@@ -1,0 +1,65 @@
+:root {
+  font-family:
+    "SUIT Variable",
+    "Pretendard Variable",
+    "Apple SD Gothic Neo",
+    "Noto Sans KR",
+    sans-serif;
+  line-height: 1.5;
+  font-weight: 400;
+  color: #2d241d;
+  background: #efe6d7;
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  --text: #2d241d;
+  --muted: #7e5f42;
+  --accent: #c5683e;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html {
+  min-height: 100%;
+  background:
+    radial-gradient(circle at top, rgba(255, 250, 242, 0.9), transparent 35%),
+    linear-gradient(180deg, #efe6d7 0%, #e7dbca 100%);
+}
+
+body {
+  margin: 0;
+  min-width: 320px;
+  min-height: 100vh;
+}
+
+body,
+button,
+input {
+  font: inherit;
+}
+
+button,
+input {
+  outline: none;
+}
+
+button {
+  cursor: pointer;
+}
+
+button:focus-visible,
+input:focus-visible {
+  box-shadow: 0 0 0 3px rgba(197, 104, 62, 0.22);
+}
+
+h1,
+p {
+  margin: 0;
+}
+
+#root {
+  min-height: 100vh;
+}
