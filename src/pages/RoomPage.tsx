@@ -1,0 +1,117 @@
+import { CalendarGrid } from '../components/calendar/CalendarGrid'
+import { NicknameModal } from '../components/room/NicknameModal'
+import { RoomDashboard } from '../components/room/RoomDashboard'
+import { Button } from '../components/ui/Button'
+import { SegmentedButtonGroup } from '../components/ui/SegmentedButtonGroup'
+import type { DateMode, Participant, Room, RoomSummary } from '../types'
+
+type ModeOption = { label: string; value: DateMode }
+type WeekdayOption = { label: string; value: number; selected: boolean }
+
+type RoomPageProps = {
+  currentParticipant?: Participant
+  modeOptions: ModeOption[]
+  room?: Room
+  roomSummary?: RoomSummary
+  selectedMode: DateMode
+  weekdayOptions: WeekdayOption[]
+  onBackToLanding: () => void
+  onChangeMode: (mode: DateMode) => void
+  onJoinRoom: (nickname: string) => void
+  onSelectDate: (isoDate: string) => void
+  onToggleWeekday: (weekday: number) => void
+}
+
+export function RoomPage({
+  currentParticipant,
+  modeOptions,
+  onBackToLanding,
+  onChangeMode,
+  onJoinRoom,
+  onSelectDate,
+  onToggleWeekday,
+  room,
+  roomSummary,
+  selectedMode,
+  weekdayOptions,
+}: RoomPageProps) {
+  if (!room || !roomSummary) {
+    return (
+      <main className="page room-page">
+        <section className="hero-card">
+          <p className="eyebrow">room not found</p>
+          <h1>존재하지 않는 방입니다</h1>
+          <p className="hero-copy">초대 코드를 다시 확인하거나 새 방을 만들어 주세요.</p>
+        </section>
+        <Button block onClick={onBackToLanding}>
+          랜딩으로 돌아가기
+        </Button>
+      </main>
+    )
+  }
+
+  return (
+    <main className="page room-page">
+      <header className="room-header">
+        <div>
+          <p className="eyebrow">room code</p>
+          <h1 className="room-title">{room.inviteCode}</h1>
+        </div>
+        <div className="header-actions">
+          <Button variant="chip">복사</Button>
+          <Button variant="chip">공유</Button>
+        </div>
+      </header>
+
+      <RoomDashboard
+        currentParticipant={currentParticipant}
+        rankings={roomSummary.rankings}
+        room={room}
+      />
+
+      <section className="controls-card">
+        <div className="control-group">
+          <p className="section-label">선택 방식</p>
+          <SegmentedButtonGroup
+            onChange={onChangeMode}
+            options={modeOptions}
+            selectedValue={selectedMode}
+          />
+        </div>
+
+        <div className="control-group">
+          <p className="section-label">요일 일괄 적용</p>
+          <div className="weekday-row">
+            {weekdayOptions.map((option) => (
+              <button
+                key={option.value}
+                className={`day-chip${option.selected ? ' is-active' : ''}`}
+                onClick={() => onToggleWeekday(option.value)}
+                type="button"
+              >
+                {option.label}
+              </button>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      <section className="calendar-card">
+        <div className="calendar-header">
+          <Button variant="chip">&lt;</Button>
+          <strong>{formatMonthLabel(room.startDate)}</strong>
+          <Button variant="chip">&gt;</Button>
+        </div>
+
+        <CalendarGrid days={roomSummary.calendarDays} onSelectDate={onSelectDate} />
+      </section>
+
+      {!currentParticipant ? <NicknameModal onJoinRoom={onJoinRoom} /> : null}
+    </main>
+  )
+}
+
+function formatMonthLabel(isoDate: string) {
+  const date = new Date(isoDate)
+  return `${date.getFullYear()}년 ${date.getMonth() + 1}월`
+}
