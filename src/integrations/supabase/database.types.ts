@@ -31,6 +31,7 @@ export type Database = {
           updated_at?: string
         }
         Update: Partial<Database['public']['Tables']['rooms']['Insert']>
+        Relationships: []
       }
       participants: {
         Row: {
@@ -40,6 +41,7 @@ export type Database = {
           joined_at: string
           nickname: string
           room_id: string
+          updated_at: string
         }
         Insert: {
           client_key: string
@@ -48,8 +50,18 @@ export type Database = {
           joined_at?: string
           nickname: string
           room_id: string
+          updated_at?: string
         }
         Update: Partial<Database['public']['Tables']['participants']['Insert']>
+        Relationships: [
+          {
+            foreignKeyName: 'participants_room_id_fkey'
+            columns: ['room_id']
+            isOneToOne: false
+            referencedRelation: 'rooms'
+            referencedColumns: ['id']
+          },
+        ]
       }
       availability_rules: {
         Row: {
@@ -71,6 +83,22 @@ export type Database = {
         Update: Partial<
           Database['public']['Tables']['availability_rules']['Insert']
         >
+        Relationships: [
+          {
+            foreignKeyName: 'availability_rules_participant_id_fkey'
+            columns: ['participant_id']
+            isOneToOne: true
+            referencedRelation: 'participants'
+            referencedColumns: ['id']
+          },
+          {
+            foreignKeyName: 'availability_rules_room_id_fkey'
+            columns: ['room_id']
+            isOneToOne: false
+            referencedRelation: 'rooms'
+            referencedColumns: ['id']
+          },
+        ]
       }
       date_overrides: {
         Row: {
@@ -80,6 +108,7 @@ export type Database = {
           room_id: string
           status: 'available' | 'unavailable'
           target_date: string
+          updated_at: string
         }
         Insert: {
           created_at?: string
@@ -88,12 +117,49 @@ export type Database = {
           room_id: string
           status: 'available' | 'unavailable'
           target_date: string
+          updated_at?: string
         }
         Update: Partial<Database['public']['Tables']['date_overrides']['Insert']>
+        Relationships: [
+          {
+            foreignKeyName: 'date_overrides_participant_id_fkey'
+            columns: ['participant_id']
+            isOneToOne: false
+            referencedRelation: 'participants'
+            referencedColumns: ['id']
+          },
+          {
+            foreignKeyName: 'date_overrides_room_id_fkey'
+            columns: ['room_id']
+            isOneToOne: false
+            referencedRelation: 'rooms'
+            referencedColumns: ['id']
+          },
+        ]
       }
     }
     Views: Record<string, never>
-    Functions: Record<string, never>
+    Functions: {
+      get_room_by_invite_code: {
+        Args: { input_invite_code: string }
+        Returns: Database['public']['Tables']['rooms']['Row'][]
+      }
+      join_room: {
+        Args: {
+          input_client_key: string
+          input_nickname: string
+          input_room_id: string
+        }
+        Returns: Database['public']['Tables']['participants']['Row']
+      }
+      restore_participant: {
+        Args: {
+          input_client_key: string
+          input_room_id: string
+        }
+        Returns: Database['public']['Tables']['participants']['Row'][]
+      }
+    }
     Enums: Record<string, never>
     CompositeTypes: Record<string, never>
   }
