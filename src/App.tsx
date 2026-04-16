@@ -12,6 +12,7 @@ function App() {
         {appState.currentRoute.name === 'landing' ? (
           <LandingPage
             joinInviteCode={appState.joinInviteCode}
+            message={appState.landingMessage}
             onCreateRoom={appState.createRoom}
             onJoinInviteCodeChange={appState.setJoinInviteCode}
             onJoinRoom={appState.joinRoomByInviteCode}
@@ -22,12 +23,16 @@ function App() {
             modeOptions={appState.modeOptions}
             room={appState.currentRoom}
             roomSummary={appState.currentRoomSummary}
+            roomMessage={appState.roomMessage}
             selectedMode={appState.selectedMode}
             weekdayOptions={appState.weekdayOptions}
             onBackToLanding={appState.goToLanding}
             onChangeMode={appState.changeSelectionMode}
+            onCopyInviteCode={appState.copyInviteCode}
             onJoinRoom={appState.joinCurrentRoom}
+            onMoveMonth={appState.moveVisibleMonth}
             onSelectDate={appState.toggleDate}
+            onShareRoom={appState.shareRoom}
             onToggleWeekday={appState.toggleWeekday}
           />
         )}

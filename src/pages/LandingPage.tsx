@@ -6,6 +6,7 @@ import type { CreateRoomPayload } from '../types'
 
 type LandingPageProps = {
   joinInviteCode: string
+  message: string
   onCreateRoom: (payload: CreateRoomPayload) => void
   onJoinInviteCodeChange: (inviteCode: string) => void
   onJoinRoom: () => void
@@ -13,6 +14,7 @@ type LandingPageProps = {
 
 export function LandingPage({
   joinInviteCode,
+  message,
   onCreateRoom,
   onJoinInviteCodeChange,
   onJoinRoom,
@@ -48,6 +50,7 @@ export function LandingPage({
           <Button block variant="secondary" onClick={onJoinRoom}>
             참여하기
           </Button>
+          {message ? <p className="inline-feedback">{message}</p> : null}
         </div>
       </section>
 

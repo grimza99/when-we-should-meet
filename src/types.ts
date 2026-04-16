@@ -54,6 +54,7 @@ export type CalendarDay = {
 }
 
 export type RoomSummary = {
+  monthLabel: string
   rankings: RankingItem[]
   calendarDays: CalendarDay[]
 }

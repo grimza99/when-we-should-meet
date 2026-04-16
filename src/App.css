@@ -162,6 +162,16 @@
   color: var(--muted);
 }
 
+.inline-feedback {
+  margin: 0;
+  padding: 12px 14px;
+  border-radius: 14px;
+  background: rgba(201, 128, 81, 0.12);
+  color: var(--accent);
+  font-size: 14px;
+  font-weight: 600;
+}
+
 .room-header,
 .dashboard-head,
 .calendar-header,
