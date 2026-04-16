@@ -13,12 +13,16 @@ type RoomPageProps = {
   modeOptions: ModeOption[]
   room?: Room
   roomSummary?: RoomSummary
+  roomMessage: string
   selectedMode: DateMode
   weekdayOptions: WeekdayOption[]
   onBackToLanding: () => void
   onChangeMode: (mode: DateMode) => void
+  onCopyInviteCode: () => void
   onJoinRoom: (nickname: string) => void
+  onMoveMonth: (offset: number) => void
   onSelectDate: (isoDate: string) => void
+  onShareRoom: () => void
   onToggleWeekday: (weekday: number) => void
 }
 
@@ -27,10 +31,14 @@ export function RoomPage({
   modeOptions,
   onBackToLanding,
   onChangeMode,
+  onCopyInviteCode,
   onJoinRoom,
+  onMoveMonth,
   onSelectDate,
+  onShareRoom,
   onToggleWeekday,
   room,
+  roomMessage,
   roomSummary,
   selectedMode,
   weekdayOptions,
@@ -58,10 +66,16 @@ export function RoomPage({
           <h1 className="room-title">{room.inviteCode}</h1>
         </div>
         <div className="header-actions">
-          <Button variant="chip">복사</Button>
-          <Button variant="chip">공유</Button>
+          <Button onClick={onCopyInviteCode} variant="chip">
+            복사
+          </Button>
+          <Button onClick={onShareRoom} variant="chip">
+            공유
+          </Button>
         </div>
       </header>
+
+      {roomMessage ? <p className="inline-feedback">{roomMessage}</p> : null}
 
       <RoomDashboard
         currentParticipant={currentParticipant}
@@ -98,9 +112,13 @@ export function RoomPage({
 
       <section className="calendar-card">
         <div className="calendar-header">
-          <Button variant="chip">&lt;</Button>
-          <strong>{formatMonthLabel(room.startDate)}</strong>
-          <Button variant="chip">&gt;</Button>
+          <Button onClick={() => onMoveMonth(-1)} variant="chip">
+            &lt;
+          </Button>
+          <strong>{roomSummary.monthLabel}</strong>
+          <Button onClick={() => onMoveMonth(1)} variant="chip">
+            &gt;
+          </Button>
         </div>
 
         <CalendarGrid days={roomSummary.calendarDays} onSelectDate={onSelectDate} />
@@ -109,9 +127,4 @@ export function RoomPage({
       {!currentParticipant ? <NicknameModal onJoinRoom={onJoinRoom} /> : null}
     </main>
   )
-}
-
-function formatMonthLabel(isoDate: string) {
-  const date = new Date(isoDate)
-  return `${date.getFullYear()}년 ${date.getMonth() + 1}월`
 }

@@ -23,9 +23,13 @@ export function resolveDateRange(type: DateRangeType, start: string, end: string
   }
 }
 
-export function buildCalendarDays(room: Room, currentParticipantId?: string): CalendarDay[] {
-  const start = new Date(room.startDate)
-  const end = new Date(room.endDate)
+export function buildCalendarDays(
+  room: Room,
+  currentParticipantId?: string,
+  visibleMonth?: string,
+): CalendarDay[] {
+  const start = visibleMonth ? startOfMonth(new Date(visibleMonth)) : new Date(room.startDate)
+  const end = visibleMonth ? endOfMonth(new Date(visibleMonth)) : new Date(room.endDate)
   const calendarStart = new Date(start)
   calendarStart.setDate(calendarStart.getDate() - calendarStart.getDay())
 
@@ -98,6 +102,34 @@ export function buildRankings(room: Room): RankingItem[] {
     }))
 }
 
+export function clampVisibleMonth(room: Room, visibleMonth: string) {
+  const month = startOfMonth(new Date(visibleMonth))
+  const roomStart = startOfMonth(new Date(room.startDate))
+  const roomEnd = startOfMonth(new Date(room.endDate))
+
+  if (month < roomStart) {
+    return formatDate(roomStart)
+  }
+
+  if (month > roomEnd) {
+    return formatDate(roomEnd)
+  }
+
+  return formatDate(month)
+}
+
+export function addMonths(isoDate: string, amount: number) {
+  const next = new Date(isoDate)
+  next.setDate(1)
+  next.setMonth(next.getMonth() + amount)
+  return formatDate(next)
+}
+
+export function formatMonthLabel(isoDate: string) {
+  const date = new Date(isoDate)
+  return `${date.getFullYear()}년 ${date.getMonth() + 1}월`
+}
+
 export function isDateAvailable(
   participant: Room['participants'][number],
   isoDate: string,
@@ -123,6 +155,14 @@ export function formatDate(date: Date) {
 
 export function formatReadableDate(date: Date) {
   return `${date.getMonth() + 1}월 ${date.getDate()}일 ${WEEKDAY_LABELS[date.getDay()]}요일`
+}
+
+function startOfMonth(date: Date) {
+  return new Date(date.getFullYear(), date.getMonth(), 1)
+}
+
+function endOfMonth(date: Date) {
+  return new Date(date.getFullYear(), date.getMonth() + 1, 0)
 }
 
 const COLOR_FALLBACKS = [

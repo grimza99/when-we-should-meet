@@ -1,6 +1,12 @@
 import { useMemo, useState } from 'react'
 import { useLocalStorageState } from '../hooks/useLocalStorageState'
-import { buildCalendarDays, buildRankings } from '../lib/date'
+import {
+  addMonths,
+  buildCalendarDays,
+  buildRankings,
+  clampVisibleMonth,
+  formatMonthLabel,
+} from '../lib/date'
 import { COLOR_PALETTE, DEFAULT_STORAGE, MODE_LABELS, WEEKDAY_LABELS } from '../lib/constants'
 import { useRouteState } from '../lib/router'
 import type {
@@ -20,6 +26,9 @@ export function useAppState() {
     DEFAULT_STORAGE,
   )
   const [joinInviteCode, setJoinInviteCode] = useState('')
+  const [landingMessage, setLandingMessage] = useState('')
+  const [roomMessage, setRoomMessage] = useState('')
+  const [visibleMonth, setVisibleMonth] = useState('')
 
   const currentRoom =
     route.name === 'room' ? storage.rooms[route.roomId] : undefined
@@ -28,6 +37,9 @@ export function useAppState() {
   const currentParticipant = currentRoom?.participants.find(
     (participant) => participant.id === currentParticipantId,
   )
+  const effectiveVisibleMonth = currentRoom
+    ? clampVisibleMonth(currentRoom, visibleMonth || currentRoom.startDate)
+    : ''
 
   const currentRoomSummary = useMemo(() => {
     if (!currentRoom) {
@@ -35,10 +47,15 @@ export function useAppState() {
     }
 
     return {
+      monthLabel: formatMonthLabel(effectiveVisibleMonth),
       rankings: buildRankings(currentRoom),
-      calendarDays: buildCalendarDays(currentRoom, currentParticipant?.id),
+      calendarDays: buildCalendarDays(
+        currentRoom,
+        currentParticipant?.id,
+        effectiveVisibleMonth,
+      ),
     }
-  }, [currentParticipant?.id, currentRoom])
+  }, [currentParticipant?.id, currentRoom, effectiveVisibleMonth])
 
   const createRoom = (payload: CreateRoomPayload) => {
     const room = createRoomRecord(payload)
@@ -51,19 +68,29 @@ export function useAppState() {
       },
     }))
 
+    setVisibleMonth(room.startDate)
+    setLandingMessage('')
     navigate({ name: 'room', roomId: room.id })
   }
 
   const joinRoomByInviteCode = () => {
     const inviteCode = joinInviteCode.trim().toUpperCase()
+    if (!inviteCode) {
+      setLandingMessage('초대 코드를 입력해 주세요.')
+      return
+    }
+
     const room = Object.values(storage.rooms).find(
       (candidate) => candidate.inviteCode === inviteCode,
     )
 
     if (!room) {
+      setLandingMessage('일치하는 방을 찾지 못했어요. 코드를 다시 확인해 주세요.')
       return
     }
 
+    setVisibleMonth(room.startDate)
+    setLandingMessage('')
     navigate({ name: 'room', roomId: room.id })
   }
 
@@ -75,6 +102,7 @@ export function useAppState() {
     const nextParticipant = createParticipant(currentRoom)
 
     nextParticipant.nickname = nickname
+    setRoomMessage(`${nickname} 님으로 방에 참여했어요.`)
 
     setStorage((previous) => ({
       rooms: {
@@ -100,6 +128,11 @@ export function useAppState() {
       ...currentParticipant,
       selectionMode: mode,
     })
+    setRoomMessage(
+      mode === 'available'
+        ? '가능한 날짜를 고르는 모드로 바뀌었어요.'
+        : '불가능한 날짜를 고르는 모드로 바뀌었어요.',
+    )
   }
 
   const toggleWeekday = (weekday: number) => {
@@ -115,6 +148,7 @@ export function useAppState() {
       ...currentParticipant,
       weekdayRules,
     })
+    setRoomMessage(`${WEEKDAY_LABELS[weekday]}요일 규칙을 업데이트했어요.`)
   }
 
   const toggleDate = (isoDate: string) => {
@@ -135,6 +169,7 @@ export function useAppState() {
       ...currentParticipant,
       overrides: nextOverrides,
     })
+    setRoomMessage(`${isoDate} 날짜 선택을 반영했어요.`)
   }
 
   const updateCurrentParticipant = (nextParticipant: Participant) => {
@@ -156,8 +191,60 @@ export function useAppState() {
     }))
   }
 
+  const moveVisibleMonth = (offset: number) => {
+    if (!currentRoom) {
+      return
+    }
+
+    setVisibleMonth((previous) =>
+      clampVisibleMonth(
+        currentRoom,
+        addMonths(previous || currentRoom.startDate, offset),
+      ),
+    )
+  }
+
+  const copyInviteCode = async () => {
+    if (!currentRoom) {
+      return
+    }
+
+    try {
+      await navigator.clipboard.writeText(currentRoom.inviteCode)
+      setRoomMessage('초대 코드가 복사되었어요.')
+    } catch {
+      setRoomMessage('복사에 실패했어요. 브라우저 권한을 확인해 주세요.')
+    }
+  }
+
+  const shareRoom = async () => {
+    if (!currentRoom) {
+      return
+    }
+
+    const shareData = {
+      title: 'when should we meet?',
+      text: `초대 코드 ${currentRoom.inviteCode}로 방에 참여해 주세요.`,
+      url: window.location.href,
+    }
+
+    try {
+      if (navigator.share) {
+        await navigator.share(shareData)
+        setRoomMessage('공유 시트를 열었어요.')
+        return
+      }
+
+      await navigator.clipboard.writeText(shareData.url)
+      setRoomMessage('공유 링크를 복사했어요.')
+    } catch {
+      setRoomMessage('공유를 완료하지 못했어요.')
+    }
+  }
+
   return {
     changeSelectionMode,
+    copyInviteCode,
     createRoom,
     currentParticipant,
     currentRoom,
@@ -167,12 +254,16 @@ export function useAppState() {
     joinCurrentRoom,
     joinInviteCode,
     joinRoomByInviteCode,
+    landingMessage,
     modeOptions: (Object.keys(MODE_LABELS) as DateMode[]).map((value) => ({
       label: MODE_LABELS[value],
       value,
     })),
+    moveVisibleMonth,
+    roomMessage,
     selectedMode: currentParticipant?.selectionMode ?? 'available',
     setJoinInviteCode,
+    shareRoom,
     toggleDate,
     toggleWeekday,
     weekdayOptions: WEEKDAY_LABELS.map((label, value) => ({
