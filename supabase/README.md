@@ -25,10 +25,11 @@ Copy `.env.example` to `.env.local` and provide:
 ## Current access pattern
 - rooms are created directly from the client
 - room lookup is expected to go through `get_room_by_invite_code()`
+- participant join is expected to go through `join_room()`
 - participant restoration is expected to go through `restore_participant()`
-- direct table access is constrained with RLS and scoped to the participant's room membership
+- direct table access for participant-owned data is currently disabled until the final anonymous access strategy is fixed
 
 ## Follow-up work
-- replace the current JWT-claim-based placeholder ownership model with the final anonymous access strategy
-- add RPCs for room creation / participant join if direct client writes become too permissive
+- add RPCs for availability rule updates and date override updates
+- decide whether room creation should stay as a direct client insert or also move behind an RPC
 - add Realtime publication and client subscriptions for room-level sync
