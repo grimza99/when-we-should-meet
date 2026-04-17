@@ -215,6 +215,28 @@
   gap: 8px;
 }
 
+.dashboard-summary {
+  margin-top: 6px;
+  color: var(--muted);
+  font-size: 14px;
+  line-height: 1.4;
+}
+
+.dashboard-content {
+  display: grid;
+  grid-template-rows: 0fr;
+  transition: grid-template-rows 180ms ease;
+}
+
+.dashboard-content.is-expanded {
+  grid-template-rows: 1fr;
+}
+
+.dashboard-content > .ranking-list,
+.dashboard-content > .participant-row {
+  overflow: hidden;
+}
+
 .ranking-list {
   display: flex;
   flex-direction: column;
