@@ -10,6 +10,7 @@ type WeekdayOption = { label: string; value: number; selected: boolean }
 
 type RoomPageProps = {
   currentParticipant?: Participant
+  isHydratingRoom?: boolean
   modeOptions: ModeOption[]
   room?: Room
   roomSummary?: RoomSummary
@@ -28,6 +29,7 @@ type RoomPageProps = {
 
 export function RoomPage({
   currentParticipant,
+  isHydratingRoom = false,
   modeOptions,
   onBackToLanding,
   onChangeMode,
@@ -43,6 +45,18 @@ export function RoomPage({
   selectedMode,
   weekdayOptions,
 }: RoomPageProps) {
+  if (isHydratingRoom) {
+    return (
+      <main className="page room-page">
+        <section className="hero-card">
+          <p className="eyebrow">loading room</p>
+          <h1>방 정보를 불러오는 중입니다</h1>
+          <p className="hero-copy">공유 링크와 참가자 정보를 확인하고 있어요.</p>
+        </section>
+      </main>
+    )
+  }
+
   if (!room || !roomSummary) {
     return (
       <main className="page room-page">

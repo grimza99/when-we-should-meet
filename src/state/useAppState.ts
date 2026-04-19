@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useLocalStorageState } from '../hooks/useLocalStorageState'
 import {
   addMonths,
@@ -19,6 +19,7 @@ import {
   mapParticipantRow,
   mapRoomRowToDraftRoom,
   mapRoomSnapshotToDraftRoom,
+  restoreParticipant,
 } from '../integrations/supabase/services/roomService'
 import type {
   AppStorage,
@@ -40,6 +41,7 @@ export function useAppState() {
   const [landingMessage, setLandingMessage] = useState('')
   const [roomMessage, setRoomMessage] = useState('')
   const [visibleMonth, setVisibleMonth] = useState('')
+  const [isHydratingRoom, setIsHydratingRoom] = useState(false)
 
   const currentRoom =
     route.name === 'room' ? storage.rooms[route.roomId] : undefined
@@ -48,6 +50,7 @@ export function useAppState() {
   const currentParticipant = currentRoom?.participants.find(
     (participant) => participant.id === currentParticipantId,
   )
+  const routeRoomId = route.name === 'room' ? route.roomId : undefined
   const effectiveVisibleMonth = currentRoom
     ? clampVisibleMonth(currentRoom, visibleMonth || currentRoom.startDate)
     : ''
@@ -67,6 +70,89 @@ export function useAppState() {
       ),
     }
   }, [currentParticipant?.id, currentRoom, effectiveVisibleMonth])
+
+  useEffect(() => {
+    if (!isSupabaseConfigured || !routeRoomId) {
+      setIsHydratingRoom(false)
+      return
+    }
+
+    const needsRoomSnapshot =
+      !currentRoom || (currentParticipantId !== undefined && !currentParticipant)
+
+    if (!needsRoomSnapshot) {
+      setIsHydratingRoom(false)
+      return
+    }
+
+    let isCancelled = false
+    setIsHydratingRoom(true)
+
+    const hydrateRoom = async () => {
+      try {
+        const roomSnapshot = await getRoomSnapshot(routeRoomId)
+
+        if (!roomSnapshot) {
+          if (!isCancelled) {
+            setRoomMessage('존재하지 않는 방이거나 이미 접근할 수 없는 방입니다.')
+          }
+          return
+        }
+
+        const room = mapRoomSnapshotToDraftRoom(roomSnapshot)
+        const restoredParticipant = await restoreParticipant({
+          clientKey: getOrCreateClientKey(),
+          roomId: routeRoomId,
+        })
+
+        if (isCancelled) {
+          return
+        }
+
+        const restoredParticipantId =
+          restoredParticipant?.id ?? storage.memberships[routeRoomId]
+
+        setStorage((previous) => ({
+          ...previous,
+          rooms: {
+            ...previous.rooms,
+            [room.id]: mergeRoomSnapshot(
+              previous.rooms[room.id],
+              room,
+              restoredParticipantId,
+            ),
+          },
+          memberships: restoredParticipantId
+            ? {
+                ...previous.memberships,
+                [room.id]: restoredParticipantId,
+              }
+            : previous.memberships,
+        }))
+      } catch {
+        if (!isCancelled) {
+          setRoomMessage('방 정보를 불러오지 못했어요. 잠시 후 다시 시도해 주세요.')
+        }
+      } finally {
+        if (!isCancelled) {
+          setIsHydratingRoom(false)
+        }
+      }
+    }
+
+    void hydrateRoom()
+
+    return () => {
+      isCancelled = true
+    }
+  }, [
+    currentParticipant,
+    currentParticipantId,
+    currentRoom,
+    routeRoomId,
+    setStorage,
+    storage.memberships,
+  ])
 
   const createRoom = async (payload: CreateRoomPayload) => {
     if (!isSupabaseConfigured) {
@@ -349,6 +435,7 @@ export function useAppState() {
     currentRoomSummary,
     currentRoute: route,
     goToLanding: () => navigate({ name: 'landing' }),
+    isHydratingRoom,
     joinCurrentRoom,
     joinInviteCode,
     joinRoomByInviteCode,
