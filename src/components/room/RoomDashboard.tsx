@@ -35,28 +35,30 @@ export function RoomDashboard({
       </div>
 
       <div className={`dashboard-content${isExpanded ? ' is-expanded' : ''}`}>
-        <div className="ranking-list">
-          {rankings.map((ranking) => (
-            <div key={ranking.date} className="ranking-item">
-              <span>#{ranking.rank}</span>
-              <strong>{ranking.label}</strong>
-              <small>{ranking.score}명 가능</small>
-            </div>
-          ))}
-        </div>
+        <div className="dashboard-content-inner">
+          <div className="ranking-list">
+            {rankings.map((ranking) => (
+              <div key={ranking.date} className="ranking-item">
+                <span>#{ranking.rank}</span>
+                <strong>{ranking.label}</strong>
+                <small>{ranking.score}명 가능</small>
+              </div>
+            ))}
+          </div>
 
-        <div className="participant-row">
-          {room.participants.map((participant) => (
-            <span
-              key={participant.id}
-              className={`participant-pill${
-                currentParticipant?.id === participant.id ? ' is-current-user' : ''
-              }`}
-              style={{ color: COLOR_PALETTE[participant.colorIndex] }}
-            >
-              {participant.nickname}
-            </span>
-          ))}
+          <div className="participant-row">
+            {room.participants.map((participant) => (
+              <span
+                key={participant.id}
+                className={`participant-pill${
+                  currentParticipant?.id === participant.id ? ' is-current-user' : ''
+                }`}
+                style={{ color: COLOR_PALETTE[participant.colorIndex] }}
+              >
+                {participant.nickname}
+              </span>
+            ))}
+          </div>
         </div>
       </div>
     </section>
