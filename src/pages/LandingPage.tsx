@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { CreateRoomModal } from '../components/room/CreateRoomModal'
 import { Button } from '../components/ui/Button'
 import { TextInput } from '../components/ui/TextInput'
+import { normalizeInviteCodeInput } from '../lib/inviteCode'
 import type { CreateRoomPayload } from '../types'
 
 type LandingPageProps = {
@@ -41,10 +42,15 @@ export function LandingPage({
 
         <div className="join-block">
           <TextInput
+            autoCapitalize="characters"
+            autoCorrect="off"
             id="invite-code"
+            inputMode="text"
             label="초대 코드로 참여하기"
-            onChange={onJoinInviteCodeChange}
+            maxLength={6}
+            onChange={(value) => onJoinInviteCodeChange(normalizeInviteCodeInput(value))}
             placeholder="예: ABC123"
+            spellCheck={false}
             value={joinInviteCode}
           />
           <Button block variant="secondary" onClick={onJoinRoom}>
