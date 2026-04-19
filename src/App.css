@@ -231,6 +231,27 @@
   line-height: 1.4;
 }
 
+.dashboard-summary {
+  margin-top: 6px;
+  color: var(--muted);
+  font-size: 14px;
+  line-height: 1.4;
+}
+
+.dashboard-content {
+  display: grid;
+  grid-template-rows: 0fr;
+  transition: grid-template-rows 180ms ease;
+}
+
+.dashboard-content.is-expanded {
+  grid-template-rows: 1fr;
+}
+
+.dashboard-content-inner {
+  overflow: hidden;
+}
+
 .ranking-list {
   display: flex;
   flex-direction: column;
