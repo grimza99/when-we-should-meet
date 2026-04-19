@@ -8,9 +8,9 @@ import type { CreateRoomPayload } from '../types'
 type LandingPageProps = {
   joinInviteCode: string
   message: string
-  onCreateRoom: (payload: CreateRoomPayload) => void
+  onCreateRoom: (payload: CreateRoomPayload) => Promise<boolean>
   onJoinInviteCodeChange: (inviteCode: string) => void
-  onJoinRoom: () => void
+  onJoinRoom: () => Promise<boolean>
 }
 
 export function LandingPage({
@@ -21,6 +21,21 @@ export function LandingPage({
   onJoinRoom,
 }: LandingPageProps) {
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false)
+  const [isJoiningRoom, setIsJoiningRoom] = useState(false)
+
+  const submitJoin = async () => {
+    if (isJoiningRoom) {
+      return
+    }
+
+    setIsJoiningRoom(true)
+
+    try {
+      await onJoinRoom()
+    } finally {
+      setIsJoiningRoom(false)
+    }
+  }
 
   return (
     <main className="page landing-page">
@@ -53,8 +68,13 @@ export function LandingPage({
             spellCheck={false}
             value={joinInviteCode}
           />
-          <Button block variant="secondary" onClick={onJoinRoom}>
-            참여하기
+          <Button
+            block
+            disabled={!joinInviteCode.trim() || isJoiningRoom}
+            variant="secondary"
+            onClick={() => void submitJoin()}
+          >
+            {isJoiningRoom ? '참여 중...' : '참여하기'}
           </Button>
           {message ? <p className="inline-feedback">{message}</p> : null}
         </div>
@@ -77,9 +97,14 @@ export function LandingPage({
 
       {isCreateModalOpen ? (
         <CreateRoomModal
-          onCreateRoom={(payload) => {
-            setIsCreateModalOpen(false)
-            onCreateRoom(payload)
+          onCreateRoom={async (payload) => {
+            const didCreateRoom = await onCreateRoom(payload)
+
+            if (didCreateRoom) {
+              setIsCreateModalOpen(false)
+            }
+
+            return didCreateRoom
           }}
         />
       ) : null}

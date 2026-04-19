@@ -83,7 +83,7 @@ export function useAppState() {
       setVisibleMonth(room.startDate)
       setLandingMessage('')
       navigate({ name: 'room', roomId: room.id })
-      return
+      return true
     }
 
     try {
@@ -101,8 +101,10 @@ export function useAppState() {
       setVisibleMonth(room.startDate)
       setLandingMessage('')
       navigate({ name: 'room', roomId: room.id })
+      return true
     } catch {
       setLandingMessage('방 생성에 실패했어요. 잠시 후 다시 시도해 주세요.')
+      return false
     }
   }
 
@@ -110,7 +112,7 @@ export function useAppState() {
     const inviteCode = joinInviteCode.trim().toUpperCase()
     if (!inviteCode) {
       setLandingMessage('초대 코드를 입력해 주세요.')
-      return
+      return false
     }
 
     if (!isSupabaseConfigured) {
@@ -120,13 +122,13 @@ export function useAppState() {
 
       if (!room) {
         setLandingMessage('일치하는 방을 찾지 못했어요. 코드를 다시 확인해 주세요.')
-        return
+        return false
       }
 
       setVisibleMonth(room.startDate)
       setLandingMessage('')
       navigate({ name: 'room', roomId: room.id })
-      return
+      return true
     }
 
     try {
@@ -134,7 +136,7 @@ export function useAppState() {
 
       if (!roomRow) {
         setLandingMessage('일치하는 방을 찾지 못했어요. 코드를 다시 확인해 주세요.')
-        return
+        return false
       }
 
       const roomSnapshot = await getRoomSnapshot(roomRow.id)
@@ -157,14 +159,16 @@ export function useAppState() {
       setVisibleMonth(room.startDate)
       setLandingMessage('')
       navigate({ name: 'room', roomId: room.id })
+      return true
     } catch {
       setLandingMessage('방 조회에 실패했어요. 네트워크 상태를 확인해 주세요.')
+      return false
     }
   }
 
   const joinCurrentRoom = async (nickname: string) => {
     if (!currentRoom || currentParticipant) {
-      return
+      return false
     }
 
     if (!isSupabaseConfigured) {
@@ -186,7 +190,7 @@ export function useAppState() {
           [currentRoom.id]: nextParticipant.id,
         },
       }))
-      return
+      return true
     }
 
     try {
@@ -212,8 +216,10 @@ export function useAppState() {
           [currentRoom.id]: nextParticipant.id,
         },
       }))
+      return true
     } catch {
       setRoomMessage('방 참여에 실패했어요. 잠시 후 다시 시도해 주세요.')
+      return false
     }
   }
 

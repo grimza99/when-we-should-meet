@@ -4,11 +4,28 @@ import { Modal } from '../ui/Modal'
 import { TextInput } from '../ui/TextInput'
 
 type NicknameModalProps = {
-  onJoinRoom: (nickname: string) => void
+  onJoinRoom: (nickname: string) => Promise<boolean>
 }
 
 export function NicknameModal({ onJoinRoom }: NicknameModalProps) {
   const [nickname, setNickname] = useState('')
+  const [isSubmitting, setIsSubmitting] = useState(false)
+
+  const submit = async () => {
+    const trimmedNickname = nickname.trim()
+
+    if (!trimmedNickname || isSubmitting) {
+      return
+    }
+
+    setIsSubmitting(true)
+
+    try {
+      await onJoinRoom(trimmedNickname)
+    } finally {
+      setIsSubmitting(false)
+    }
+  }
 
   return (
     <Modal
@@ -22,8 +39,12 @@ export function NicknameModal({ onJoinRoom }: NicknameModalProps) {
           placeholder="예: 민준"
           value={nickname}
         />
-        <Button block disabled={!nickname.trim()} onClick={() => onJoinRoom(nickname.trim())}>
-          입장하기
+        <Button
+          block
+          disabled={!nickname.trim() || isSubmitting}
+          onClick={() => void submit()}
+        >
+          {isSubmitting ? '입장 중...' : '입장하기'}
         </Button>
       </div>
     </Modal>
