@@ -140,6 +140,12 @@ export type Database = {
     }
     Views: Record<string, never>
     Functions: {
+      get_room_snapshot: {
+        Args: {
+          input_room_id: string
+        }
+        Returns: Json
+      }
       get_room_by_invite_code: {
         Args: { input_invite_code: string }
         Returns: Database['public']['Tables']['rooms']['Row'][]

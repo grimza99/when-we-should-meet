@@ -1,9 +1,21 @@
 import { supabase } from '../client'
 import type { Database } from '../database.types'
-import type { CreateRoomPayload } from '../../../types'
+import type { CreateRoomPayload, Participant, Room } from '../../../types'
 
 type RoomRow = Database['public']['Tables']['rooms']['Row']
 type ParticipantRow = Database['public']['Tables']['participants']['Row']
+type RoomSnapshot = {
+  room: RoomRow
+  participants: RoomSnapshotParticipantRow[]
+}
+type RoomSnapshotParticipantRow = {
+  id: string
+  nickname: string
+  color_index: number
+  selection_mode: Participant['selectionMode']
+  weekday_rules: Participant['weekdayRules']
+  overrides: Participant['overrides']
+}
 
 export async function createRoom(payload: CreateRoomPayload) {
   const inviteCode = createInviteCode()
@@ -73,6 +85,18 @@ export async function restoreParticipant(params: {
   return data[0] ?? null
 }
 
+export async function getRoomSnapshot(roomId: string) {
+  const { data, error } = await supabase.rpc('get_room_snapshot', {
+    input_room_id: roomId,
+  })
+
+  if (error) {
+    throw error
+  }
+
+  return (data as RoomSnapshot | null) ?? null
+}
+
 export function mapRoomRowToDraftRoom(row: RoomRow) {
   return {
     id: row.id,
@@ -86,17 +110,35 @@ export function mapRoomRowToDraftRoom(row: RoomRow) {
   }
 }
 
-export function mapParticipantRow(row: ParticipantRow) {
+export function mapRoomSnapshotToDraftRoom(snapshot: RoomSnapshot): Room {
   return {
+    ...mapRoomRowToDraftRoom(snapshot.room),
+    participants: snapshot.participants.map(mapDraftParticipantRecord),
+  }
+}
+
+export function mapParticipantRow(row: ParticipantRow) {
+  return mapDraftParticipantRecord({
     id: row.id,
     nickname: row.nickname,
-    colorIndex: row.color_index,
-    selectionMode: 'available' as const,
-    weekdayRules: [],
+    color_index: row.color_index,
+    selection_mode: 'available',
+    weekday_rules: [],
     overrides: {},
-  }
+  })
 }
 
 function createInviteCode() {
   return crypto.randomUUID().replace(/-/g, '').slice(0, 6).toUpperCase()
+}
+
+function mapDraftParticipantRecord(row: RoomSnapshotParticipantRow): Participant {
+  return {
+    id: row.id,
+    nickname: row.nickname,
+    colorIndex: row.color_index,
+    selectionMode: row.selection_mode,
+    weekdayRules: row.weekday_rules,
+    overrides: row.overrides,
+  }
 }

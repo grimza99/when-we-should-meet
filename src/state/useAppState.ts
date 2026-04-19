@@ -14,9 +14,11 @@ import { isSupabaseConfigured } from '../integrations/supabase/client'
 import {
   createRoom as createSupabaseRoom,
   getRoomByInviteCode,
+  getRoomSnapshot,
   joinRoom as joinSupabaseRoom,
   mapParticipantRow,
   mapRoomRowToDraftRoom,
+  mapRoomSnapshotToDraftRoom,
 } from '../integrations/supabase/services/roomService'
 import type {
   AppStorage,
@@ -135,13 +137,20 @@ export function useAppState() {
         return
       }
 
-      const room = mapRoomRowToDraftRoom(roomRow)
+      const roomSnapshot = await getRoomSnapshot(roomRow.id)
+      const room = roomSnapshot
+        ? mapRoomSnapshotToDraftRoom(roomSnapshot)
+        : mapRoomRowToDraftRoom(roomRow)
 
       setStorage((previous) => ({
         ...previous,
         rooms: {
           ...previous.rooms,
-          [room.id]: previous.rooms[room.id] ?? room,
+          [room.id]: mergeRoomSnapshot(
+            previous.rooms[room.id],
+            room,
+            previous.memberships[room.id],
+          ),
         },
       }))
 
@@ -407,4 +416,42 @@ function upsertParticipant(participants: Participant[], nextParticipant: Partici
   return participants.map((participant) =>
     participant.id === nextParticipant.id ? nextParticipant : participant,
   )
+}
+
+function mergeRoomSnapshot(
+  previousRoom: Room | undefined,
+  nextRoom: Room,
+  localParticipantId: string | undefined,
+) {
+  if (!previousRoom || !localParticipantId) {
+    return nextRoom
+  }
+
+  const localParticipant = previousRoom.participants.find(
+    (participant) => participant.id === localParticipantId,
+  )
+
+  if (!localParticipant) {
+    return nextRoom
+  }
+
+  const mergedParticipants = nextRoom.participants.map((participant) =>
+    participant.id === localParticipant.id
+      ? {
+          ...participant,
+          selectionMode: localParticipant.selectionMode,
+          weekdayRules: localParticipant.weekdayRules,
+          overrides: localParticipant.overrides,
+        }
+      : participant,
+  )
+
+  return {
+    ...nextRoom,
+    participants: mergedParticipants.some(
+      (participant) => participant.id === localParticipant.id,
+    )
+      ? mergedParticipants
+      : upsertParticipant(mergedParticipants, localParticipant),
+  }
 }
