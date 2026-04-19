@@ -118,6 +118,15 @@
   background: var(--accent);
 }
 
+.primary-button:disabled,
+.secondary-button:disabled,
+.chip-button:disabled,
+.mode-button:disabled,
+.day-chip:disabled {
+  opacity: 0.48;
+  cursor: not-allowed;
+}
+
 .secondary-button {
   color: var(--text);
   background: rgba(201, 128, 81, 0.12);
@@ -377,4 +386,14 @@
   background: #f9f4eb;
   color: var(--muted);
   font-weight: 600;
+}
+
+.modal-validation {
+  margin: 0;
+  padding: 14px 16px;
+  border-radius: 16px;
+  background: rgba(197, 104, 62, 0.12);
+  color: var(--accent);
+  font-size: 14px;
+  font-weight: 700;
 }
