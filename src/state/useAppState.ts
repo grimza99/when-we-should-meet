@@ -9,6 +9,17 @@ import {
 } from '../lib/date'
 import { COLOR_PALETTE, DEFAULT_STORAGE, MODE_LABELS, WEEKDAY_LABELS } from '../lib/constants'
 import { useRouteState } from '../lib/router'
+import { getOrCreateClientKey } from '../lib/session/clientIdentity'
+import { isSupabaseConfigured } from '../integrations/supabase/client'
+import {
+  createRoom as createSupabaseRoom,
+  getRoomByInviteCode,
+  getRoomSnapshot,
+  joinRoom as joinSupabaseRoom,
+  mapParticipantRow,
+  mapRoomRowToDraftRoom,
+  mapRoomSnapshotToDraftRoom,
+} from '../integrations/supabase/services/roomService'
 import type {
   AppStorage,
   CreateRoomPayload,
@@ -57,66 +68,153 @@ export function useAppState() {
     }
   }, [currentParticipant?.id, currentRoom, effectiveVisibleMonth])
 
-  const createRoom = (payload: CreateRoomPayload) => {
-    const room = createRoomRecord(payload)
+  const createRoom = async (payload: CreateRoomPayload) => {
+    if (!isSupabaseConfigured) {
+      const room = createRoomRecord(payload)
 
-    setStorage((previous) => ({
-      ...previous,
-      rooms: {
-        ...previous.rooms,
-        [room.id]: room,
-      },
-    }))
+      setStorage((previous) => ({
+        ...previous,
+        rooms: {
+          ...previous.rooms,
+          [room.id]: room,
+        },
+      }))
 
-    setVisibleMonth(room.startDate)
-    setLandingMessage('')
-    navigate({ name: 'room', roomId: room.id })
+      setVisibleMonth(room.startDate)
+      setLandingMessage('')
+      navigate({ name: 'room', roomId: room.id })
+      return
+    }
+
+    try {
+      const roomRow = await createSupabaseRoom(payload)
+      const room = mapRoomRowToDraftRoom(roomRow)
+
+      setStorage((previous) => ({
+        ...previous,
+        rooms: {
+          ...previous.rooms,
+          [room.id]: room,
+        },
+      }))
+
+      setVisibleMonth(room.startDate)
+      setLandingMessage('')
+      navigate({ name: 'room', roomId: room.id })
+    } catch {
+      setLandingMessage('방 생성에 실패했어요. 잠시 후 다시 시도해 주세요.')
+    }
   }
 
-  const joinRoomByInviteCode = () => {
+  const joinRoomByInviteCode = async () => {
     const inviteCode = joinInviteCode.trim().toUpperCase()
     if (!inviteCode) {
       setLandingMessage('초대 코드를 입력해 주세요.')
       return
     }
 
-    const room = Object.values(storage.rooms).find(
-      (candidate) => candidate.inviteCode === inviteCode,
-    )
+    if (!isSupabaseConfigured) {
+      const room = Object.values(storage.rooms).find(
+        (candidate) => candidate.inviteCode === inviteCode,
+      )
 
-    if (!room) {
-      setLandingMessage('일치하는 방을 찾지 못했어요. 코드를 다시 확인해 주세요.')
+      if (!room) {
+        setLandingMessage('일치하는 방을 찾지 못했어요. 코드를 다시 확인해 주세요.')
+        return
+      }
+
+      setVisibleMonth(room.startDate)
+      setLandingMessage('')
+      navigate({ name: 'room', roomId: room.id })
       return
     }
 
-    setVisibleMonth(room.startDate)
-    setLandingMessage('')
-    navigate({ name: 'room', roomId: room.id })
+    try {
+      const roomRow = await getRoomByInviteCode(inviteCode)
+
+      if (!roomRow) {
+        setLandingMessage('일치하는 방을 찾지 못했어요. 코드를 다시 확인해 주세요.')
+        return
+      }
+
+      const roomSnapshot = await getRoomSnapshot(roomRow.id)
+      const room = roomSnapshot
+        ? mapRoomSnapshotToDraftRoom(roomSnapshot)
+        : mapRoomRowToDraftRoom(roomRow)
+
+      setStorage((previous) => ({
+        ...previous,
+        rooms: {
+          ...previous.rooms,
+          [room.id]: mergeRoomSnapshot(
+            previous.rooms[room.id],
+            room,
+            previous.memberships[room.id],
+          ),
+        },
+      }))
+
+      setVisibleMonth(room.startDate)
+      setLandingMessage('')
+      navigate({ name: 'room', roomId: room.id })
+    } catch {
+      setLandingMessage('방 조회에 실패했어요. 네트워크 상태를 확인해 주세요.')
+    }
   }
 
-  const joinCurrentRoom = (nickname: string) => {
+  const joinCurrentRoom = async (nickname: string) => {
     if (!currentRoom || currentParticipant) {
       return
     }
 
-    const nextParticipant = createParticipant(currentRoom)
+    if (!isSupabaseConfigured) {
+      const nextParticipant = createParticipant(currentRoom)
 
-    nextParticipant.nickname = nickname
-    setRoomMessage(`${nickname} 님으로 방에 참여했어요.`)
+      nextParticipant.nickname = nickname
+      setRoomMessage(`${nickname} 님으로 방에 참여했어요.`)
 
-    setStorage((previous) => ({
-      rooms: {
-        ...previous.rooms,
-        [currentRoom.id]: {
-          ...currentRoom,
-          participants: [...currentRoom.participants, nextParticipant],
+      setStorage((previous) => ({
+        rooms: {
+          ...previous.rooms,
+          [currentRoom.id]: {
+            ...currentRoom,
+            participants: [...currentRoom.participants, nextParticipant],
+          },
         },
-      },
-      memberships: {
-        ...previous.memberships,
-        [currentRoom.id]: nextParticipant.id,
-      },
-    }))
+        memberships: {
+          ...previous.memberships,
+          [currentRoom.id]: nextParticipant.id,
+        },
+      }))
+      return
+    }
+
+    try {
+      const participantRow = await joinSupabaseRoom({
+        clientKey: getOrCreateClientKey(),
+        nickname,
+        roomId: currentRoom.id,
+      })
+
+      const nextParticipant = mapParticipantRow(participantRow)
+
+      setRoomMessage(`${nickname} 님으로 방에 참여했어요.`)
+      setStorage((previous) => ({
+        rooms: {
+          ...previous.rooms,
+          [currentRoom.id]: {
+            ...currentRoom,
+            participants: upsertParticipant(currentRoom.participants, nextParticipant),
+          },
+        },
+        memberships: {
+          ...previous.memberships,
+          [currentRoom.id]: nextParticipant.id,
+        },
+      }))
+    } catch {
+      setRoomMessage('방 참여에 실패했어요. 잠시 후 다시 시도해 주세요.')
+    }
   }
 
   const changeSelectionMode = (mode: DateMode) => {
@@ -303,5 +401,57 @@ function createParticipant(room: Room): Participant {
     selectionMode: 'available',
     weekdayRules: [],
     overrides: {},
+  }
+}
+
+function upsertParticipant(participants: Participant[], nextParticipant: Participant) {
+  const existing = participants.some(
+    (participant) => participant.id === nextParticipant.id,
+  )
+
+  if (!existing) {
+    return [...participants, nextParticipant]
+  }
+
+  return participants.map((participant) =>
+    participant.id === nextParticipant.id ? nextParticipant : participant,
+  )
+}
+
+function mergeRoomSnapshot(
+  previousRoom: Room | undefined,
+  nextRoom: Room,
+  localParticipantId: string | undefined,
+) {
+  if (!previousRoom || !localParticipantId) {
+    return nextRoom
+  }
+
+  const localParticipant = previousRoom.participants.find(
+    (participant) => participant.id === localParticipantId,
+  )
+
+  if (!localParticipant) {
+    return nextRoom
+  }
+
+  const mergedParticipants = nextRoom.participants.map((participant) =>
+    participant.id === localParticipant.id
+      ? {
+          ...participant,
+          selectionMode: localParticipant.selectionMode,
+          weekdayRules: localParticipant.weekdayRules,
+          overrides: localParticipant.overrides,
+        }
+      : participant,
+  )
+
+  return {
+    ...nextRoom,
+    participants: mergedParticipants.some(
+      (participant) => participant.id === localParticipant.id,
+    )
+      ? mergedParticipants
+      : upsertParticipant(mergedParticipants, localParticipant),
   }
 }

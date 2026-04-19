@@ -16,15 +16,51 @@ export function CreateRoomModal({ onCreateRoom }: CreateRoomModalProps) {
   const today = new Date().toISOString().slice(0, 10)
   const [startDate, setStartDate] = useState(today)
   const [endDate, setEndDate] = useState(today)
+  const participantCount = Number(maxParticipants)
 
   const resolvedRange = useMemo(
     () => resolveDateRange(dateRangeType, startDate, endDate),
     [dateRangeType, endDate, startDate],
   )
 
+  const participantValidationMessage = useMemo(() => {
+    if (!Number.isInteger(participantCount)) {
+      return '최대 인원은 숫자로 입력해 주세요.'
+    }
+
+    if (participantCount < 2 || participantCount > 10) {
+      return '최대 인원은 2명부터 10명까지 설정할 수 있습니다.'
+    }
+
+    return null
+  }, [participantCount])
+
+  const rangeValidationMessage = useMemo(() => {
+    if (dateRangeType !== 'custom') {
+      return null
+    }
+
+    if (!startDate || !endDate) {
+      return '직접 지정에서는 시작일과 종료일을 모두 입력해야 합니다.'
+    }
+
+    if (startDate > endDate) {
+      return '직접 지정 날짜 범위는 시작일이 종료일보다 늦을 수 없습니다.'
+    }
+
+    return null
+  }, [dateRangeType, endDate, startDate])
+
+  const validationMessage = participantValidationMessage ?? rangeValidationMessage
+  const canSubmit = validationMessage === null
+
   const submit = () => {
+    if (!canSubmit) {
+      return
+    }
+
     onCreateRoom({
-      maxParticipants: Number(maxParticipants),
+      maxParticipants: participantCount,
       dateRangeType,
       startDate: resolvedRange.startDate,
       endDate: resolvedRange.endDate,
@@ -81,7 +117,18 @@ export function CreateRoomModal({ onCreateRoom }: CreateRoomModalProps) {
           </div>
         )}
 
-        <Button block onClick={submit}>
+        {validationMessage ? (
+          <p className="modal-validation">{validationMessage}</p>
+        ) : (
+          <p className="range-preview">
+            <span>선택 범위</span>
+            <span>
+              {resolvedRange.startDate} ~ {resolvedRange.endDate}
+            </span>
+          </p>
+        )}
+
+        <Button block disabled={!canSubmit} onClick={submit}>
           방 생성하기
         </Button>
       </div>
