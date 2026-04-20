@@ -257,6 +257,11 @@ export function useAppState() {
       return false
     }
 
+    if (currentRoom.participants.length >= currentRoom.maxParticipants) {
+      setRoomMessage('이 방은 정원이 모두 찼어요.')
+      return false
+    }
+
     if (!isSupabaseConfigured) {
       const nextParticipant = createParticipant(currentRoom)
 
@@ -303,8 +308,13 @@ export function useAppState() {
         },
       }))
       return true
-    } catch {
-      setRoomMessage('방 참여에 실패했어요. 잠시 후 다시 시도해 주세요.')
+    } catch (error) {
+      const errorMessage = String(error)
+      setRoomMessage(
+        errorMessage.includes('ROOM_CAPACITY_REACHED')
+          ? '이 방은 정원이 모두 찼어요.'
+          : '방 참여에 실패했어요. 잠시 후 다시 시도해 주세요.',
+      )
       return false
     }
   }
