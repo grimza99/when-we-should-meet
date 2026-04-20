@@ -6,6 +6,7 @@ This directory holds the Supabase-side assets for the project.
 
 - `migrations/20260416000000_initial_schema.sql`: initial schema for rooms, participants, rules, date overrides, RLS policies, and room join/restore RPCs.
 - `migrations/20260419000000_add_room_snapshot_rpc.sql`: room snapshot RPC for hydrating room state from the client.
+- `migrations/20260420000000_add_availability_write_rpcs.sql`: participant-owned availability write RPCs.
 
 ## Environment variables
 
@@ -25,8 +26,9 @@ keys, database passwords, production dumps, or user data exports.
 - Participant join uses `join_room()`.
 - Participant restoration uses `restore_participant()`.
 - Room hydration uses `get_room_snapshot()`.
+- Participant-owned availability writes use `update_participant_availability()` and `set_participant_date_override()`.
+- Room synchronization uses Supabase Realtime Broadcast events followed by a room snapshot refresh.
 - Direct table access for participant-owned state is intentionally disabled.
-- Participant-owned write RPCs are tracked in PR #14 and should land before Realtime work starts.
 
 ## Current schema coverage
 
@@ -67,9 +69,9 @@ After applying migrations and setting `.env.local`:
 4. Copy the room URL, open it in a fresh browser profile, and confirm the room snapshot loads.
 5. Join with a second nickname and confirm color assignment remains unique.
 6. Refresh the first browser and confirm participant restoration still works.
+7. Select dates in one browser and confirm the other browser refreshes after the Realtime event.
 
 ## Follow-up work
 
-- Merge PR #14 before starting Supabase Realtime synchronization.
 - Decide whether room creation should stay as a direct client insert or move behind an RPC.
-- Add Realtime publication and client subscriptions for room-level sync.
+- Consider adding presence if online participant indicators become part of the MVP.
