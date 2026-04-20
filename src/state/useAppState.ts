@@ -20,6 +20,8 @@ import {
   mapRoomRowToDraftRoom,
   mapRoomSnapshotToDraftRoom,
   restoreParticipant,
+  setParticipantDateOverride,
+  updateParticipantAvailability,
 } from '../integrations/supabase/services/roomService'
 import type {
   AppStorage,
@@ -309,57 +311,121 @@ export function useAppState() {
     }
   }
 
-  const changeSelectionMode = (mode: DateMode) => {
+  const changeSelectionMode = async (mode: DateMode) => {
     if (!currentRoom || !currentParticipant) {
       return
     }
 
-    updateCurrentParticipant({
+    const previousParticipant = currentParticipant
+    const nextParticipant = {
       ...currentParticipant,
       selectionMode: mode,
-    })
+    }
+
+    updateCurrentParticipant(nextParticipant)
     setRoomMessage(
       mode === 'available'
         ? '가능한 날짜를 고르는 모드로 바뀌었어요.'
         : '불가능한 날짜를 고르는 모드로 바뀌었어요.',
     )
-  }
 
-  const toggleWeekday = (weekday: number) => {
-    if (!currentParticipant) {
+    if (!isSupabaseConfigured) {
       return
     }
 
+    try {
+      await updateParticipantAvailability({
+        clientKey: getOrCreateClientKey(),
+        participantId: nextParticipant.id,
+        roomId: currentRoom.id,
+        selectionMode: nextParticipant.selectionMode,
+        weekdayRules: nextParticipant.weekdayRules,
+      })
+    } catch {
+      updateCurrentParticipant(previousParticipant)
+      setRoomMessage('선택 방식을 저장하지 못했어요. 잠시 후 다시 시도해 주세요.')
+    }
+  }
+
+  const toggleWeekday = async (weekday: number) => {
+    if (!currentRoom || !currentParticipant) {
+      return
+    }
+
+    const previousParticipant = currentParticipant
     const weekdayRules = currentParticipant.weekdayRules.includes(weekday)
       ? currentParticipant.weekdayRules.filter((value) => value !== weekday)
       : [...currentParticipant.weekdayRules, weekday].sort((left, right) => left - right)
 
-    updateCurrentParticipant({
+    const nextParticipant = {
       ...currentParticipant,
       weekdayRules,
-    })
-    setRoomMessage(`${WEEKDAY_LABELS[weekday]}요일 규칙을 업데이트했어요.`)
-  }
+    }
 
-  const toggleDate = (isoDate: string) => {
-    if (!currentParticipant) {
+    updateCurrentParticipant(nextParticipant)
+    setRoomMessage(`${WEEKDAY_LABELS[weekday]}요일 규칙을 업데이트했어요.`)
+
+    if (!isSupabaseConfigured) {
       return
     }
 
-    const nextOverrides = { ...currentParticipant.overrides }
-    const currentOverride = nextOverrides[isoDate]
+    try {
+      await updateParticipantAvailability({
+        clientKey: getOrCreateClientKey(),
+        participantId: nextParticipant.id,
+        roomId: currentRoom.id,
+        selectionMode: nextParticipant.selectionMode,
+        weekdayRules: nextParticipant.weekdayRules,
+      })
+    } catch {
+      updateCurrentParticipant(previousParticipant)
+      setRoomMessage('요일 규칙을 저장하지 못했어요. 잠시 후 다시 시도해 주세요.')
+    }
+  }
 
-    if (currentOverride === currentParticipant.selectionMode) {
-      delete nextOverrides[isoDate]
-    } else {
-      nextOverrides[isoDate] = currentParticipant.selectionMode
+  const toggleDate = async (isoDate: string) => {
+    if (!currentRoom || !currentParticipant) {
+      return
     }
 
-    updateCurrentParticipant({
+    const previousParticipant = currentParticipant
+    const nextOverrides = { ...currentParticipant.overrides }
+    const currentOverride = nextOverrides[isoDate]
+    const nextStatus =
+      currentOverride === currentParticipant.selectionMode
+        ? null
+        : currentParticipant.selectionMode
+
+    if (nextStatus === null) {
+      delete nextOverrides[isoDate]
+    } else {
+      nextOverrides[isoDate] = nextStatus
+    }
+
+    const nextParticipant = {
       ...currentParticipant,
       overrides: nextOverrides,
-    })
+    }
+
+    updateCurrentParticipant(nextParticipant)
     setRoomMessage(`${isoDate} 날짜 선택을 반영했어요.`)
+
+    if (!isSupabaseConfigured) {
+      return
+    }
+
+    try {
+      await setParticipantDateOverride({
+        clientKey: getOrCreateClientKey(),
+        participantId: nextParticipant.id,
+        roomId: currentRoom.id,
+        status: nextStatus,
+        targetDate: isoDate,
+      })
+    } catch {
+      updateCurrentParticipant(previousParticipant)
+      setRoomMessage('날짜 선택을 저장하지 못했어요. 잠시 후 다시 시도해 주세요.')
+    }
   }
 
   const updateCurrentParticipant = (nextParticipant: Participant) => {

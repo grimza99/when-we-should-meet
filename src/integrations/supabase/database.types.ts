@@ -165,6 +165,26 @@ export type Database = {
         }
         Returns: Database['public']['Tables']['participants']['Row'][]
       }
+      set_participant_date_override: {
+        Args: {
+          input_client_key: string
+          input_participant_id: string
+          input_room_id: string
+          input_status: 'available' | 'unavailable' | null
+          input_target_date: string
+        }
+        Returns: Json
+      }
+      update_participant_availability: {
+        Args: {
+          input_client_key: string
+          input_participant_id: string
+          input_room_id: string
+          input_selection_mode: 'available' | 'unavailable'
+          input_weekday_rules: number[]
+        }
+        Returns: Json
+      }
     }
     Enums: Record<string, never>
     CompositeTypes: Record<string, never>
