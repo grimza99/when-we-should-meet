@@ -1,3 +1,5 @@
+import { useId } from 'react'
+
 type TextInputProps = {
   autoCapitalize?: 'none' | 'sentences' | 'words' | 'characters'
   autoCorrect?: 'off' | 'on'
@@ -29,17 +31,20 @@ export function TextInput({
   type = 'text',
   value,
 }: TextInputProps) {
+  const generatedId = useId()
+  const inputId = id ?? generatedId
+
   return (
     <div className="field">
       {label ? (
-        <label className="label" htmlFor={id}>
+        <label className="label" htmlFor={inputId}>
           {label}
         </label>
       ) : null}
       <input
         autoCapitalize={autoCapitalize}
         autoCorrect={autoCorrect}
-        id={id}
+        id={inputId}
         className="text-input"
         inputMode={inputMode}
         max={max}

@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useId, useState } from 'react'
 import { COLOR_PALETTE } from '../../lib/constants'
 import type { Participant, RankingItem, Room } from '../../types'
 import { Button } from '../ui/Button'
@@ -15,6 +15,7 @@ export function RoomDashboard({
   room,
 }: RoomDashboardProps) {
   const [isExpanded, setIsExpanded] = useState(false)
+  const dashboardContentId = useId()
   const participantCount = room.participants.length
   const hasRankings = rankings.some((ranking) => ranking.score > 0)
   const topRanking = hasRankings ? rankings[0] : undefined
@@ -36,12 +37,20 @@ export function RoomDashboard({
             {participantCount} / {room.maxParticipants}명 참여 중
           </p>
         </div>
-        <Button onClick={() => setIsExpanded((value) => !value)} variant="chip">
+        <Button
+          ariaControls={dashboardContentId}
+          ariaExpanded={isExpanded}
+          onClick={() => setIsExpanded((value) => !value)}
+          variant="chip"
+        >
           {isExpanded ? '접기' : '펼치기'}
         </Button>
       </div>
 
-      <div className={`dashboard-content${isExpanded ? ' is-expanded' : ''}`}>
+      <div
+        className={`dashboard-content${isExpanded ? ' is-expanded' : ''}`}
+        id={dashboardContentId}
+      >
         <div className="dashboard-content-inner">
           {hasRankings ? (
             <div className="ranking-list">
