@@ -1,3 +1,4 @@
+import { useMemo } from 'react'
 import { CalendarGrid } from '../components/calendar/CalendarGrid'
 import { NicknameModal } from '../components/room/NicknameModal'
 import { RoomDashboard } from '../components/room/RoomDashboard'
@@ -45,6 +46,16 @@ export function RoomPage({
   selectedMode,
   weekdayOptions,
 }: RoomPageProps) {
+  const rankByDate = useMemo(
+    () =>
+      Object.fromEntries(
+        roomSummary?.rankings
+          .filter((ranking) => ranking.score > 0)
+          .map((ranking) => [ranking.date, ranking.rank]) ?? [],
+      ),
+    [roomSummary?.rankings],
+  )
+
   if (isHydratingRoom) {
     return (
       <main className="page room-page">
@@ -138,7 +149,11 @@ export function RoomPage({
           </Button>
         </div>
 
-        <CalendarGrid days={roomSummary.calendarDays} onSelectDate={onSelectDate} />
+        <CalendarGrid
+          days={roomSummary.calendarDays}
+          rankByDate={rankByDate}
+          onSelectDate={onSelectDate}
+        />
       </section>
 
       {!currentParticipant && isRoomFull ? (

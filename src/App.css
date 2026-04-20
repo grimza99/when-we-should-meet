@@ -358,6 +358,11 @@
   align-items: center;
 }
 
+.calendar-day.is-ranked {
+  border-color: rgba(201, 128, 81, 0.34);
+  box-shadow: inset 0 0 0 1px rgba(201, 128, 81, 0.12);
+}
+
 .calendar-day:disabled {
   opacity: 0;
   pointer-events: none;
@@ -374,6 +379,31 @@
 
 .date-number {
   font-weight: 700;
+}
+
+.calendar-day-topline {
+  width: 100%;
+  min-height: 20px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 4px;
+}
+
+.rank-badge {
+  border-radius: 999px;
+  padding: 2px 5px;
+  background: var(--accent);
+  color: #fff;
+  font-size: 10px;
+  font-weight: 800;
+  line-height: 1;
+}
+
+.available-count {
+  color: var(--accent);
+  font-size: 11px;
+  font-weight: 800;
 }
 
 .dot-row {

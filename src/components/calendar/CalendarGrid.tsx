@@ -2,10 +2,11 @@ import type { CalendarDay } from '../../types'
 
 type CalendarGridProps = {
   days: CalendarDay[]
+  rankByDate: Record<string, number>
   onSelectDate: (isoDate: string) => void
 }
 
-export function CalendarGrid({ days, onSelectDate }: CalendarGridProps) {
+export function CalendarGrid({ days, onSelectDate, rankByDate }: CalendarGridProps) {
   return (
     <>
       <div className="calendar-weekdays">
@@ -15,34 +16,47 @@ export function CalendarGrid({ days, onSelectDate }: CalendarGridProps) {
       </div>
 
       <div className="calendar-grid">
-        {days.map((day) => (
-          <button
-            key={day.key}
-            className={[
-              'calendar-day',
-              !day.isCurrentMonth ? 'is-outside-month' : '',
-              day.isSelectedByCurrentUser ? 'is-highlighted' : '',
-            ]
-              .filter(Boolean)
-              .join(' ')}
-            disabled={!day.isoDate}
-            onClick={() => day.isoDate && onSelectDate(day.isoDate)}
-            type="button"
-          >
-            <span className="date-number">{day.dayNumber}</span>
-            {day.isoDate ? (
-              <span className="dot-row" aria-hidden="true">
-                {day.participantColors.slice(0, 3).map((color, index) => (
-                  <span
-                    key={`${day.isoDate}-${index}`}
-                    className="dot"
-                    style={{ background: color }}
-                  />
-                ))}
+        {days.map((day) => {
+          const rank = day.isoDate ? rankByDate[day.isoDate] : undefined
+
+          return (
+            <button
+              key={day.key}
+              className={[
+                'calendar-day',
+                !day.isCurrentMonth ? 'is-outside-month' : '',
+                day.isSelectedByCurrentUser ? 'is-highlighted' : '',
+                rank ? 'is-ranked' : '',
+              ]
+                .filter(Boolean)
+                .join(' ')}
+              disabled={!day.isoDate}
+              onClick={() => day.isoDate && onSelectDate(day.isoDate)}
+              type="button"
+            >
+              <span className="calendar-day-topline">
+                <span className="date-number">{day.dayNumber}</span>
+                {rank ? <span className="rank-badge">#{rank}</span> : null}
               </span>
-            ) : null}
-          </button>
-        ))}
+
+              {day.isoDate && day.availableCount > 0 ? (
+                <span className="available-count">{day.availableCount}명</span>
+              ) : null}
+
+              {day.isoDate ? (
+                <span className="dot-row" aria-hidden="true">
+                  {day.participantColors.slice(0, 3).map((color, index) => (
+                    <span
+                      key={`${day.isoDate}-${index}`}
+                      className="dot"
+                      style={{ background: color }}
+                    />
+                  ))}
+                </span>
+              ) : null}
+            </button>
+          )
+        })}
       </div>
     </>
   )
