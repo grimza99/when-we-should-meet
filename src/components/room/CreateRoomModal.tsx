@@ -7,12 +7,13 @@ import { TextInput } from '../ui/TextInput'
 import type { CreateRoomPayload, DateRangeType } from '../../types'
 
 type CreateRoomModalProps = {
-  onCreateRoom: (payload: CreateRoomPayload) => void
+  onCreateRoom: (payload: CreateRoomPayload) => Promise<boolean>
 }
 
 export function CreateRoomModal({ onCreateRoom }: CreateRoomModalProps) {
   const [maxParticipants, setMaxParticipants] = useState('6')
   const [dateRangeType, setDateRangeType] = useState<DateRangeType>('this_month')
+  const [isSubmitting, setIsSubmitting] = useState(false)
   const today = new Date().toISOString().slice(0, 10)
   const [startDate, setStartDate] = useState(today)
   const [endDate, setEndDate] = useState(today)
@@ -52,19 +53,25 @@ export function CreateRoomModal({ onCreateRoom }: CreateRoomModalProps) {
   }, [dateRangeType, endDate, startDate])
 
   const validationMessage = participantValidationMessage ?? rangeValidationMessage
-  const canSubmit = validationMessage === null
+  const canSubmit = validationMessage === null && !isSubmitting
 
-  const submit = () => {
+  const submit = async () => {
     if (!canSubmit) {
       return
     }
 
-    onCreateRoom({
-      maxParticipants: participantCount,
-      dateRangeType,
-      startDate: resolvedRange.startDate,
-      endDate: resolvedRange.endDate,
-    })
+    setIsSubmitting(true)
+
+    try {
+      await onCreateRoom({
+        maxParticipants: participantCount,
+        dateRangeType,
+        startDate: resolvedRange.startDate,
+        endDate: resolvedRange.endDate,
+      })
+    } finally {
+      setIsSubmitting(false)
+    }
   }
 
   return (
@@ -128,8 +135,8 @@ export function CreateRoomModal({ onCreateRoom }: CreateRoomModalProps) {
           </p>
         )}
 
-        <Button block disabled={!canSubmit} onClick={submit}>
-          방 생성하기
+        <Button block disabled={!canSubmit} onClick={() => void submit()}>
+          {isSubmitting ? '방 생성 중...' : '방 생성하기'}
         </Button>
       </div>
     </Modal>
