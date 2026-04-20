@@ -97,6 +97,46 @@ export async function getRoomSnapshot(roomId: string) {
   return (data as RoomSnapshot | null) ?? null
 }
 
+export async function updateParticipantAvailability(params: {
+  clientKey: string
+  participantId: string
+  roomId: string
+  selectionMode: Participant['selectionMode']
+  weekdayRules: number[]
+}) {
+  const { error } = await supabase.rpc('update_participant_availability', {
+    input_client_key: params.clientKey,
+    input_participant_id: params.participantId,
+    input_room_id: params.roomId,
+    input_selection_mode: params.selectionMode,
+    input_weekday_rules: params.weekdayRules,
+  })
+
+  if (error) {
+    throw error
+  }
+}
+
+export async function setParticipantDateOverride(params: {
+  clientKey: string
+  participantId: string
+  roomId: string
+  status: Participant['selectionMode'] | null
+  targetDate: string
+}) {
+  const { error } = await supabase.rpc('set_participant_date_override', {
+    input_client_key: params.clientKey,
+    input_participant_id: params.participantId,
+    input_room_id: params.roomId,
+    input_status: params.status,
+    input_target_date: params.targetDate,
+  })
+
+  if (error) {
+    throw error
+  }
+}
+
 export function mapRoomRowToDraftRoom(row: RoomRow) {
   return {
     id: row.id,
