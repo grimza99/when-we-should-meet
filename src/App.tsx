@@ -20,6 +20,7 @@ function App() {
         ) : (
           <RoomPage
             currentParticipant={appState.currentParticipant}
+            isHydratingRoom={appState.isHydratingRoom}
             modeOptions={appState.modeOptions}
             room={appState.currentRoom}
             roomSummary={appState.currentRoomSummary}
