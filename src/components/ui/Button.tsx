@@ -3,6 +3,8 @@ import type { ReactNode } from 'react'
 type ButtonVariant = 'primary' | 'secondary' | 'chip'
 
 type ButtonProps = {
+  ariaControls?: string
+  ariaExpanded?: boolean
   children: ReactNode
   onClick?: () => void
   type?: 'button' | 'submit'
@@ -12,6 +14,8 @@ type ButtonProps = {
 }
 
 export function Button({
+  ariaControls,
+  ariaExpanded,
   block = false,
   children,
   disabled = false,
@@ -31,7 +35,14 @@ export function Button({
     .join(' ')
 
   return (
-    <button className={className} disabled={disabled} onClick={onClick} type={type}>
+    <button
+      aria-controls={ariaControls}
+      aria-expanded={ariaExpanded}
+      className={className}
+      disabled={disabled}
+      onClick={onClick}
+      type={type}
+    >
       {children}
     </button>
   )

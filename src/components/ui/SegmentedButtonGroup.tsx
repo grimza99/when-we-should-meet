@@ -19,6 +19,7 @@ export function SegmentedButtonGroup<T extends string>({
       {options.map((option) => (
         <button
           key={option.value}
+          aria-pressed={selectedValue === option.value}
           className={`mode-button${selectedValue === option.value ? ' is-active' : ''}`}
           onClick={() => onChange(option.value)}
           type="button"
