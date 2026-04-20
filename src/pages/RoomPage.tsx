@@ -72,6 +72,9 @@ export function RoomPage({
     )
   }
 
+  const isRoomFull = room.participants.length >= room.maxParticipants
+  const shouldShowNicknameModal = !currentParticipant && !isRoomFull
+
   return (
     <main className="page room-page">
       <header className="room-header">
@@ -138,7 +141,21 @@ export function RoomPage({
         <CalendarGrid days={roomSummary.calendarDays} onSelectDate={onSelectDate} />
       </section>
 
-      {!currentParticipant ? <NicknameModal onJoinRoom={onJoinRoom} /> : null}
+      {!currentParticipant && isRoomFull ? (
+        <section className="panel stack-gap">
+          <p className="eyebrow">room is full</p>
+          <h2>이 방은 정원이 모두 찼어요</h2>
+          <p className="hero-copy">
+            방 만든 사람에게 정원 추가를 요청하거나, 새 방을 만들어 일정을 다시
+            조율해 주세요.
+          </p>
+          <Button block onClick={onBackToLanding} variant="secondary">
+            랜딩으로 돌아가기
+          </Button>
+        </section>
+      ) : null}
+
+      {shouldShowNicknameModal ? <NicknameModal onJoinRoom={onJoinRoom} /> : null}
     </main>
   )
 }
