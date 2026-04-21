@@ -1,0 +1,94 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    match /rooms/{roomId} {
+      allow read: if true;
+      allow create: if isValidRoomCreate();
+      allow update: if isValidRoomParticipantCountUpdate();
+
+      match /participants/{participantId} {
+        allow read: if true;
+        allow create: if isValidParticipant(participantId);
+        allow update: if isValidParticipant(participantId)
+          && request.resource.data.diff(resource.data).changedKeys().hasOnly([
+            'selectionMode',
+            'weekdayRules',
+            'overrides',
+            'updatedAt'
+          ]);
+      }
+    }
+
+    match /inviteCodes/{inviteCode} {
+      allow read: if true;
+      allow create: if isInviteCode(inviteCode)
+        && request.resource.data.keys().hasOnly(['roomId', 'createdAt'])
+        && request.resource.data.roomId is string
+        && request.resource.data.createdAt is string
+        && existsAfter(/databases/$(database)/documents/rooms/$(request.resource.data.roomId));
+    }
+
+    function isValidRoomCreate() {
+      return request.resource.data.keys().hasOnly([
+        'inviteCode',
+        'maxParticipants',
+        'participantCount',
+        'dateRangeType',
+        'startDate',
+        'endDate',
+        'createdAt',
+        'updatedAt'
+      ])
+      && isInviteCode(request.resource.data.inviteCode)
+      && request.resource.data.maxParticipants is int
+      && request.resource.data.maxParticipants >= 2
+      && request.resource.data.maxParticipants <= 10
+      && request.resource.data.participantCount == 0
+      && request.resource.data.dateRangeType in ['this_month', 'this_year', 'custom']
+      && request.resource.data.startDate is string
+      && request.resource.data.endDate is string
+      && request.resource.data.createdAt is string
+      && request.resource.data.updatedAt is string;
+    }
+
+    function isValidParticipant(participantId) {
+      return request.resource.data.keys().hasOnly([
+        'clientKey',
+        'nickname',
+        'colorIndex',
+        'selectionMode',
+        'weekdayRules',
+        'overrides',
+        'joinedAt',
+        'updatedAt'
+      ])
+      && request.resource.data.clientKey == participantId
+      && request.resource.data.nickname is string
+      && request.resource.data.nickname.size() > 0
+      && request.resource.data.nickname.size() <= 30
+      && request.resource.data.colorIndex is int
+      && request.resource.data.colorIndex >= 0
+      && request.resource.data.colorIndex < 10
+      && request.resource.data.selectionMode in ['available', 'unavailable']
+      && request.resource.data.weekdayRules is list
+      && request.resource.data.overrides is map
+      && request.resource.data.joinedAt is string
+      && request.resource.data.updatedAt is string;
+    }
+
+    function isValidRoomParticipantCountUpdate() {
+      return request.resource.data.diff(resource.data).changedKeys().hasOnly([
+        'participantCount',
+        'updatedAt'
+      ])
+      && request.resource.data.participantCount == resource.data.participantCount + 1
+      && request.resource.data.participantCount <= resource.data.maxParticipants
+      && request.resource.data.updatedAt is string;
+    }
+
+    function isInviteCode(inviteCode) {
+      return inviteCode is string && inviteCode.matches('^[A-Z0-9]{6}$');
+    }
+  }
+}

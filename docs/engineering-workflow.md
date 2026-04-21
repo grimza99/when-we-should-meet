@@ -19,7 +19,7 @@ This document defines the working rules for the `when-should-we-meet` project.
   - MVP scope discipline
   - mobile-only UX consistency
   - state model clarity
-  - Supabase / SQL / RLS safety
+  - Firebase / Firestore rules safety
 
 ## PR expectations
 - Explain what changed and why.
@@ -33,8 +33,8 @@ This document defines the working rules for the `when-should-we-meet` project.
 - local state vs server state boundaries remain clear
 - common UI is reused rather than duplicated
 - mobile-width-only layout is preserved
-- SQL and RLS changes do not accidentally widen access
+- Firestore rules changes do not accidentally widen access
 
 ## Notes
-- SQL migrations are expected to be committed to Git when they define schema, policies, indexes, or functions.
+- Firestore rules are expected to be committed to Git when they define access policy.
 - Secrets, production data dumps, and sensitive environment values must not be committed.
