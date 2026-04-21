@@ -28,8 +28,8 @@ keys, database passwords, production dumps, or user data exports.
 - Room hydration uses `get_room_snapshot()`.
 - Participant availability writes use `update_participant_availability()`.
 - Participant date override writes use `set_participant_date_override()`.
+- Room synchronization uses Supabase Realtime Broadcast events followed by a room snapshot refresh.
 - Direct table access for participant-owned state is intentionally disabled.
-- Participant-owned write RPCs landed in PR #14, so Realtime work should observe and reconcile against these persisted writes.
 
 ## Current schema coverage
 
@@ -84,9 +84,9 @@ After applying migrations and setting `.env.local`:
 6. Refresh the first browser and confirm participant restoration still works.
 7. Toggle selection mode, weekday rules, and an explicit date override.
 8. Refresh the room and confirm those availability choices are restored from Supabase.
+9. Select dates in one browser and confirm the other browser refreshes after the Realtime event.
 
 ## Follow-up work
 
-- Start Supabase Realtime synchronization from the persisted availability write path introduced in PR #14.
 - Decide whether room creation should stay as a direct client insert or move behind an RPC.
-- Add Realtime publication and client subscriptions for room-level sync.
+- Consider adding presence if online participant indicators become part of the MVP.

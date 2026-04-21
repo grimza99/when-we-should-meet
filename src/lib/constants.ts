@@ -1,5 +1,6 @@
 import type { AppStorage, DateMode } from '../types'
 
+
 export const COLOR_PALETTE = [
   '#ee6c4d',
   '#2a9d8f',
