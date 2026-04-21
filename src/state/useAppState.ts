@@ -49,6 +49,7 @@ export function useAppState() {
   const [visibleMonth, setVisibleMonth] = useState('')
   const [isHydratingRoom, setIsHydratingRoom] = useState(false)
   const roomRealtimeChannelRef = useRef<RealtimeChannel | null>(null)
+  const isRoomRealtimeSubscribedRef = useRef(false)
 
   const currentRoom =
     route.name === 'room' ? storage.rooms[route.roomId] : undefined
@@ -164,6 +165,7 @@ export function useAppState() {
   useEffect(() => {
     if (!isSupabaseConfigured || !routeRoomId) {
       roomRealtimeChannelRef.current = null
+      isRoomRealtimeSubscribedRef.current = false
       return
     }
 
@@ -208,6 +210,8 @@ export function useAppState() {
       roomId: routeRoomId,
       onChange: refreshRoomSnapshot,
       onStatusChange: (status) => {
+        isRoomRealtimeSubscribedRef.current = status === 'SUBSCRIBED'
+
         if (status === 'CHANNEL_ERROR') {
           setRoomMessage('실시간 연결에 문제가 있어요. 새로고침하면 최신 상태를 볼 수 있어요.')
         }
@@ -225,6 +229,7 @@ export function useAppState() {
 
       if (roomRealtimeChannelRef.current === channel) {
         roomRealtimeChannelRef.current = null
+        isRoomRealtimeSubscribedRef.current = false
       }
 
       void unsubscribeFromRoomChanges(channel)
@@ -590,7 +595,11 @@ export function useAppState() {
   const notifyRoomChanged = async (
     reason: 'participant_joined' | 'availability_changed',
   ) => {
-    if (!currentRoom || !roomRealtimeChannelRef.current) {
+    if (
+      !currentRoom ||
+      !roomRealtimeChannelRef.current ||
+      !isRoomRealtimeSubscribedRef.current
+    ) {
       return
     }
 
