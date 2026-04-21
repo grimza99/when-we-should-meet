@@ -1,16 +1,21 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
-import { useLocalStorageState } from '../hooks/useLocalStorageState'
+import { useEffect, useMemo, useRef, useState } from "react";
+import { useLocalStorageState } from "../hooks/useLocalStorageState";
 import {
   addMonths,
   buildCalendarDays,
   buildRankings,
   clampVisibleMonth,
   formatMonthLabel,
-} from '../lib/date'
-import { COLOR_PALETTE, DEFAULT_STORAGE, MODE_LABELS, WEEKDAY_LABELS } from '../lib/constants'
-import { useRouteState } from '../lib/router'
-import { getOrCreateClientKey } from '../lib/session/clientIdentity'
-import { isFirebaseConfigured } from '../integrations/firebase/client'
+} from "../lib/date";
+import {
+  COLOR_PALETTE,
+  DEFAULT_STORAGE,
+  MODE_LABELS,
+  WEEKDAY_LABELS,
+} from "../lib/constants";
+import { useRouteState } from "../lib/router";
+import { getOrCreateClientKey } from "../lib/session/clientIdentity";
+import { isFirebaseConfigured } from "../integrations/firebase/client";
 import {
   createRoom as createFirebaseRoom,
   getRoomByInviteCode,
@@ -25,45 +30,45 @@ import {
   unsubscribeFromRoomChanges,
   updateParticipantAvailability,
   type RoomChangeSubscription,
-} from '../integrations/firebase/services/roomService'
+} from "../integrations/firebase/services/roomService";
 import type {
   AppStorage,
   CreateRoomPayload,
   DateMode,
   Participant,
   Room,
-} from '../types'
+} from "../types";
 
-const STORAGE_KEY = 'when-should-we-meet-storage'
+const STORAGE_KEY = "when-should-we-meet-storage";
 
 export function useAppState() {
-  const { navigate, route } = useRouteState()
+  const { navigate, route } = useRouteState();
   const [storage, setStorage] = useLocalStorageState<AppStorage>(
     STORAGE_KEY,
-    DEFAULT_STORAGE,
-  )
-  const [joinInviteCode, setJoinInviteCode] = useState('')
-  const [landingMessage, setLandingMessage] = useState('')
-  const [roomMessage, setRoomMessage] = useState('')
-  const [visibleMonth, setVisibleMonth] = useState('')
-  const [isHydratingRoom, setIsHydratingRoom] = useState(false)
-  const roomChangeSubscriptionRef = useRef<RoomChangeSubscription | null>(null)
+    DEFAULT_STORAGE
+  );
+  const [joinInviteCode, setJoinInviteCode] = useState("");
+  const [landingMessage, setLandingMessage] = useState("");
+  const [roomMessage, setRoomMessage] = useState("");
+  const [visibleMonth, setVisibleMonth] = useState("");
+  const [isHydratingRoom, setIsHydratingRoom] = useState(false);
+  const roomChangeSubscriptionRef = useRef<RoomChangeSubscription | null>(null);
 
   const currentRoom =
-    route.name === 'room' ? storage.rooms[route.roomId] : undefined
+    route.name === "room" ? storage.rooms[route.roomId] : undefined;
   const currentParticipantId =
-    route.name === 'room' ? storage.memberships[route.roomId] : undefined
+    route.name === "room" ? storage.memberships[route.roomId] : undefined;
   const currentParticipant = currentRoom?.participants.find(
-    (participant) => participant.id === currentParticipantId,
-  )
-  const routeRoomId = route.name === 'room' ? route.roomId : undefined
+    (participant) => participant.id === currentParticipantId
+  );
+  const routeRoomId = route.name === "room" ? route.roomId : undefined;
   const effectiveVisibleMonth = currentRoom
     ? clampVisibleMonth(currentRoom, visibleMonth || currentRoom.startDate)
-    : ''
+    : "";
 
   const currentRoomSummary = useMemo(() => {
     if (!currentRoom) {
-      return undefined
+      return undefined;
     }
 
     return {
@@ -72,51 +77,54 @@ export function useAppState() {
       calendarDays: buildCalendarDays(
         currentRoom,
         currentParticipant?.id,
-        effectiveVisibleMonth,
+        effectiveVisibleMonth
       ),
-    }
-  }, [currentParticipant?.id, currentRoom, effectiveVisibleMonth])
+    };
+  }, [currentParticipant?.id, currentRoom, effectiveVisibleMonth]);
 
   useEffect(() => {
     if (!isFirebaseConfigured || !routeRoomId) {
-      setIsHydratingRoom(false)
-      return
+      setIsHydratingRoom(false);
+      return;
     }
 
     const needsRoomSnapshot =
-      !currentRoom || (currentParticipantId !== undefined && !currentParticipant)
+      !currentRoom ||
+      (currentParticipantId !== undefined && !currentParticipant);
 
     if (!needsRoomSnapshot) {
-      setIsHydratingRoom(false)
-      return
+      setIsHydratingRoom(false);
+      return;
     }
 
-    let isCancelled = false
-    setIsHydratingRoom(true)
+    let isCancelled = false;
+    setIsHydratingRoom(true);
 
     const hydrateRoom = async () => {
       try {
-        const roomSnapshot = await getRoomSnapshot(routeRoomId)
+        const roomSnapshot = await getRoomSnapshot(routeRoomId);
 
         if (!roomSnapshot) {
           if (!isCancelled) {
-            setRoomMessage('존재하지 않는 방이거나 이미 접근할 수 없는 방입니다.')
+            setRoomMessage(
+              "존재하지 않는 방이거나 이미 접근할 수 없는 방입니다."
+            );
           }
-          return
+          return;
         }
 
-        const room = mapRoomSnapshotToDraftRoom(roomSnapshot)
+        const room = mapRoomSnapshotToDraftRoom(roomSnapshot);
         const restoredParticipant = await restoreParticipant({
           clientKey: getOrCreateClientKey(),
           roomId: routeRoomId,
-        })
+        });
 
         if (isCancelled) {
-          return
+          return;
         }
 
         const restoredParticipantId =
-          restoredParticipant?.id ?? storage.memberships[routeRoomId]
+          restoredParticipant?.id ?? storage.memberships[routeRoomId];
 
         setStorage((previous) => ({
           ...previous,
@@ -125,7 +133,7 @@ export function useAppState() {
             [room.id]: mergeRoomSnapshot(
               previous.rooms[room.id],
               room,
-              restoredParticipantId,
+              restoredParticipantId
             ),
           },
           memberships: restoredParticipantId
@@ -134,23 +142,25 @@ export function useAppState() {
                 [room.id]: restoredParticipantId,
               }
             : previous.memberships,
-        }))
+        }));
       } catch {
         if (!isCancelled) {
-          setRoomMessage('방 정보를 불러오지 못했어요. 잠시 후 다시 시도해 주세요.')
+          setRoomMessage(
+            "방 정보를 불러오지 못했어요. 잠시 후 다시 시도해 주세요."
+          );
         }
       } finally {
         if (!isCancelled) {
-          setIsHydratingRoom(false)
+          setIsHydratingRoom(false);
         }
       }
-    }
+    };
 
-    void hydrateRoom()
+    void hydrateRoom();
 
     return () => {
-      isCancelled = true
-    }
+      isCancelled = true;
+    };
   }, [
     currentParticipant,
     currentParticipantId,
@@ -158,32 +168,32 @@ export function useAppState() {
     routeRoomId,
     setStorage,
     storage.memberships,
-  ])
+  ]);
 
   useEffect(() => {
     if (!isFirebaseConfigured || !routeRoomId) {
-      roomChangeSubscriptionRef.current = null
-      return
+      roomChangeSubscriptionRef.current = null;
+      return;
     }
 
-    let isCancelled = false
-    let refreshTimer: number | undefined
+    let isCancelled = false;
+    let refreshTimer: number | undefined;
 
     const refreshRoomSnapshot = () => {
       if (refreshTimer) {
-        window.clearTimeout(refreshTimer)
+        window.clearTimeout(refreshTimer);
       }
 
       refreshTimer = window.setTimeout(() => {
         const refresh = async () => {
           try {
-            const roomSnapshot = await getRoomSnapshot(routeRoomId)
+            const roomSnapshot = await getRoomSnapshot(routeRoomId);
 
             if (!roomSnapshot || isCancelled) {
-              return
+              return;
             }
 
-            const room = mapRoomSnapshotToDraftRoom(roomSnapshot)
+            const room = mapRoomSnapshotToDraftRoom(roomSnapshot);
 
             setStorage((previous) => ({
               ...previous,
@@ -191,48 +201,50 @@ export function useAppState() {
                 ...previous.rooms,
                 [room.id]: room,
               },
-            }))
+            }));
           } catch {
             if (!isCancelled) {
-              setRoomMessage('최신 방 정보를 동기화하지 못했어요.')
+              setRoomMessage("최신 방 정보를 동기화하지 못했어요.");
             }
           }
-        }
+        };
 
-        void refresh()
-      }, 120)
-    }
+        void refresh();
+      }, 120);
+    };
 
     const subscription = subscribeToRoomChanges({
       roomId: routeRoomId,
       onChange: refreshRoomSnapshot,
       onStatusChange: (status) => {
-        if (status === 'SNAPSHOT_ERROR') {
-          setRoomMessage('실시간 연결에 문제가 있어요. 새로고침하면 최신 상태를 볼 수 있어요.')
+        if (status === "SNAPSHOT_ERROR") {
+          setRoomMessage(
+            "실시간 연결에 문제가 있어요. 새로고침하면 최신 상태를 볼 수 있어요."
+          );
         }
       },
-    })
+    });
 
-    roomChangeSubscriptionRef.current = subscription
+    roomChangeSubscriptionRef.current = subscription;
 
     return () => {
-      isCancelled = true
+      isCancelled = true;
 
       if (refreshTimer) {
-        window.clearTimeout(refreshTimer)
+        window.clearTimeout(refreshTimer);
       }
 
       if (roomChangeSubscriptionRef.current === subscription) {
-        roomChangeSubscriptionRef.current = null
+        roomChangeSubscriptionRef.current = null;
       }
 
-      void unsubscribeFromRoomChanges(subscription)
-    }
-  }, [routeRoomId, setStorage])
+      void unsubscribeFromRoomChanges(subscription);
+    };
+  }, [routeRoomId, setStorage]);
 
   const createRoom = async (payload: CreateRoomPayload) => {
     if (!isFirebaseConfigured) {
-      const room = createRoomRecord(payload)
+      const room = createRoomRecord(payload);
 
       setStorage((previous) => ({
         ...previous,
@@ -240,17 +252,17 @@ export function useAppState() {
           ...previous.rooms,
           [room.id]: room,
         },
-      }))
+      }));
 
-      setVisibleMonth(room.startDate)
-      setLandingMessage('')
-      navigate({ name: 'room', roomId: room.id })
-      return true
+      setVisibleMonth(room.startDate);
+      setLandingMessage("");
+      navigate({ name: "room", roomId: room.id });
+      return true;
     }
 
     try {
-      const roomRow = await createFirebaseRoom(payload)
-      const room = mapRoomRowToDraftRoom(roomRow)
+      const roomRow = await createFirebaseRoom(payload);
+      const room = mapRoomRowToDraftRoom(roomRow);
 
       setStorage((previous) => ({
         ...previous,
@@ -258,53 +270,57 @@ export function useAppState() {
           ...previous.rooms,
           [room.id]: room,
         },
-      }))
+      }));
 
-      setVisibleMonth(room.startDate)
-      setLandingMessage('')
-      navigate({ name: 'room', roomId: room.id })
-      return true
+      setVisibleMonth(room.startDate);
+      setLandingMessage("");
+      navigate({ name: "room", roomId: room.id });
+      return true;
     } catch {
-      setLandingMessage('방 생성에 실패했어요. 잠시 후 다시 시도해 주세요.')
-      return false
+      setLandingMessage("방 생성에 실패했어요. 잠시 후 다시 시도해 주세요.");
+      return false;
     }
-  }
+  };
 
   const joinRoomByInviteCode = async () => {
-    const inviteCode = joinInviteCode.trim().toUpperCase()
+    const inviteCode = joinInviteCode.trim().toUpperCase();
     if (!inviteCode) {
-      setLandingMessage('초대 코드를 입력해 주세요.')
-      return false
+      setLandingMessage("초대 코드를 입력해 주세요.");
+      return false;
     }
 
     if (!isFirebaseConfigured) {
       const room = Object.values(storage.rooms).find(
-        (candidate) => candidate.inviteCode === inviteCode,
-      )
+        (candidate) => candidate.inviteCode === inviteCode
+      );
 
       if (!room) {
-        setLandingMessage('일치하는 방을 찾지 못했어요. 코드를 다시 확인해 주세요.')
-        return false
+        setLandingMessage(
+          "일치하는 방을 찾지 못했어요. 코드를 다시 확인해 주세요."
+        );
+        return false;
       }
 
-      setVisibleMonth(room.startDate)
-      setLandingMessage('')
-      navigate({ name: 'room', roomId: room.id })
-      return true
+      setVisibleMonth(room.startDate);
+      setLandingMessage("");
+      navigate({ name: "room", roomId: room.id });
+      return true;
     }
 
     try {
-      const roomRow = await getRoomByInviteCode(inviteCode)
+      const roomRow = await getRoomByInviteCode(inviteCode);
 
       if (!roomRow) {
-        setLandingMessage('일치하는 방을 찾지 못했어요. 코드를 다시 확인해 주세요.')
-        return false
+        setLandingMessage(
+          "일치하는 방을 찾지 못했어요. 코드를 다시 확인해 주세요."
+        );
+        return false;
       }
 
-      const roomSnapshot = await getRoomSnapshot(roomRow.id)
+      const roomSnapshot = await getRoomSnapshot(roomRow.id);
       const room = roomSnapshot
         ? mapRoomSnapshotToDraftRoom(roomSnapshot)
-        : mapRoomRowToDraftRoom(roomRow)
+        : mapRoomRowToDraftRoom(roomRow);
 
       setStorage((previous) => ({
         ...previous,
@@ -313,36 +329,36 @@ export function useAppState() {
           [room.id]: mergeRoomSnapshot(
             previous.rooms[room.id],
             room,
-            previous.memberships[room.id],
+            previous.memberships[room.id]
           ),
         },
-      }))
+      }));
 
-      setVisibleMonth(room.startDate)
-      setLandingMessage('')
-      navigate({ name: 'room', roomId: room.id })
-      return true
+      setVisibleMonth(room.startDate);
+      setLandingMessage("");
+      navigate({ name: "room", roomId: room.id });
+      return true;
     } catch {
-      setLandingMessage('방 조회에 실패했어요. 네트워크 상태를 확인해 주세요.')
-      return false
+      setLandingMessage("방 조회에 실패했어요. 네트워크 상태를 확인해 주세요.");
+      return false;
     }
-  }
+  };
 
   const joinCurrentRoom = async (nickname: string) => {
     if (!currentRoom || currentParticipant) {
-      return false
+      return false;
     }
 
     if (currentRoom.participants.length >= currentRoom.maxParticipants) {
-      setRoomMessage('이 방은 정원이 모두 찼어요.')
-      return false
+      setRoomMessage("이 방은 정원이 모두 찼어요.");
+      return false;
     }
 
     if (!isFirebaseConfigured) {
-      const nextParticipant = createParticipant(currentRoom)
+      const nextParticipant = createParticipant(currentRoom);
 
-      nextParticipant.nickname = nickname
-      setRoomMessage(`${nickname} 님으로 방에 참여했어요.`)
+      nextParticipant.nickname = nickname;
+      setRoomMessage(`${nickname} 님으로 방에 참여했어요.`);
 
       setStorage((previous) => ({
         rooms: {
@@ -356,8 +372,8 @@ export function useAppState() {
           ...previous.memberships,
           [currentRoom.id]: nextParticipant.id,
         },
-      }))
-      return true
+      }));
+      return true;
     }
 
     try {
@@ -365,56 +381,59 @@ export function useAppState() {
         clientKey: getOrCreateClientKey(),
         nickname,
         roomId: currentRoom.id,
-      })
+      });
 
-      const nextParticipant = mapParticipantRow(participantRow)
+      const nextParticipant = mapParticipantRow(participantRow);
 
-      setRoomMessage(`${nickname} 님으로 방에 참여했어요.`)
+      setRoomMessage(`${nickname} 님으로 방에 참여했어요.`);
       setStorage((previous) => ({
         rooms: {
           ...previous.rooms,
           [currentRoom.id]: {
             ...currentRoom,
-            participants: upsertParticipant(currentRoom.participants, nextParticipant),
+            participants: upsertParticipant(
+              currentRoom.participants,
+              nextParticipant
+            ),
           },
         },
         memberships: {
           ...previous.memberships,
           [currentRoom.id]: nextParticipant.id,
         },
-      }))
-      return true
+      }));
+      return true;
     } catch (error) {
-      const errorMessage = String(error)
+      const errorMessage = String(error);
       setRoomMessage(
-        errorMessage.includes('ROOM_CAPACITY_REACHED')
-          ? '이 방은 정원이 모두 찼어요.'
-          : '방 참여에 실패했어요. 잠시 후 다시 시도해 주세요.',
-      )
-      return false
+        errorMessage.includes("ROOM_CAPACITY_REACHED")
+          ? "이 방은 정원이 모두 찼어요."
+          : "방 참여에 실패했어요. 잠시 후 다시 시도해 주세요."
+      );
+      return false;
     }
-  }
+  };
 
   const changeSelectionMode = async (mode: DateMode) => {
     if (!currentRoom || !currentParticipant) {
-      return
+      return;
     }
 
-    const previousParticipant = currentParticipant
+    const previousParticipant = currentParticipant;
     const nextParticipant = {
       ...currentParticipant,
       selectionMode: mode,
-    }
+    };
 
-    updateCurrentParticipant(nextParticipant)
+    updateCurrentParticipant(nextParticipant);
     setRoomMessage(
-      mode === 'available'
-        ? '가능한 날짜를 고르는 모드로 바뀌었어요.'
-        : '불가능한 날짜를 고르는 모드로 바뀌었어요.',
-    )
+      mode === "available"
+        ? "가능한 날짜를 고르는 모드로 바뀌었어요."
+        : "불가능한 날짜를 고르는 모드로 바뀌었어요."
+    );
 
     if (!isFirebaseConfigured) {
-      return
+      return;
     }
 
     try {
@@ -424,33 +443,37 @@ export function useAppState() {
         roomId: currentRoom.id,
         selectionMode: nextParticipant.selectionMode,
         weekdayRules: nextParticipant.weekdayRules,
-      })
+      });
     } catch {
-      updateCurrentParticipant(previousParticipant)
-      setRoomMessage('선택 방식을 저장하지 못했어요. 잠시 후 다시 시도해 주세요.')
+      updateCurrentParticipant(previousParticipant);
+      setRoomMessage(
+        "선택 방식을 저장하지 못했어요. 잠시 후 다시 시도해 주세요."
+      );
     }
-  }
+  };
 
   const toggleWeekday = async (weekday: number) => {
     if (!currentRoom || !currentParticipant) {
-      return
+      return;
     }
 
-    const previousParticipant = currentParticipant
+    const previousParticipant = currentParticipant;
     const weekdayRules = currentParticipant.weekdayRules.includes(weekday)
       ? currentParticipant.weekdayRules.filter((value) => value !== weekday)
-      : [...currentParticipant.weekdayRules, weekday].sort((left, right) => left - right)
+      : [...currentParticipant.weekdayRules, weekday].sort(
+          (left, right) => left - right
+        );
 
     const nextParticipant = {
       ...currentParticipant,
       weekdayRules,
-    }
+    };
 
-    updateCurrentParticipant(nextParticipant)
-    setRoomMessage(`${WEEKDAY_LABELS[weekday]}요일 규칙을 업데이트했어요.`)
+    updateCurrentParticipant(nextParticipant);
+    setRoomMessage(`${WEEKDAY_LABELS[weekday]}요일 규칙을 업데이트했어요.`);
 
     if (!isFirebaseConfigured) {
-      return
+      return;
     }
 
     try {
@@ -460,42 +483,44 @@ export function useAppState() {
         roomId: currentRoom.id,
         selectionMode: nextParticipant.selectionMode,
         weekdayRules: nextParticipant.weekdayRules,
-      })
+      });
     } catch {
-      updateCurrentParticipant(previousParticipant)
-      setRoomMessage('요일 규칙을 저장하지 못했어요. 잠시 후 다시 시도해 주세요.')
+      updateCurrentParticipant(previousParticipant);
+      setRoomMessage(
+        "요일 규칙을 저장하지 못했어요. 잠시 후 다시 시도해 주세요."
+      );
     }
-  }
+  };
 
   const toggleDate = async (isoDate: string) => {
     if (!currentRoom || !currentParticipant) {
-      return
+      return;
     }
 
-    const previousParticipant = currentParticipant
-    const nextOverrides = { ...currentParticipant.overrides }
-    const currentOverride = nextOverrides[isoDate]
+    const previousParticipant = currentParticipant;
+    const nextOverrides = { ...currentParticipant.overrides };
+    const currentOverride = nextOverrides[isoDate];
     const nextStatus =
       currentOverride === currentParticipant.selectionMode
         ? null
-        : currentParticipant.selectionMode
+        : currentParticipant.selectionMode;
 
     if (nextStatus === null) {
-      delete nextOverrides[isoDate]
+      delete nextOverrides[isoDate];
     } else {
-      nextOverrides[isoDate] = nextStatus
+      nextOverrides[isoDate] = nextStatus;
     }
 
     const nextParticipant = {
       ...currentParticipant,
       overrides: nextOverrides,
-    }
+    };
 
-    updateCurrentParticipant(nextParticipant)
-    setRoomMessage(`${isoDate} 날짜 선택을 반영했어요.`)
+    updateCurrentParticipant(nextParticipant);
+    setRoomMessage(`${isoDate} 날짜 선택을 반영했어요.`);
 
     if (!isFirebaseConfigured) {
-      return
+      return;
     }
 
     try {
@@ -505,16 +530,18 @@ export function useAppState() {
         roomId: currentRoom.id,
         status: nextStatus,
         targetDate: isoDate,
-      })
+      });
     } catch {
-      updateCurrentParticipant(previousParticipant)
-      setRoomMessage('날짜 선택을 저장하지 못했어요. 잠시 후 다시 시도해 주세요.')
+      updateCurrentParticipant(previousParticipant);
+      setRoomMessage(
+        "날짜 선택을 저장하지 못했어요. 잠시 후 다시 시도해 주세요."
+      );
     }
-  }
+  };
 
   const updateCurrentParticipant = (nextParticipant: Participant) => {
     if (!currentRoom) {
-      return
+      return;
     }
 
     setStorage((previous) => ({
@@ -524,63 +551,65 @@ export function useAppState() {
         [currentRoom.id]: {
           ...currentRoom,
           participants: currentRoom.participants.map((participant) =>
-            participant.id === nextParticipant.id ? nextParticipant : participant,
+            participant.id === nextParticipant.id
+              ? nextParticipant
+              : participant
           ),
         },
       },
-    }))
-  }
+    }));
+  };
 
   const moveVisibleMonth = (offset: number) => {
     if (!currentRoom) {
-      return
+      return;
     }
 
     setVisibleMonth((previous) =>
       clampVisibleMonth(
         currentRoom,
-        addMonths(previous || currentRoom.startDate, offset),
-      ),
-    )
-  }
+        addMonths(previous || currentRoom.startDate, offset)
+      )
+    );
+  };
 
   const copyInviteCode = async () => {
     if (!currentRoom) {
-      return
+      return;
     }
 
     try {
-      await navigator.clipboard.writeText(currentRoom.inviteCode)
-      setRoomMessage('초대 코드가 복사되었어요.')
+      await navigator.clipboard.writeText(currentRoom.inviteCode);
+      setRoomMessage("초대 코드가 복사되었어요.");
     } catch {
-      setRoomMessage('복사에 실패했어요. 브라우저 권한을 확인해 주세요.')
+      setRoomMessage("복사에 실패했어요. 브라우저 권한을 확인해 주세요.");
     }
-  }
+  };
 
   const shareRoom = async () => {
     if (!currentRoom) {
-      return
+      return;
     }
 
     const shareData = {
-      title: 'when should we meet?',
+      title: "when should we meet?",
       text: `초대 코드 ${currentRoom.inviteCode}로 방에 참여해 주세요.`,
       url: window.location.href,
-    }
+    };
 
     try {
       if (navigator.share) {
-        await navigator.share(shareData)
-        setRoomMessage('공유 시트를 열었어요.')
-        return
+        await navigator.share(shareData);
+        setRoomMessage("공유 시트를 열었어요.");
+        return;
       }
 
-      await navigator.clipboard.writeText(shareData.url)
-      setRoomMessage('공유 링크를 복사했어요.')
+      await navigator.clipboard.writeText(shareData.url);
+      setRoomMessage("공유 링크를 복사했어요.");
     } catch {
-      setRoomMessage('공유를 완료하지 못했어요.')
+      setRoomMessage("공유를 완료하지 못했어요.");
     }
-  }
+  };
 
   return {
     changeSelectionMode,
@@ -590,7 +619,7 @@ export function useAppState() {
     currentRoom,
     currentRoomSummary,
     currentRoute: route,
-    goToLanding: () => navigate({ name: 'landing' }),
+    goToLanding: () => navigate({ name: "landing" }),
     isHydratingRoom,
     joinCurrentRoom,
     joinInviteCode,
@@ -602,7 +631,7 @@ export function useAppState() {
     })),
     moveVisibleMonth,
     roomMessage,
-    selectedMode: currentParticipant?.selectionMode ?? 'available',
+    selectedMode: currentParticipant?.selectionMode ?? "available",
     setJoinInviteCode,
     shareRoom,
     toggleDate,
@@ -612,11 +641,11 @@ export function useAppState() {
       value,
       selected: currentParticipant?.weekdayRules.includes(value) ?? false,
     })),
-  }
+  };
 }
 
 function createRoomRecord(payload: CreateRoomPayload): Room {
-  const id = crypto.randomUUID()
+  const id = crypto.randomUUID();
 
   return {
     id,
@@ -627,55 +656,60 @@ function createRoomRecord(payload: CreateRoomPayload): Room {
     endDate: payload.endDate,
     createdAt: new Date().toISOString(),
     participants: [],
-  }
+  };
 }
 
 function createParticipant(room: Room): Participant {
-  const usedColorIndexes = new Set(room.participants.map((participant) => participant.colorIndex))
+  const usedColorIndexes = new Set(
+    room.participants.map((participant) => participant.colorIndex)
+  );
   const colorIndex =
     COLOR_PALETTE.findIndex((_, index) => !usedColorIndexes.has(index)) === -1
       ? 0
-      : COLOR_PALETTE.findIndex((_, index) => !usedColorIndexes.has(index))
+      : COLOR_PALETTE.findIndex((_, index) => !usedColorIndexes.has(index));
 
   return {
     id: crypto.randomUUID(),
-    nickname: '',
+    nickname: "",
     colorIndex,
-    selectionMode: 'available',
+    selectionMode: "available",
     weekdayRules: [],
     overrides: {},
-  }
+  };
 }
 
-function upsertParticipant(participants: Participant[], nextParticipant: Participant) {
+function upsertParticipant(
+  participants: Participant[],
+  nextParticipant: Participant
+) {
   const existing = participants.some(
-    (participant) => participant.id === nextParticipant.id,
-  )
+    (participant) => participant.id === nextParticipant.id
+  );
 
   if (!existing) {
-    return [...participants, nextParticipant]
+    return [...participants, nextParticipant];
   }
 
   return participants.map((participant) =>
-    participant.id === nextParticipant.id ? nextParticipant : participant,
-  )
+    participant.id === nextParticipant.id ? nextParticipant : participant
+  );
 }
 
 function mergeRoomSnapshot(
   previousRoom: Room | undefined,
   nextRoom: Room,
-  localParticipantId: string | undefined,
+  localParticipantId: string | undefined
 ) {
   if (!previousRoom || !localParticipantId) {
-    return nextRoom
+    return nextRoom;
   }
 
   const localParticipant = previousRoom.participants.find(
-    (participant) => participant.id === localParticipantId,
-  )
+    (participant) => participant.id === localParticipantId
+  );
 
   if (!localParticipant) {
-    return nextRoom
+    return nextRoom;
   }
 
   const mergedParticipants = nextRoom.participants.map((participant) =>
@@ -686,15 +720,15 @@ function mergeRoomSnapshot(
           weekdayRules: localParticipant.weekdayRules,
           overrides: localParticipant.overrides,
         }
-      : participant,
-  )
+      : participant
+  );
 
   return {
     ...nextRoom,
     participants: mergedParticipants.some(
-      (participant) => participant.id === localParticipant.id,
+      (participant) => participant.id === localParticipant.id
     )
       ? mergedParticipants
       : upsertParticipant(mergedParticipants, localParticipant),
-  }
+  };
 }
