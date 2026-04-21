@@ -26,6 +26,7 @@ This document defines the working rules for the `when-should-we-meet` project.
 - Keep the PR body concise but concrete.
 - Mention validation used for the change.
 - Note whether the work is independent of other open PRs.
+- Use `docs/manual-qa-checklist.md` for demo or ready-for-review sweeps.
 
 ## Current review checklist
 - landing -> room create/join -> nickname -> calendar flow is coherent
