@@ -7,7 +7,7 @@ viewport.
 ## Setup
 
 - Start from a clean browser profile or clear local storage.
-- Set `VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY` when testing server-backed flows.
+- Set the `VITE_FIREBASE_*` variables from `.env.example` when testing server-backed flows.
 - Open two browser profiles or two devices for multi-participant checks.
 - Keep one window on the landing page and one ready for a shared room URL.
 
@@ -49,14 +49,14 @@ viewport.
 - Calendar rank badges match the dashboard top dates.
 - Month navigation stays within the room date range.
 
-## Supabase And Realtime
+## Firebase And Realtime
 
-- Room creation writes a room row.
-- Joining writes or restores a participant through the join RPC.
+- Room creation writes a `rooms/{roomId}` document and `inviteCodes/{inviteCode}` lookup document.
+- Joining writes or restores a participant under `rooms/{roomId}/participants/{clientKey}`.
 - Selection mode and weekday changes persist after refresh.
 - Date overrides persist after refresh.
 - Two open clients in the same room receive updated participant/ranking/calendar state after one client changes availability.
-- Realtime disconnect or broadcast failure does not lose the local saved change.
+- Firestore listener failure does not lose the local saved change.
 
 ## Regression Sweep
 

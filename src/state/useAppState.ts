@@ -10,13 +10,12 @@ import {
 import { COLOR_PALETTE, DEFAULT_STORAGE, MODE_LABELS, WEEKDAY_LABELS } from '../lib/constants'
 import { useRouteState } from '../lib/router'
 import { getOrCreateClientKey } from '../lib/session/clientIdentity'
-import { isSupabaseConfigured } from '../integrations/supabase/client'
+import { isFirebaseConfigured } from '../integrations/firebase/client'
 import {
-  broadcastRoomChanged,
-  createRoom as createSupabaseRoom,
+  createRoom as createFirebaseRoom,
   getRoomByInviteCode,
   getRoomSnapshot,
-  joinRoom as joinSupabaseRoom,
+  joinRoom as joinFirebaseRoom,
   mapParticipantRow,
   mapRoomRowToDraftRoom,
   mapRoomSnapshotToDraftRoom,
@@ -25,8 +24,8 @@ import {
   subscribeToRoomChanges,
   unsubscribeFromRoomChanges,
   updateParticipantAvailability,
-} from '../integrations/supabase/services/roomService'
-import type { RealtimeChannel } from '@supabase/supabase-js'
+  type RoomChangeSubscription,
+} from '../integrations/firebase/services/roomService'
 import type {
   AppStorage,
   CreateRoomPayload,
@@ -48,7 +47,7 @@ export function useAppState() {
   const [roomMessage, setRoomMessage] = useState('')
   const [visibleMonth, setVisibleMonth] = useState('')
   const [isHydratingRoom, setIsHydratingRoom] = useState(false)
-  const roomRealtimeChannelRef = useRef<RealtimeChannel | null>(null)
+  const roomChangeSubscriptionRef = useRef<RoomChangeSubscription | null>(null)
 
   const currentRoom =
     route.name === 'room' ? storage.rooms[route.roomId] : undefined
@@ -79,7 +78,7 @@ export function useAppState() {
   }, [currentParticipant?.id, currentRoom, effectiveVisibleMonth])
 
   useEffect(() => {
-    if (!isSupabaseConfigured || !routeRoomId) {
+    if (!isFirebaseConfigured || !routeRoomId) {
       setIsHydratingRoom(false)
       return
     }
@@ -162,8 +161,8 @@ export function useAppState() {
   ])
 
   useEffect(() => {
-    if (!isSupabaseConfigured || !routeRoomId) {
-      roomRealtimeChannelRef.current = null
+    if (!isFirebaseConfigured || !routeRoomId) {
+      roomChangeSubscriptionRef.current = null
       return
     }
 
@@ -204,17 +203,17 @@ export function useAppState() {
       }, 120)
     }
 
-    const channel = subscribeToRoomChanges({
+    const subscription = subscribeToRoomChanges({
       roomId: routeRoomId,
       onChange: refreshRoomSnapshot,
       onStatusChange: (status) => {
-        if (status === 'CHANNEL_ERROR') {
+        if (status === 'SNAPSHOT_ERROR') {
           setRoomMessage('실시간 연결에 문제가 있어요. 새로고침하면 최신 상태를 볼 수 있어요.')
         }
       },
     })
 
-    roomRealtimeChannelRef.current = channel
+    roomChangeSubscriptionRef.current = subscription
 
     return () => {
       isCancelled = true
@@ -223,16 +222,16 @@ export function useAppState() {
         window.clearTimeout(refreshTimer)
       }
 
-      if (roomRealtimeChannelRef.current === channel) {
-        roomRealtimeChannelRef.current = null
+      if (roomChangeSubscriptionRef.current === subscription) {
+        roomChangeSubscriptionRef.current = null
       }
 
-      void unsubscribeFromRoomChanges(channel)
+      void unsubscribeFromRoomChanges(subscription)
     }
   }, [routeRoomId, setStorage])
 
   const createRoom = async (payload: CreateRoomPayload) => {
-    if (!isSupabaseConfigured) {
+    if (!isFirebaseConfigured) {
       const room = createRoomRecord(payload)
 
       setStorage((previous) => ({
@@ -250,7 +249,7 @@ export function useAppState() {
     }
 
     try {
-      const roomRow = await createSupabaseRoom(payload)
+      const roomRow = await createFirebaseRoom(payload)
       const room = mapRoomRowToDraftRoom(roomRow)
 
       setStorage((previous) => ({
@@ -278,7 +277,7 @@ export function useAppState() {
       return false
     }
 
-    if (!isSupabaseConfigured) {
+    if (!isFirebaseConfigured) {
       const room = Object.values(storage.rooms).find(
         (candidate) => candidate.inviteCode === inviteCode,
       )
@@ -339,7 +338,7 @@ export function useAppState() {
       return false
     }
 
-    if (!isSupabaseConfigured) {
+    if (!isFirebaseConfigured) {
       const nextParticipant = createParticipant(currentRoom)
 
       nextParticipant.nickname = nickname
@@ -362,7 +361,7 @@ export function useAppState() {
     }
 
     try {
-      const participantRow = await joinSupabaseRoom({
+      const participantRow = await joinFirebaseRoom({
         clientKey: getOrCreateClientKey(),
         nickname,
         roomId: currentRoom.id,
@@ -384,7 +383,6 @@ export function useAppState() {
           [currentRoom.id]: nextParticipant.id,
         },
       }))
-      void notifyRoomChanged('participant_joined')
       return true
     } catch (error) {
       const errorMessage = String(error)
@@ -415,7 +413,7 @@ export function useAppState() {
         : '불가능한 날짜를 고르는 모드로 바뀌었어요.',
     )
 
-    if (!isSupabaseConfigured) {
+    if (!isFirebaseConfigured) {
       return
     }
 
@@ -427,7 +425,6 @@ export function useAppState() {
         selectionMode: nextParticipant.selectionMode,
         weekdayRules: nextParticipant.weekdayRules,
       })
-      void notifyRoomChanged('availability_changed')
     } catch {
       updateCurrentParticipant(previousParticipant)
       setRoomMessage('선택 방식을 저장하지 못했어요. 잠시 후 다시 시도해 주세요.')
@@ -452,7 +449,7 @@ export function useAppState() {
     updateCurrentParticipant(nextParticipant)
     setRoomMessage(`${WEEKDAY_LABELS[weekday]}요일 규칙을 업데이트했어요.`)
 
-    if (!isSupabaseConfigured) {
+    if (!isFirebaseConfigured) {
       return
     }
 
@@ -464,7 +461,6 @@ export function useAppState() {
         selectionMode: nextParticipant.selectionMode,
         weekdayRules: nextParticipant.weekdayRules,
       })
-      void notifyRoomChanged('availability_changed')
     } catch {
       updateCurrentParticipant(previousParticipant)
       setRoomMessage('요일 규칙을 저장하지 못했어요. 잠시 후 다시 시도해 주세요.')
@@ -498,7 +494,7 @@ export function useAppState() {
     updateCurrentParticipant(nextParticipant)
     setRoomMessage(`${isoDate} 날짜 선택을 반영했어요.`)
 
-    if (!isSupabaseConfigured) {
+    if (!isFirebaseConfigured) {
       return
     }
 
@@ -510,7 +506,6 @@ export function useAppState() {
         status: nextStatus,
         targetDate: isoDate,
       })
-      void notifyRoomChanged('availability_changed')
     } catch {
       updateCurrentParticipant(previousParticipant)
       setRoomMessage('날짜 선택을 저장하지 못했어요. 잠시 후 다시 시도해 주세요.')
@@ -584,23 +579,6 @@ export function useAppState() {
       setRoomMessage('공유 링크를 복사했어요.')
     } catch {
       setRoomMessage('공유를 완료하지 못했어요.')
-    }
-  }
-
-  const notifyRoomChanged = async (
-    reason: 'participant_joined' | 'availability_changed',
-  ) => {
-    if (!currentRoom || !roomRealtimeChannelRef.current) {
-      return
-    }
-
-    try {
-      await broadcastRoomChanged(roomRealtimeChannelRef.current, {
-        reason,
-        roomId: currentRoom.id,
-      })
-    } catch {
-      console.warn('Room change was saved, but realtime broadcast failed.')
     }
   }
 

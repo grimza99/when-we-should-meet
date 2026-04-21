@@ -1,73 +1,66 @@
-# React + TypeScript + Vite
+# when should we meet?
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+Friends, family, and small groups can decide when to meet through a shared calendar without creating accounts. A host creates a room, shares an invite code or room link, and participants mark available or unavailable dates from a mobile-first calendar UI.
 
-Currently, two official plugins are available:
+## Features
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+- Room creation from the landing page.
+- Invite-code and shared-link room entry.
+- Nickname modal for host and participants.
+- Maximum participant count from 2 to 10.
+- Date range presets for this month, this year, or a custom range.
+- Available-date and unavailable-date selection modes.
+- Weekday rules for repeated availability patterns.
+- Dashboard ranking for the top meeting dates.
+- Participant color dots on calendar dates.
+- Local browser identity restore through localStorage.
+- Firebase Firestore-backed room, participant, and availability state.
+- Firestore realtime listeners for room snapshot synchronization.
 
-## React Compiler
+## Tech Stack
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+- React
+- TypeScript
+- Vite
+- Firebase Firestore
 
-## Expanding the ESLint configuration
+## Getting Started
 
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
-
-```js
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-
-      // Remove tseslint.configs.recommended and replace with this
-      tseslint.configs.recommendedTypeChecked,
-      // Alternatively, use this for stricter rules
-      tseslint.configs.strictTypeChecked,
-      // Optionally, add this for stylistic rules
-      tseslint.configs.stylisticTypeChecked,
-
-      // Other configs...
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+```bash
+npm install
+npm run dev
 ```
 
-You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
+For Firebase-backed flows, copy `.env.example` to `.env.local` and set:
 
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
-
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-      // Enable lint rules for React
-      reactX.configs['recommended-typescript'],
-      // Enable lint rules for React DOM
-      reactDom.configs.recommended,
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+```bash
+VITE_FIREBASE_API_KEY=your-api-key
+VITE_FIREBASE_AUTH_DOMAIN=your-project.firebaseapp.com
+VITE_FIREBASE_PROJECT_ID=your-project-id
+VITE_FIREBASE_STORAGE_BUCKET=your-project.appspot.com
+VITE_FIREBASE_MESSAGING_SENDER_ID=your-sender-id
+VITE_FIREBASE_APP_ID=your-app-id
 ```
+
+If Firebase env variables are missing, the app falls back to localStorage-only behavior for development.
+
+## Firebase
+
+Firebase setup notes and Firestore rules live under [firebase](firebase).
+
+Current Firestore model:
+
+- `rooms/{roomId}` stores room metadata and participant count.
+- `rooms/{roomId}/participants/{clientKey}` stores nickname, color, selection mode, weekday rules, and date overrides.
+- `inviteCodes/{inviteCode}` maps a six-character invite code to a room id.
+
+The current rules are MVP-oriented for a no-signup product. Before public launch, consider Firebase Anonymous Auth so Firestore rules can enforce stronger participant ownership.
+
+## Quality Gates
+
+```bash
+npm run lint
+npm run build
+```
+
+Use [docs/manual-qa-checklist.md](docs/manual-qa-checklist.md) before demo builds or ready-for-review PRs.
