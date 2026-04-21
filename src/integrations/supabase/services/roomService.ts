@@ -1,5 +1,6 @@
 import { supabase } from '../client'
 import type { Database } from '../database.types'
+import type { RealtimeChannel } from '@supabase/supabase-js'
 import type { CreateRoomPayload, Participant, Room } from '../../../types'
 
 type RoomRow = Database['public']['Tables']['rooms']['Row']
@@ -15,6 +16,10 @@ type RoomSnapshotParticipantRow = {
   selection_mode: Participant['selectionMode']
   weekday_rules: Participant['weekdayRules']
   overrides: Participant['overrides']
+}
+type RoomRealtimeChangePayload = {
+  reason: 'participant_joined' | 'availability_changed'
+  roomId: string
 }
 
 export async function createRoom(payload: CreateRoomPayload) {
@@ -135,6 +140,52 @@ export async function setParticipantDateOverride(params: {
   if (error) {
     throw error
   }
+}
+
+export function subscribeToRoomChanges(params: {
+  roomId: string
+  onChange: () => void
+  onStatusChange?: (status: string) => void
+}) {
+  const channel = supabase
+    .channel(`room:${params.roomId}`, {
+      config: {
+        broadcast: {
+          self: false,
+        },
+      },
+    })
+    .on<RoomRealtimeChangePayload>(
+      'broadcast',
+      { event: 'room_changed' },
+      ({ payload }) => {
+        if (payload.roomId === params.roomId) {
+          params.onChange()
+        }
+      },
+    )
+    .subscribe((status) => params.onStatusChange?.(status))
+
+  return channel
+}
+
+export async function broadcastRoomChanged(
+  channel: RealtimeChannel,
+  payload: RoomRealtimeChangePayload,
+) {
+  const result = await channel.send({
+    type: 'broadcast',
+    event: 'room_changed',
+    payload,
+  })
+
+  if (result === 'error' || result === 'timed out') {
+    throw new Error(`Realtime broadcast failed: ${result}`)
+  }
+}
+
+export async function unsubscribeFromRoomChanges(channel: RealtimeChannel) {
+  await supabase.removeChannel(channel)
 }
 
 export function mapRoomRowToDraftRoom(row: RoomRow) {

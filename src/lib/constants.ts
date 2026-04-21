@@ -1,4 +1,5 @@
 import type { DateMode } from '../types'
+import type { AppStorage } from '../types'
 
 export const COLOR_PALETTE = [
   '#ee6c4d',
@@ -20,7 +21,7 @@ export const MODE_LABELS: Record<DateMode, string> = {
   unavailable: '불가능 날짜',
 }
 
-export const DEFAULT_STORAGE: { rooms: {}; memberships: {} } = {
+export const DEFAULT_STORAGE: AppStorage = {
   rooms: {},
   memberships: {},
 }

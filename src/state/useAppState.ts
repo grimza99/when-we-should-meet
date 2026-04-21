@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { useLocalStorageState } from '../hooks/useLocalStorageState'
 import {
   addMonths,
@@ -12,6 +12,7 @@ import { useRouteState } from '../lib/router'
 import { getOrCreateClientKey } from '../lib/session/clientIdentity'
 import { isSupabaseConfigured } from '../integrations/supabase/client'
 import {
+  broadcastRoomChanged,
   createRoom as createSupabaseRoom,
   getRoomByInviteCode,
   getRoomSnapshot,
@@ -21,8 +22,11 @@ import {
   mapRoomSnapshotToDraftRoom,
   restoreParticipant,
   setParticipantDateOverride,
+  subscribeToRoomChanges,
+  unsubscribeFromRoomChanges,
   updateParticipantAvailability,
 } from '../integrations/supabase/services/roomService'
+import type { RealtimeChannel } from '@supabase/supabase-js'
 import type {
   AppStorage,
   CreateRoomPayload,
@@ -44,6 +48,7 @@ export function useAppState() {
   const [roomMessage, setRoomMessage] = useState('')
   const [visibleMonth, setVisibleMonth] = useState('')
   const [isHydratingRoom, setIsHydratingRoom] = useState(false)
+  const roomRealtimeChannelRef = useRef<RealtimeChannel | null>(null)
 
   const currentRoom =
     route.name === 'room' ? storage.rooms[route.roomId] : undefined
@@ -155,6 +160,76 @@ export function useAppState() {
     setStorage,
     storage.memberships,
   ])
+
+  useEffect(() => {
+    if (!isSupabaseConfigured || !routeRoomId) {
+      roomRealtimeChannelRef.current = null
+      return
+    }
+
+    let isCancelled = false
+    let refreshTimer: number | undefined
+
+    const refreshRoomSnapshot = () => {
+      if (refreshTimer) {
+        window.clearTimeout(refreshTimer)
+      }
+
+      refreshTimer = window.setTimeout(() => {
+        const refresh = async () => {
+          try {
+            const roomSnapshot = await getRoomSnapshot(routeRoomId)
+
+            if (!roomSnapshot || isCancelled) {
+              return
+            }
+
+            const room = mapRoomSnapshotToDraftRoom(roomSnapshot)
+
+            setStorage((previous) => ({
+              ...previous,
+              rooms: {
+                ...previous.rooms,
+                [room.id]: room,
+              },
+            }))
+          } catch {
+            if (!isCancelled) {
+              setRoomMessage('최신 방 정보를 동기화하지 못했어요.')
+            }
+          }
+        }
+
+        void refresh()
+      }, 120)
+    }
+
+    const channel = subscribeToRoomChanges({
+      roomId: routeRoomId,
+      onChange: refreshRoomSnapshot,
+      onStatusChange: (status) => {
+        if (status === 'CHANNEL_ERROR') {
+          setRoomMessage('실시간 연결에 문제가 있어요. 새로고침하면 최신 상태를 볼 수 있어요.')
+        }
+      },
+    })
+
+    roomRealtimeChannelRef.current = channel
+
+    return () => {
+      isCancelled = true
+
+      if (refreshTimer) {
+        window.clearTimeout(refreshTimer)
+      }
+
+      if (roomRealtimeChannelRef.current === channel) {
+        roomRealtimeChannelRef.current = null
+      }
+
+      void unsubscribeFromRoomChanges(channel)
+    }
+  }, [routeRoomId, setStorage])
 
   const createRoom = async (payload: CreateRoomPayload) => {
     if (!isSupabaseConfigured) {
@@ -309,6 +384,7 @@ export function useAppState() {
           [currentRoom.id]: nextParticipant.id,
         },
       }))
+      void notifyRoomChanged('participant_joined')
       return true
     } catch (error) {
       const errorMessage = String(error)
@@ -351,6 +427,7 @@ export function useAppState() {
         selectionMode: nextParticipant.selectionMode,
         weekdayRules: nextParticipant.weekdayRules,
       })
+      void notifyRoomChanged('availability_changed')
     } catch {
       updateCurrentParticipant(previousParticipant)
       setRoomMessage('선택 방식을 저장하지 못했어요. 잠시 후 다시 시도해 주세요.')
@@ -387,6 +464,7 @@ export function useAppState() {
         selectionMode: nextParticipant.selectionMode,
         weekdayRules: nextParticipant.weekdayRules,
       })
+      void notifyRoomChanged('availability_changed')
     } catch {
       updateCurrentParticipant(previousParticipant)
       setRoomMessage('요일 규칙을 저장하지 못했어요. 잠시 후 다시 시도해 주세요.')
@@ -432,6 +510,7 @@ export function useAppState() {
         status: nextStatus,
         targetDate: isoDate,
       })
+      void notifyRoomChanged('availability_changed')
     } catch {
       updateCurrentParticipant(previousParticipant)
       setRoomMessage('날짜 선택을 저장하지 못했어요. 잠시 후 다시 시도해 주세요.')
@@ -505,6 +584,23 @@ export function useAppState() {
       setRoomMessage('공유 링크를 복사했어요.')
     } catch {
       setRoomMessage('공유를 완료하지 못했어요.')
+    }
+  }
+
+  const notifyRoomChanged = async (
+    reason: 'participant_joined' | 'availability_changed',
+  ) => {
+    if (!currentRoom || !roomRealtimeChannelRef.current) {
+      return
+    }
+
+    try {
+      await broadcastRoomChanged(roomRealtimeChannelRef.current, {
+        reason,
+        roomId: currentRoom.id,
+      })
+    } catch {
+      console.warn('Room change was saved, but realtime broadcast failed.')
     }
   }
 
