@@ -1,9 +1,10 @@
-import { useMemo } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { CalendarGrid } from '../components/calendar/CalendarGrid'
 import { NicknameModal } from '../components/room/NicknameModal'
 import { RoomDashboard } from '../components/room/RoomDashboard'
 import { Button } from '../components/ui/Button'
 import { SegmentedButtonGroup } from '../components/ui/SegmentedButtonGroup'
+import { TextInput } from '../components/ui/TextInput'
 import type { DateMode, Participant, Room, RoomSummary } from '../types'
 
 type ModeOption = { label: string; value: DateMode }
@@ -11,6 +12,7 @@ type WeekdayOption = { label: string; value: number; selected: boolean }
 
 type RoomPageProps = {
   currentParticipant?: Participant
+  isCurrentUserHost?: boolean
   isHydratingRoom?: boolean
   modeOptions: ModeOption[]
   room?: Room
@@ -20,9 +22,12 @@ type RoomPageProps = {
   weekdayOptions: WeekdayOption[]
   onBackToLanding: () => void
   onChangeMode: (mode: DateMode) => void
+  onChangeNickname: (nickname: string) => Promise<boolean>
   onCopyInviteCode: () => void
+  onDeleteRoom: () => Promise<boolean>
   onJoinRoom: (nickname: string) => Promise<boolean>
   onMoveMonth: (offset: number) => void
+  onRemoveParticipant: (participantId: string) => Promise<boolean>
   onSelectDate: (isoDate: string) => void
   onShareRoom: () => void
   onToggleWeekday: (weekday: number) => void
@@ -30,13 +35,17 @@ type RoomPageProps = {
 
 export function RoomPage({
   currentParticipant,
+  isCurrentUserHost = false,
   isHydratingRoom = false,
   modeOptions,
   onBackToLanding,
   onChangeMode,
+  onChangeNickname,
   onCopyInviteCode,
+  onDeleteRoom,
   onJoinRoom,
   onMoveMonth,
+  onRemoveParticipant,
   onSelectDate,
   onShareRoom,
   onToggleWeekday,
@@ -46,6 +55,18 @@ export function RoomPage({
   selectedMode,
   weekdayOptions,
 }: RoomPageProps) {
+  const [nicknameInput, setNicknameInput] = useState(
+    currentParticipant?.nickname ?? '',
+  )
+  const [isSavingNickname, setIsSavingNickname] = useState(false)
+  const [isDeletingRoom, setIsDeletingRoom] = useState(false)
+  const [removingParticipantId, setRemovingParticipantId] = useState<
+    string | null
+  >(null)
+
+  useEffect(() => {
+    setNicknameInput(currentParticipant?.nickname ?? '')
+  }, [currentParticipant?.nickname])
   const rankByDate = useMemo(
     () =>
       Object.fromEntries(
@@ -85,6 +106,52 @@ export function RoomPage({
 
   const isRoomFull = room.participants.length >= room.maxParticipants
   const shouldShowNicknameModal = !currentParticipant && !isRoomFull
+  const trimmedNickname = nicknameInput.trim()
+
+  const submitNicknameChange = async () => {
+    if (!trimmedNickname || isSavingNickname) {
+      return
+    }
+
+    setIsSavingNickname(true)
+
+    try {
+      await onChangeNickname(trimmedNickname)
+    } finally {
+      setIsSavingNickname(false)
+    }
+  }
+
+  const submitRemoveParticipant = async (participantId: string) => {
+    if (removingParticipantId) {
+      return
+    }
+
+    setRemovingParticipantId(participantId)
+
+    try {
+      await onRemoveParticipant(participantId)
+    } finally {
+      setRemovingParticipantId(null)
+    }
+  }
+
+  const submitDeleteRoom = async () => {
+    if (
+      isDeletingRoom ||
+      !window.confirm('이 방과 참가자 정보를 모두 삭제할까요?')
+    ) {
+      return
+    }
+
+    setIsDeletingRoom(true)
+
+    try {
+      await onDeleteRoom()
+    } finally {
+      setIsDeletingRoom(false)
+    }
+  }
 
   return (
     <main className="page room-page">
@@ -107,9 +174,58 @@ export function RoomPage({
 
       <RoomDashboard
         currentParticipant={currentParticipant}
+        isCurrentUserHost={isCurrentUserHost}
+        onRemoveParticipant={(participantId) =>
+          void submitRemoveParticipant(participantId)
+        }
+        removingParticipantId={removingParticipantId}
         rankings={roomSummary.rankings}
         room={room}
       />
+
+      {currentParticipant ? (
+        <section className="controls-card">
+          <div className="control-group">
+            <p className="section-label">내 정보</p>
+            <div className="nickname-edit-row">
+              <TextInput
+                label="닉네임"
+                onChange={setNicknameInput}
+                placeholder="새 닉네임"
+                value={nicknameInput}
+              />
+              <Button
+                disabled={
+                  !trimmedNickname ||
+                  trimmedNickname === currentParticipant.nickname ||
+                  isSavingNickname
+                }
+                onClick={() => void submitNicknameChange()}
+                variant="secondary"
+              >
+                {isSavingNickname ? '저장 중...' : '변경'}
+              </Button>
+            </div>
+          </div>
+
+          {isCurrentUserHost ? (
+            <div className="control-group danger-zone">
+              <p className="section-label">방장 관리</p>
+              <p className="dashboard-summary">
+                방장은 참가자를 내보내거나 방 전체를 삭제할 수 있어요.
+              </p>
+              <Button
+                block
+                disabled={isDeletingRoom}
+                onClick={() => void submitDeleteRoom()}
+                variant="secondary"
+              >
+                {isDeletingRoom ? '삭제 중...' : '방 삭제'}
+              </Button>
+            </div>
+          ) : null}
+        </section>
+      ) : null}
 
       <section className="controls-card">
         <div className="control-group">

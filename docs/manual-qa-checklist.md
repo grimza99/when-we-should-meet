@@ -34,10 +34,16 @@ viewport.
 - First room entry shows the nickname modal.
 - Empty nickname submit is blocked.
 - Successful nickname join adds the participant to the dashboard.
+- Current participant can change their nickname and sees the updated value after refresh.
 - Refreshing the same browser restores the same participant identity.
 - A second browser can join with a different nickname and gets a different color.
 - When the room is full, non-participants see the full-room message instead of the nickname modal.
 - Existing participants can still view and edit a full room.
+- Room host can remove another participant.
+- Removed participant no longer appears in the dashboard or calendar dots.
+- Non-host participants do not see host management actions.
+- Room host can delete the room and return to the landing page.
+- Other clients in a deleted room leave the room state after realtime sync or refresh.
 
 ## Calendar Interaction
 
@@ -52,9 +58,13 @@ viewport.
 ## Firebase And Realtime
 
 - Room creation writes a `rooms/{roomId}` document and `inviteCodes/{inviteCode}` lookup document.
+- Room creation stores `hostClientKey` and `expiresAt` on the room document.
 - Joining writes or restores a participant under `rooms/{roomId}/participants/{clientKey}`.
 - Selection mode and weekday changes persist after refresh.
 - Date overrides persist after refresh.
+- Nickname changes persist after refresh.
+- Host participant removal deletes the participant document and decrements participant count.
+- Host room deletion removes the room, invite-code lookup, and participant documents.
 - Two open clients in the same room receive updated participant/ranking/calendar state after one client changes availability.
 - Firestore listener failure does not lose the local saved change.
 

@@ -7,10 +7,16 @@ type RoomDashboardProps = {
   rankings: RankingItem[]
   room: Room
   currentParticipant?: Participant
+  isCurrentUserHost?: boolean
+  onRemoveParticipant?: (participantId: string) => void
+  removingParticipantId?: string | null
 }
 
 export function RoomDashboard({
   currentParticipant,
+  isCurrentUserHost = false,
+  onRemoveParticipant,
+  removingParticipantId = null,
   rankings,
   room,
 }: RoomDashboardProps) {
@@ -70,17 +76,33 @@ export function RoomDashboard({
           )}
 
           {participantCount > 0 ? (
-            <div className="participant-row">
+            <div className="participant-list">
               {room.participants.map((participant) => (
-                <span
+                <div
                   key={participant.id}
                   className={`participant-pill${
                     currentParticipant?.id === participant.id ? ' is-current-user' : ''
                   }`}
                   style={{ color: COLOR_PALETTE[participant.colorIndex] }}
                 >
-                  {participant.nickname}
-                </span>
+                  <span>
+                    {participant.nickname}
+                    {participant.id === room.hostClientKey ? (
+                      <small className="host-badge">방장</small>
+                    ) : null}
+                  </span>
+                  {isCurrentUserHost && participant.id !== room.hostClientKey ? (
+                    <Button
+                      disabled={removingParticipantId === participant.id}
+                      onClick={() => onRemoveParticipant?.(participant.id)}
+                      variant="chip"
+                    >
+                      {removingParticipantId === participant.id
+                        ? '내보내는 중'
+                        : '내보내기'}
+                    </Button>
+                  ) : null}
+                </div>
               ))}
             </div>
           ) : (

@@ -187,6 +187,7 @@
 .toggle-row,
 .weekday-row,
 .participant-row,
+.participant-list,
 .header-actions {
   display: flex;
   align-items: center;
@@ -289,12 +290,26 @@
   line-height: 1.45;
 }
 
-.participant-row {
+.participant-row,
+.participant-list {
   flex-wrap: wrap;
   margin-top: 14px;
 }
 
+.participant-list {
+  align-items: stretch;
+  flex-direction: column;
+  gap: 10px;
+}
+
 .participant-pill {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  border-radius: 16px;
+  background: #f9f4eb;
   font-weight: 700;
 }
 
@@ -302,6 +317,30 @@
   text-decoration: underline;
   text-decoration-thickness: 2px;
   text-underline-offset: 4px;
+}
+
+.host-badge {
+  display: inline-flex;
+  margin-left: 6px;
+  padding: 2px 6px;
+  border-radius: 999px;
+  background: rgba(201, 128, 81, 0.14);
+  color: var(--accent);
+  font-size: 10px;
+  font-weight: 800;
+}
+
+.nickname-edit-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: end;
+  gap: 10px;
+  margin-top: 10px;
+}
+
+.danger-zone {
+  padding-top: 18px;
+  border-top: 1px solid rgba(126, 95, 66, 0.12);
 }
 
 .control-group + .control-group {

@@ -28,6 +28,8 @@ export type Room = {
   startDate: string
   endDate: string
   createdAt: string
+  expiresAt?: string
+  hostClientKey?: string
   participants: Participant[]
 }
 

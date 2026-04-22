@@ -9,8 +9,10 @@ This folder contains the client-side Firebase bootstrap and Firestore service he
 
 ## Firestore Shape
 
-- `rooms/{roomId}`: room metadata, date range, max participants, participant count.
+- `rooms/{roomId}`: room metadata, date range, max participants, participant count, host client key, and expiration timestamp.
 - `rooms/{roomId}/participants/{clientKey}`: nickname, color, selection mode, weekday rules, and date overrides for one local browser identity.
 - `inviteCodes/{inviteCode}`: lookup document that maps a six-character invite code to a room id.
 
 The app still keeps a local fallback for development when Firebase env variables are not configured.
+
+Host-only room management uses `rooms/{roomId}.hostClientKey` at the app layer. This matches the no-signup MVP, but it should move to Firebase Anonymous Auth or a trusted backend function if stronger authorization is needed.
