@@ -23,6 +23,8 @@ type FirestoreRoomDocument = {
   startDate: string
   endDate: string
   createdAt: string
+  expiresAt: string
+  hostClientKey: string
   updatedAt: string
 }
 
@@ -57,7 +59,9 @@ type ParticipantRow = FirestoreParticipantDocument & {
 
 export type RoomChangeSubscription = Unsubscribe
 
-export async function createRoom(payload: CreateRoomPayload) {
+export async function createRoom(
+  payload: CreateRoomPayload & { hostClientKey: string },
+) {
   const now = new Date().toISOString()
   const roomId = crypto.randomUUID()
   const inviteCode = await createUniqueInviteCode()
@@ -69,6 +73,8 @@ export async function createRoom(payload: CreateRoomPayload) {
     startDate: payload.startDate,
     endDate: payload.endDate,
     createdAt: now,
+    expiresAt: addOneMonth(now),
+    hostClientKey: payload.hostClientKey,
     updatedAt: now,
   }
   const inviteCodeRecord: FirestoreInviteCodeDocument = {
@@ -227,6 +233,94 @@ export async function setParticipantDateOverride(params: {
   })
 }
 
+export async function updateParticipantNickname(params: {
+  clientKey: string
+  nickname: string
+  participantId: string
+  roomId: string
+}) {
+  assertParticipantOwnership(params)
+
+  await updateDoc(participantRef(params.roomId, params.participantId), {
+    nickname: params.nickname,
+    updatedAt: new Date().toISOString(),
+  })
+}
+
+export async function removeParticipant(params: {
+  hostClientKey: string
+  participantId: string
+  roomId: string
+}) {
+  if (params.participantId === params.hostClientKey) {
+    throw new Error('HOST_PARTICIPANT_CANNOT_BE_REMOVED')
+  }
+
+  const now = new Date().toISOString()
+
+  await runTransaction(db, async (transaction) => {
+    const roomDocumentRef = roomRef(params.roomId)
+    const participantDocumentRef = participantRef(
+      params.roomId,
+      params.participantId,
+    )
+    const [roomSnapshot, participantSnapshot] = await Promise.all([
+      transaction.get(roomDocumentRef),
+      transaction.get(participantDocumentRef),
+    ])
+
+    if (!roomSnapshot.exists()) {
+      throw new Error('ROOM_NOT_FOUND')
+    }
+
+    const room = roomSnapshot.data() as FirestoreRoomDocument
+
+    if (room.hostClientKey !== params.hostClientKey) {
+      throw new Error('HOST_PERMISSION_REQUIRED')
+    }
+
+    if (!participantSnapshot.exists()) {
+      return
+    }
+
+    transaction.delete(participantDocumentRef)
+    transaction.update(roomDocumentRef, {
+      participantCount: increment(-1),
+      updatedAt: now,
+    })
+  })
+}
+
+export async function deleteRoom(params: {
+  hostClientKey: string
+  roomId: string
+}) {
+  const roomSnapshot = await getDoc(roomRef(params.roomId))
+
+  if (!roomSnapshot.exists()) {
+    return
+  }
+
+  const room = roomSnapshot.data() as FirestoreRoomDocument
+
+  if (room.hostClientKey !== params.hostClientKey) {
+    throw new Error('HOST_PERMISSION_REQUIRED')
+  }
+
+  const participantSnapshots = await getDocs(
+    collection(db, 'rooms', params.roomId, 'participants'),
+  )
+  const batch = writeBatch(db)
+
+  participantSnapshots.docs.forEach((participantSnapshot) => {
+    batch.delete(participantSnapshot.ref)
+  })
+  batch.delete(inviteCodeRef(room.inviteCode))
+  batch.delete(roomRef(params.roomId))
+
+  await batch.commit()
+}
+
 export function subscribeToRoomChanges(params: {
   roomId: string
   onChange: () => void
@@ -263,6 +357,8 @@ export function mapRoomRowToDraftRoom(row: RoomRow) {
     startDate: row.startDate,
     endDate: row.endDate,
     createdAt: row.createdAt,
+    expiresAt: row.expiresAt,
+    hostClientKey: row.hostClientKey,
     participants: [],
   }
 }
@@ -329,6 +425,12 @@ async function createUniqueInviteCode() {
 
 function createInviteCode() {
   return crypto.randomUUID().replace(/-/g, '').slice(0, 6).toUpperCase()
+}
+
+function addOneMonth(isoDate: string) {
+  const expiresAt = new Date(isoDate)
+  expiresAt.setMonth(expiresAt.getMonth() + 1)
+  return expiresAt.toISOString()
 }
 
 function assertParticipantOwnership(params: {

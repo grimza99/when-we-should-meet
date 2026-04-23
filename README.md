@@ -15,8 +15,11 @@
 - 요일 일괄 규칙과 날짜별 override
 - 대시보드 랭킹 1~3위
 - 참가자별 컬러 표시
-- Supabase 기반 방/참가자/선택 상태 저장
-- Supabase Realtime Broadcast 기반 room snapshot 동기화
+- Firebase Firestore 기반 방/참가자/선택 상태 저장
+- Firestore realtime listener 기반 room snapshot 동기화
+- 닉네임 변경
+- 방장 기반 참가자 제거
+- 방장 기반 방 삭제
 - 모바일 폭 중심 UI
 
 ## Tech Stack
@@ -24,7 +27,7 @@
 - React
 - TypeScript
 - Vite
-- Supabase
+- Firebase Firestore
 - Plain CSS
 
 ## Getting Started
@@ -34,7 +37,6 @@ npm install
 npm run dev
 ```
 
-<<<<<<< HEAD
 For Firebase-backed flows, copy `.env.example` to `.env.local` and set:
 
 ```bash
@@ -54,11 +56,11 @@ Firebase setup notes and Firestore rules live under [firebase](firebase).
 
 Current Firestore model:
 
-- `rooms/{roomId}` stores room metadata and participant count.
+- `rooms/{roomId}` stores room metadata, participant count, host client key, and expiration timestamp.
 - `rooms/{roomId}/participants/{clientKey}` stores nickname, color, selection mode, weekday rules, and date overrides.
 - `inviteCodes/{inviteCode}` maps a six-character invite code to a room id.
 
-The current rules are MVP-oriented for a no-signup product. Before public launch, consider Firebase Anonymous Auth so Firestore rules can enforce stronger participant ownership.
+The current rules are MVP-oriented for a no-signup product. Room host actions are enforced by app logic with `hostClientKey`, but this is not a strong security boundary. Before public launch, consider Firebase Anonymous Auth or Cloud Functions for stronger authorization.
 
 ## Quality Gates
 
@@ -67,36 +69,7 @@ npm run lint
 npm run build
 ```
 
-# Use [docs/manual-qa-checklist.md](docs/manual-qa-checklist.md) before demo builds or ready-for-review PRs.
-
-For Supabase-backed flows, copy `.env.example` to `.env.local` and set:
-
-```bash
-VITE_SUPABASE_URL=https://your-project-ref.supabase.co
-VITE_SUPABASE_ANON_KEY=your-anon-key
-```
-
-Without these variables, the app keeps the local fallback behavior where possible.
-
-## Validation
-
-```bash
-npm run build
-npm run lint
-```
-
-For manual checks, use [docs/manual-qa-checklist.md](docs/manual-qa-checklist.md).
-
-## Supabase
-
-Supabase migrations and setup notes live under [supabase](supabase).
-
-Important access rules:
-
-- The frontend uses the anon key only.
-- Participant-owned state is accessed through RPCs.
-- Direct reads/writes for participant-owned tables are intentionally disabled by RLS.
-- Room synchronization uses Realtime Broadcast events followed by `get_room_snapshot()`.
+Use [docs/manual-qa-checklist.md](docs/manual-qa-checklist.md) before demo builds or ready-for-review PRs.
 
 ## Engineering Workflow
 
@@ -109,4 +82,3 @@ Default branch flow:
 - Open draft PRs to `dev`.
 - Record PR review comments on GitHub.
 - Keep merge-blocked follow-up work in [docs/blocked-work.md](docs/blocked-work.md).
-  > > > > > > > b993fc05fda8b857f02ba72c1f1a6ca7b44cdef4

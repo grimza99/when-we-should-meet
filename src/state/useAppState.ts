@@ -18,17 +18,20 @@ import { getOrCreateClientKey } from "../lib/session/clientIdentity";
 import { isFirebaseConfigured } from "../integrations/firebase/client";
 import {
   createRoom as createFirebaseRoom,
+  deleteRoom as deleteFirebaseRoom,
   getRoomByInviteCode,
   getRoomSnapshot,
   joinRoom as joinFirebaseRoom,
   mapParticipantRow,
   mapRoomRowToDraftRoom,
   mapRoomSnapshotToDraftRoom,
+  removeParticipant as removeFirebaseParticipant,
   restoreParticipant,
   setParticipantDateOverride,
   subscribeToRoomChanges,
   unsubscribeFromRoomChanges,
   updateParticipantAvailability,
+  updateParticipantNickname,
   type RoomChangeSubscription,
 } from "../integrations/firebase/services/roomService";
 import type {
@@ -61,6 +64,9 @@ export function useAppState() {
   const currentParticipant = currentRoom?.participants.find(
     (participant) => participant.id === currentParticipantId
   );
+  const isCurrentUserHost =
+    Boolean(currentParticipantId) &&
+    currentParticipantId === currentRoom?.hostClientKey;
   const routeRoomId = route.name === "room" ? route.roomId : undefined;
   const effectiveVisibleMonth = currentRoom
     ? clampVisibleMonth(currentRoom, visibleMonth || currentRoom.startDate)
@@ -123,8 +129,7 @@ export function useAppState() {
           return;
         }
 
-        const restoredParticipantId =
-          restoredParticipant?.id ?? storage.memberships[routeRoomId];
+        const restoredParticipantId = restoredParticipant?.id;
 
         setStorage((previous) => ({
           ...previous,
@@ -136,12 +141,7 @@ export function useAppState() {
               restoredParticipantId
             ),
           },
-          memberships: restoredParticipantId
-            ? {
-                ...previous.memberships,
-                [room.id]: restoredParticipantId,
-              }
-            : previous.memberships,
+          memberships: updateMembership(previous.memberships, room.id, restoredParticipantId),
         }));
       } catch {
         if (!isCancelled) {
@@ -189,7 +189,25 @@ export function useAppState() {
           try {
             const roomSnapshot = await getRoomSnapshot(routeRoomId);
 
-            if (!roomSnapshot || isCancelled) {
+            if (isCancelled) {
+              return;
+            }
+
+            if (!roomSnapshot) {
+              setStorage((previous) => {
+                const rooms = { ...previous.rooms };
+                const memberships = { ...previous.memberships };
+
+                delete rooms[routeRoomId];
+                delete memberships[routeRoomId];
+
+                return {
+                  ...previous,
+                  memberships,
+                  rooms,
+                };
+              });
+              setRoomMessage("방이 삭제되었거나 더 이상 접근할 수 없어요.");
               return;
             }
 
@@ -197,6 +215,14 @@ export function useAppState() {
 
             setStorage((previous) => ({
               ...previous,
+              memberships:
+                previous.memberships[room.id] &&
+                !room.participants.some(
+                  (participant) =>
+                    participant.id === previous.memberships[room.id]
+                )
+                  ? updateMembership(previous.memberships, room.id, undefined)
+                  : previous.memberships,
               rooms: {
                 ...previous.rooms,
                 [room.id]: room,
@@ -243,8 +269,10 @@ export function useAppState() {
   }, [routeRoomId, setStorage]);
 
   const createRoom = async (payload: CreateRoomPayload) => {
+    const hostClientKey = getOrCreateClientKey();
+
     if (!isFirebaseConfigured) {
-      const room = createRoomRecord(payload);
+      const room = createRoomRecord(payload, hostClientKey);
 
       setStorage((previous) => ({
         ...previous,
@@ -261,7 +289,10 @@ export function useAppState() {
     }
 
     try {
-      const roomRow = await createFirebaseRoom(payload);
+      const roomRow = await createFirebaseRoom({
+        ...payload,
+        hostClientKey,
+      });
       const room = mapRoomRowToDraftRoom(roomRow);
 
       setStorage((previous) => ({
@@ -355,7 +386,7 @@ export function useAppState() {
     }
 
     if (!isFirebaseConfigured) {
-      const nextParticipant = createParticipant(currentRoom);
+      const nextParticipant = createParticipant(currentRoom, getOrCreateClientKey());
 
       nextParticipant.nickname = nickname;
       setRoomMessage(`${nickname} 님으로 방에 참여했어요.`);
@@ -539,6 +570,136 @@ export function useAppState() {
     }
   };
 
+  const changeNickname = async (nickname: string) => {
+    if (!currentRoom || !currentParticipant) {
+      return false;
+    }
+
+    const trimmedNickname = nickname.trim();
+
+    if (!trimmedNickname) {
+      setRoomMessage("닉네임을 입력해 주세요.");
+      return false;
+    }
+
+    const previousParticipant = currentParticipant;
+    const nextParticipant = {
+      ...currentParticipant,
+      nickname: trimmedNickname,
+    };
+
+    updateCurrentParticipant(nextParticipant);
+    setRoomMessage("닉네임을 변경했어요.");
+
+    if (!isFirebaseConfigured) {
+      return true;
+    }
+
+    try {
+      await updateParticipantNickname({
+        clientKey: getOrCreateClientKey(),
+        nickname: trimmedNickname,
+        participantId: nextParticipant.id,
+        roomId: currentRoom.id,
+      });
+      return true;
+    } catch {
+      updateCurrentParticipant(previousParticipant);
+      setRoomMessage("닉네임을 저장하지 못했어요. 잠시 후 다시 시도해 주세요.");
+      return false;
+    }
+  };
+
+  const removeParticipant = async (participantId: string) => {
+    if (!currentRoom || !isCurrentUserHost) {
+      setRoomMessage("방장만 참가자를 관리할 수 있어요.");
+      return false;
+    }
+
+    if (participantId === currentRoom.hostClientKey) {
+      setRoomMessage("방장은 참가자 목록에서 제거할 수 없어요.");
+      return false;
+    }
+
+    const previousRoom = currentRoom;
+    const nextRoom = {
+      ...currentRoom,
+      participants: currentRoom.participants.filter(
+        (participant) => participant.id !== participantId
+      ),
+    };
+
+    setStorage((previous) => ({
+      ...previous,
+      rooms: {
+        ...previous.rooms,
+        [currentRoom.id]: nextRoom,
+      },
+    }));
+    setRoomMessage("참가자를 내보냈어요.");
+
+    if (!isFirebaseConfigured) {
+      return true;
+    }
+
+    try {
+      await removeFirebaseParticipant({
+        hostClientKey: getOrCreateClientKey(),
+        participantId,
+        roomId: currentRoom.id,
+      });
+      return true;
+    } catch {
+      setStorage((previous) => ({
+        ...previous,
+        rooms: {
+          ...previous.rooms,
+          [previousRoom.id]: previousRoom,
+        },
+      }));
+      setRoomMessage("참가자를 내보내지 못했어요. 잠시 후 다시 시도해 주세요.");
+      return false;
+    }
+  };
+
+  const deleteCurrentRoom = async () => {
+    if (!currentRoom || !isCurrentUserHost) {
+      setRoomMessage("방장만 방을 삭제할 수 있어요.");
+      return false;
+    }
+
+    const roomId = currentRoom.id;
+    if (isFirebaseConfigured) {
+      try {
+        await deleteFirebaseRoom({
+          hostClientKey: getOrCreateClientKey(),
+          roomId,
+        });
+      } catch {
+        setRoomMessage("방을 삭제하지 못했어요. 잠시 후 다시 시도해 주세요.");
+        return false;
+      }
+    }
+
+    setStorage((previous) => {
+      const rooms = { ...previous.rooms };
+      const memberships = { ...previous.memberships };
+
+      delete rooms[roomId];
+      delete memberships[roomId];
+
+      return {
+        ...previous,
+        memberships,
+        rooms,
+      };
+    });
+    setRoomMessage("방을 삭제했어요.");
+    navigate({ name: "landing" });
+
+    return true;
+  };
+
   const updateCurrentParticipant = (nextParticipant: Participant) => {
     if (!currentRoom) {
       return;
@@ -619,8 +780,10 @@ export function useAppState() {
     currentRoom,
     currentRoomSummary,
     currentRoute: route,
+    deleteCurrentRoom,
     goToLanding: () => navigate({ name: "landing" }),
     isHydratingRoom,
+    isCurrentUserHost,
     joinCurrentRoom,
     joinInviteCode,
     joinRoomByInviteCode,
@@ -634,6 +797,8 @@ export function useAppState() {
     selectedMode: currentParticipant?.selectionMode ?? "available",
     setJoinInviteCode,
     shareRoom,
+    changeNickname,
+    removeParticipant,
     toggleDate,
     toggleWeekday,
     weekdayOptions: WEEKDAY_LABELS.map((label, value) => ({
@@ -644,8 +809,9 @@ export function useAppState() {
   };
 }
 
-function createRoomRecord(payload: CreateRoomPayload): Room {
+function createRoomRecord(payload: CreateRoomPayload, hostClientKey: string): Room {
   const id = crypto.randomUUID();
+  const createdAt = new Date().toISOString();
 
   return {
     id,
@@ -654,12 +820,17 @@ function createRoomRecord(payload: CreateRoomPayload): Room {
     dateRangeType: payload.dateRangeType,
     startDate: payload.startDate,
     endDate: payload.endDate,
-    createdAt: new Date().toISOString(),
+    createdAt,
+    expiresAt: addOneMonth(createdAt),
+    hostClientKey,
     participants: [],
   };
 }
 
-function createParticipant(room: Room): Participant {
+function createParticipant(
+  room: Room,
+  participantId: string = crypto.randomUUID(),
+): Participant {
   const usedColorIndexes = new Set(
     room.participants.map((participant) => participant.colorIndex)
   );
@@ -669,13 +840,35 @@ function createParticipant(room: Room): Participant {
       : COLOR_PALETTE.findIndex((_, index) => !usedColorIndexes.has(index));
 
   return {
-    id: crypto.randomUUID(),
+    id: participantId,
     nickname: "",
     colorIndex,
     selectionMode: "available",
     weekdayRules: [],
     overrides: {},
   };
+}
+
+function addOneMonth(isoDate: string) {
+  const expiresAt = new Date(isoDate);
+  expiresAt.setMonth(expiresAt.getMonth() + 1);
+  return expiresAt.toISOString();
+}
+
+function updateMembership(
+  memberships: AppStorage["memberships"],
+  roomId: string,
+  participantId: string | undefined
+) {
+  const nextMemberships = { ...memberships };
+
+  if (participantId) {
+    nextMemberships[roomId] = participantId;
+  } else {
+    delete nextMemberships[roomId];
+  }
+
+  return nextMemberships;
 }
 
 function upsertParticipant(

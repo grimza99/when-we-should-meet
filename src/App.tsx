@@ -29,12 +29,16 @@ function App() {
             weekdayOptions={appState.weekdayOptions}
             onBackToLanding={appState.goToLanding}
             onChangeMode={appState.changeSelectionMode}
+            onChangeNickname={appState.changeNickname}
             onCopyInviteCode={appState.copyInviteCode}
+            onDeleteRoom={appState.deleteCurrentRoom}
             onJoinRoom={appState.joinCurrentRoom}
             onMoveMonth={appState.moveVisibleMonth}
+            onRemoveParticipant={appState.removeParticipant}
             onSelectDate={appState.toggleDate}
             onShareRoom={appState.shareRoom}
             onToggleWeekday={appState.toggleWeekday}
+            isCurrentUserHost={appState.isCurrentUserHost}
           />
         )}
       </div>

@@ -12,6 +12,8 @@ This directory holds Firebase-side assets for the project.
   - `startDate`
   - `endDate`
   - `createdAt`
+  - `expiresAt`
+  - `hostClientKey`
   - `updatedAt`
 - `rooms/{roomId}/participants/{clientKey}`
   - `clientKey`
@@ -46,6 +48,8 @@ If these values are missing, the app keeps using the localStorage-only fallback 
 Deploy `firestore.rules` through the Firebase console or Firebase CLI.
 
 These rules are intentionally MVP-oriented because the product does not use visible signup/login yet. They validate the rough document shape, but they do not provide strong per-user ownership. Before public launch, prefer adding Firebase Anonymous Auth so rules can bind participant writes to `request.auth.uid`.
+
+Room management is currently enforced by app logic with the room creator's local `clientKey` stored as `hostClientKey`. Firestore rules allow the required participant and room delete operations for this MVP shape, so this is not a strong security boundary. Move host-only actions behind Firebase Anonymous Auth or Cloud Functions before public abuse becomes a realistic risk.
 
 ## Manual Smoke Test
 

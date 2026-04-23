@@ -7,10 +7,16 @@ type RoomDashboardProps = {
   rankings: RankingItem[]
   room: Room
   currentParticipant?: Participant
+  isCurrentUserHost?: boolean
+  onRemoveParticipant?: (participantId: string) => void
+  removingParticipantId?: string | null
 }
 
 export function RoomDashboard({
   currentParticipant,
+  isCurrentUserHost = false,
+  onRemoveParticipant,
+  removingParticipantId = null,
   rankings,
   room,
 }: RoomDashboardProps) {
@@ -19,6 +25,10 @@ export function RoomDashboard({
   const participantCount = room.participants.length
   const hasRankings = rankings.some((ranking) => ranking.score > 0)
   const topRanking = hasRankings ? rankings[0] : undefined
+  const participants = room.participants.map((participant) => ({
+    ...participant,
+    color: COLOR_PALETTE[participant.colorIndex] ?? COLOR_PALETTE[0],
+  }))
 
   return (
     <section className="dashboard-card">
@@ -47,6 +57,31 @@ export function RoomDashboard({
         </Button>
       </div>
 
+      {participantCount > 0 ? (
+        <div className="participant-legend" aria-label="참가자 색상 목록">
+          {participants.map((participant) => (
+            <span
+              key={participant.id}
+              className={`participant-legend-item${
+                currentParticipant?.id === participant.id ? ' is-current-user' : ''
+              }`}
+            >
+              <span
+                aria-hidden="true"
+                className="participant-color-dot"
+                style={{ background: participant.color }}
+              />
+              <span style={{ color: participant.color }}>
+                {participant.nickname}
+              </span>
+              {participant.id === room.hostClientKey ? (
+                <small className="host-badge">방장</small>
+              ) : null}
+            </span>
+          ))}
+        </div>
+      ) : null}
+
       <div
         className={`dashboard-content${isExpanded ? ' is-expanded' : ''}`}
         id={dashboardContentId}
@@ -70,17 +105,39 @@ export function RoomDashboard({
           )}
 
           {participantCount > 0 ? (
-            <div className="participant-row">
-              {room.participants.map((participant) => (
-                <span
+            <div className="participant-list">
+              {participants.map((participant) => (
+                <div
                   key={participant.id}
                   className={`participant-pill${
                     currentParticipant?.id === participant.id ? ' is-current-user' : ''
                   }`}
-                  style={{ color: COLOR_PALETTE[participant.colorIndex] }}
                 >
-                  {participant.nickname}
-                </span>
+                  <span className="participant-name-with-dot">
+                    <span
+                      aria-hidden="true"
+                      className="participant-color-dot"
+                      style={{ background: participant.color }}
+                    />
+                    <span style={{ color: participant.color }}>
+                      {participant.nickname}
+                    </span>
+                    {participant.id === room.hostClientKey ? (
+                      <small className="host-badge">방장</small>
+                    ) : null}
+                  </span>
+                  {isCurrentUserHost && participant.id !== room.hostClientKey ? (
+                    <Button
+                      disabled={removingParticipantId === participant.id}
+                      onClick={() => onRemoveParticipant?.(participant.id)}
+                      variant="chip"
+                    >
+                      {removingParticipantId === participant.id
+                        ? '내보내는 중'
+                        : '내보내기'}
+                    </Button>
+                  ) : null}
+                </div>
               ))}
             </div>
           ) : (
