@@ -3,10 +3,11 @@ import { useId, type ReactNode } from 'react'
 type ModalProps = {
   children: ReactNode
   description?: string
+  onClose?: () => void
   title: string
 }
 
-export function Modal({ children, description, title }: ModalProps) {
+export function Modal({ children, description, onClose, title }: ModalProps) {
   const titleId = useId()
   const descriptionId = useId()
 
@@ -20,7 +21,19 @@ export function Modal({ children, description, title }: ModalProps) {
         role="dialog"
       >
         <div className="modal-header">
-          <h2 id={titleId}>{title}</h2>
+          <div className="modal-title-row">
+            <h2 id={titleId}>{title}</h2>
+            {onClose ? (
+              <button
+                aria-label={`${title} 닫기`}
+                className="modal-close-button"
+                onClick={onClose}
+                type="button"
+              >
+                ×
+              </button>
+            ) : null}
+          </div>
           {description ? (
             <p className="modal-copy" id={descriptionId}>
               {description}

@@ -60,6 +60,7 @@ export function RoomPage({
   )
   const [isSavingNickname, setIsSavingNickname] = useState(false)
   const [isDeletingRoom, setIsDeletingRoom] = useState(false)
+  const [isNicknameModalOpen, setIsNicknameModalOpen] = useState(true)
   const [removingParticipantId, setRemovingParticipantId] = useState<
     string | null
   >(null)
@@ -67,6 +68,10 @@ export function RoomPage({
   useEffect(() => {
     setNicknameInput(currentParticipant?.nickname ?? '')
   }, [currentParticipant?.nickname])
+
+  useEffect(() => {
+    setIsNicknameModalOpen(true)
+  }, [room?.id])
   const rankByDate = useMemo(
     () =>
       Object.fromEntries(
@@ -105,7 +110,8 @@ export function RoomPage({
   }
 
   const isRoomFull = room.participants.length >= room.maxParticipants
-  const shouldShowNicknameModal = !currentParticipant && !isRoomFull
+  const shouldPromptForNickname = !currentParticipant && !isRoomFull
+  const shouldShowNicknameModal = shouldPromptForNickname && isNicknameModalOpen
   const trimmedNickname = nicknameInput.trim()
 
   const submitNicknameChange = async () => {
@@ -286,7 +292,22 @@ export function RoomPage({
         </section>
       ) : null}
 
-      {shouldShowNicknameModal ? <NicknameModal onJoinRoom={onJoinRoom} /> : null}
+      {shouldPromptForNickname && !isNicknameModalOpen ? (
+        <section className="panel stack-gap">
+          <p className="eyebrow">join room</p>
+          <h2>닉네임을 입력하면 일정 선택에 참여할 수 있어요</h2>
+          <Button block onClick={() => setIsNicknameModalOpen(true)}>
+            닉네임 입력하기
+          </Button>
+        </section>
+      ) : null}
+
+      {shouldShowNicknameModal ? (
+        <NicknameModal
+          onClose={() => setIsNicknameModalOpen(false)}
+          onJoinRoom={onJoinRoom}
+        />
+      ) : null}
     </main>
   )
 }

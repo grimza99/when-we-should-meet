@@ -7,13 +7,15 @@ import { TextInput } from '../ui/TextInput'
 import type { CreateRoomPayload, DateRangeType } from '../../types'
 
 type CreateRoomModalProps = {
+  onClose: () => void
   onCreateRoom: (payload: CreateRoomPayload) => Promise<boolean>
 }
 
-export function CreateRoomModal({ onCreateRoom }: CreateRoomModalProps) {
+export function CreateRoomModal({ onClose, onCreateRoom }: CreateRoomModalProps) {
   const [maxParticipants, setMaxParticipants] = useState('6')
   const [dateRangeType, setDateRangeType] = useState<DateRangeType>('this_month')
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const [submitMessage, setSubmitMessage] = useState('')
   const today = new Date().toISOString().slice(0, 10)
   const [startDate, setStartDate] = useState(today)
   const [endDate, setEndDate] = useState(today)
@@ -61,14 +63,19 @@ export function CreateRoomModal({ onCreateRoom }: CreateRoomModalProps) {
     }
 
     setIsSubmitting(true)
+    setSubmitMessage('')
 
     try {
-      await onCreateRoom({
+      const didCreateRoom = await onCreateRoom({
         maxParticipants: participantCount,
         dateRangeType,
         startDate: resolvedRange.startDate,
         endDate: resolvedRange.endDate,
       })
+
+      if (!didCreateRoom) {
+        setSubmitMessage('방을 만들지 못했어요. 연결 상태나 Firebase 설정을 확인해 주세요.')
+      }
     } finally {
       setIsSubmitting(false)
     }
@@ -77,6 +84,7 @@ export function CreateRoomModal({ onCreateRoom }: CreateRoomModalProps) {
   return (
     <Modal
       description="최대 인원과 날짜 범위를 먼저 정한 뒤 바로 방으로 이동합니다."
+      onClose={onClose}
       title="방 만들기"
     >
       <div className="modal-body">
@@ -134,6 +142,10 @@ export function CreateRoomModal({ onCreateRoom }: CreateRoomModalProps) {
             </span>
           </p>
         )}
+
+        {submitMessage ? (
+          <p className="modal-validation">{submitMessage}</p>
+        ) : null}
 
         <Button block disabled={!canSubmit} onClick={() => void submit()}>
           {isSubmitting ? '방 생성 중...' : '방 생성하기'}

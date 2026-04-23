@@ -45,7 +45,11 @@ If these values are missing, the app keeps using the localStorage-only fallback 
 
 ## Firestore Rules
 
-Deploy `firestore.rules` through the Firebase console or Firebase CLI.
+Deploy `firestore.rules` through the Firebase console or Firebase CLI:
+
+```bash
+firebase deploy --only firestore:rules --project <firebase-project-id>
+```
 
 These rules are intentionally MVP-oriented because the product does not use visible signup/login yet. They validate the rough document shape, but they do not provide strong per-user ownership. Before public launch, prefer adding Firebase Anonymous Auth so rules can bind participant writes to `request.auth.uid`.
 

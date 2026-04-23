@@ -514,6 +514,32 @@
   margin-bottom: 18px;
 }
 
+.modal-title-row {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.modal-title-row h2 {
+  margin: 0;
+}
+
+.modal-close-button {
+  width: 36px;
+  height: 36px;
+  flex: 0 0 auto;
+  border: 0;
+  border-radius: 999px;
+  background: rgba(201, 128, 81, 0.12);
+  color: var(--text);
+  cursor: pointer;
+  font: inherit;
+  font-size: 22px;
+  font-weight: 800;
+  line-height: 1;
+}
+
 .date-grid {
   display: grid;
   grid-template-columns: 1fr 1fr;
