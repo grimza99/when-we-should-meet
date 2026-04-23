@@ -5,9 +5,10 @@ import { TextInput } from '../ui/TextInput'
 
 type NicknameModalProps = {
   onJoinRoom: (nickname: string) => Promise<boolean>
+  onClose: () => void
 }
 
-export function NicknameModal({ onJoinRoom }: NicknameModalProps) {
+export function NicknameModal({ onClose, onJoinRoom }: NicknameModalProps) {
   const [nickname, setNickname] = useState('')
   const [isSubmitting, setIsSubmitting] = useState(false)
 
@@ -21,7 +22,11 @@ export function NicknameModal({ onJoinRoom }: NicknameModalProps) {
     setIsSubmitting(true)
 
     try {
-      await onJoinRoom(trimmedNickname)
+      const didJoinRoom = await onJoinRoom(trimmedNickname)
+
+      if (didJoinRoom) {
+        onClose()
+      }
     } finally {
       setIsSubmitting(false)
     }
@@ -30,6 +35,7 @@ export function NicknameModal({ onJoinRoom }: NicknameModalProps) {
   return (
     <Modal
       description="방 안에서 보일 닉네임을 입력하면 바로 참여합니다."
+      onClose={onClose}
       title="닉네임 입력"
     >
       <div className="modal-body">

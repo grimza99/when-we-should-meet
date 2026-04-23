@@ -97,6 +97,7 @@ export function LandingPage({
 
       {isCreateModalOpen ? (
         <CreateRoomModal
+          onClose={() => setIsCreateModalOpen(false)}
           onCreateRoom={async (payload) => {
             const didCreateRoom = await onCreateRoom(payload)
 
