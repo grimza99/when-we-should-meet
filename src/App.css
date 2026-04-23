@@ -1,16 +1,4 @@
 :root {
-  --color-app-text: #2d241d;
-  --color-app-muted: #7e5f42;
-  --color-app-accent: #c5683e;
-  --color-app-accent-soft: rgba(201, 128, 81, 0.12);
-  --color-app-accent-badge: rgba(201, 128, 81, 0.14);
-  --color-app-accent-softer: rgba(197, 104, 62, 0.18);
-  --color-app-accent-alert: rgba(197, 104, 62, 0.12);
-  --color-app-accent-line: rgba(201, 128, 81, 0.32);
-  --color-app-accent-line-strong: rgba(201, 128, 81, 0.34);
-  --color-app-accent-shadow: rgba(201, 128, 81, 0.22);
-  --color-app-warm-bg: #fffaf2;
-  --color-app-warm-bg-glass: rgba(255, 250, 242, 0.88);
   --color-app-warm-bg-clear: rgba(255, 250, 242, 0);
   --color-app-warm-bg-subtle: #f7f2ea;
   --color-app-warm-surface: #fffaf5;
@@ -20,7 +8,6 @@
   --color-app-white: #fff;
   --color-app-white-glass: rgba(255, 255, 255, 0.88);
   --color-app-white-ring: rgba(255, 255, 255, 0.85);
-  --color-app-frame-line: rgba(126, 95, 66, 0.08);
   --color-app-day-line: rgba(126, 95, 66, 0.1);
   --color-app-line: rgba(126, 95, 66, 0.12);
   --color-app-input-line: rgba(126, 95, 66, 0.16);
@@ -50,20 +37,6 @@
 }
 
 .mobile-frame {
-  width: 100%;
-  max-width: 430px;
-  min-height: 100svh;
-  position: relative;
-  background: linear-gradient(
-    180deg,
-    var(--color-app-warm-bg) 0%,
-    var(--color-app-white) 18%,
-    var(--color-app-warm-bg-subtle) 100%
-  );
-  box-shadow: 0 0 0 1px var(--color-app-frame-line);
-}
-
-.mobile-frame:has(.landing-page) {
   background: var(--color-app-white);
   box-shadow: 0 0 40px var(--color-landing-frame-shadow);
 }
