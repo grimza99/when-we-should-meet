@@ -296,6 +296,33 @@
   margin-top: 14px;
 }
 
+.participant-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 14px;
+}
+
+.participant-legend-item,
+.participant-name-with-dot {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.participant-legend-item {
+  min-height: 32px;
+  padding: 6px 10px;
+  border-radius: 999px;
+  background: #f9f4eb;
+  font-size: 13px;
+  font-weight: 800;
+}
+
+.participant-legend-item.is-current-user {
+  box-shadow: inset 0 0 0 1px rgba(201, 128, 81, 0.22);
+}
+
 .participant-list {
   align-items: stretch;
   flex-direction: column;
@@ -317,6 +344,14 @@
   text-decoration: underline;
   text-decoration-thickness: 2px;
   text-underline-offset: 4px;
+}
+
+.participant-color-dot {
+  width: 9px;
+  height: 9px;
+  flex: 0 0 auto;
+  border-radius: 999px;
+  box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.85);
 }
 
 .host-badge {
