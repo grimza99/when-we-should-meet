@@ -291,6 +291,48 @@ export async function removeParticipant(params: {
   })
 }
 
+export async function leaveRoom(params: {
+  clientKey: string
+  participantId: string
+  roomId: string
+}) {
+  assertParticipantOwnership(params)
+
+  const now = new Date().toISOString()
+
+  await runTransaction(db, async (transaction) => {
+    const roomDocumentRef = roomRef(params.roomId)
+    const participantDocumentRef = participantRef(
+      params.roomId,
+      params.participantId,
+    )
+    const [roomSnapshot, participantSnapshot] = await Promise.all([
+      transaction.get(roomDocumentRef),
+      transaction.get(participantDocumentRef),
+    ])
+
+    if (!roomSnapshot.exists()) {
+      throw new Error('ROOM_NOT_FOUND')
+    }
+
+    const room = roomSnapshot.data() as FirestoreRoomDocument
+
+    if (room.hostClientKey === params.participantId) {
+      throw new Error('HOST_PARTICIPANT_CANNOT_LEAVE')
+    }
+
+    if (!participantSnapshot.exists()) {
+      return
+    }
+
+    transaction.delete(participantDocumentRef)
+    transaction.update(roomDocumentRef, {
+      participantCount: increment(-1),
+      updatedAt: now,
+    })
+  })
+}
+
 export async function deleteRoom(params: {
   hostClientKey: string
   roomId: string

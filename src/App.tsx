@@ -33,6 +33,7 @@ function App() {
             onCopyInviteCode={appState.copyInviteCode}
             onDeleteRoom={appState.deleteCurrentRoom}
             onJoinRoom={appState.joinCurrentRoom}
+            onLeaveRoom={appState.leaveCurrentRoom}
             onMoveMonth={appState.moveVisibleMonth}
             onRemoveParticipant={appState.removeParticipant}
             onSelectDate={appState.toggleDate}

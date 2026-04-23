@@ -26,6 +26,7 @@ type RoomPageProps = {
   onCopyInviteCode: () => void
   onDeleteRoom: () => Promise<boolean>
   onJoinRoom: (nickname: string) => Promise<boolean>
+  onLeaveRoom: () => Promise<boolean>
   onMoveMonth: (offset: number) => void
   onRemoveParticipant: (participantId: string) => Promise<boolean>
   onSelectDate: (isoDate: string) => void
@@ -44,6 +45,7 @@ export function RoomPage({
   onCopyInviteCode,
   onDeleteRoom,
   onJoinRoom,
+  onLeaveRoom,
   onMoveMonth,
   onRemoveParticipant,
   onSelectDate,
@@ -60,6 +62,7 @@ export function RoomPage({
   )
   const [isSavingNickname, setIsSavingNickname] = useState(false)
   const [isDeletingRoom, setIsDeletingRoom] = useState(false)
+  const [isLeavingRoom, setIsLeavingRoom] = useState(false)
   const [isNicknameModalOpen, setIsNicknameModalOpen] = useState(true)
   const [removingParticipantId, setRemovingParticipantId] = useState<
     string | null
@@ -159,6 +162,23 @@ export function RoomPage({
     }
   }
 
+  const submitLeaveRoom = async () => {
+    if (
+      isLeavingRoom ||
+      !window.confirm('이 방에서 나가면 선택한 날짜도 함께 사라집니다. 나갈까요?')
+    ) {
+      return
+    }
+
+    setIsLeavingRoom(true)
+
+    try {
+      await onLeaveRoom()
+    } finally {
+      setIsLeavingRoom(false)
+    }
+  }
+
   return (
     <main className="page room-page">
       <header className="room-header">
@@ -214,12 +234,16 @@ export function RoomPage({
             </div>
           </div>
 
-          {isCurrentUserHost ? (
-            <div className="control-group danger-zone">
-              <p className="section-label">방장 관리</p>
-              <p className="dashboard-summary">
-                방장은 참가자를 내보내거나 방 전체를 삭제할 수 있어요.
-              </p>
+          <div className="control-group danger-zone">
+            <p className="section-label">
+              {isCurrentUserHost ? '방장 관리' : '참여 관리'}
+            </p>
+            <p className="dashboard-summary">
+              {isCurrentUserHost
+                ? '방장은 참가자를 내보내거나 방 전체를 삭제할 수 있어요.'
+                : '방에서 나가면 내 닉네임과 선택한 날짜가 삭제돼요.'}
+            </p>
+            {isCurrentUserHost ? (
               <Button
                 block
                 disabled={isDeletingRoom}
@@ -228,8 +252,17 @@ export function RoomPage({
               >
                 {isDeletingRoom ? '삭제 중...' : '방 삭제'}
               </Button>
-            </div>
-          ) : null}
+            ) : (
+              <Button
+                block
+                disabled={isLeavingRoom}
+                onClick={() => void submitLeaveRoom()}
+                variant="secondary"
+              >
+                {isLeavingRoom ? '나가는 중...' : '방 나가기'}
+              </Button>
+            )}
+          </div>
         </section>
       ) : null}
 

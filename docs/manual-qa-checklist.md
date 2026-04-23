@@ -41,6 +41,8 @@ viewport.
 - Existing participants can still view and edit a full room.
 - Room host can remove another participant.
 - Removed participant no longer appears in the dashboard or calendar dots.
+- Non-host participant can leave the room themselves.
+- Leaving removes the participant from dashboard, calendar dots, and local membership.
 - Non-host participants do not see host management actions.
 - Room host can delete the room and return to the landing page.
 - Other clients in a deleted room leave the room state after realtime sync or refresh.
@@ -64,6 +66,7 @@ viewport.
 - Date overrides persist after refresh.
 - Nickname changes persist after refresh.
 - Host participant removal deletes the participant document and decrements participant count.
+- Participant self-leave deletes their participant document and decrements participant count.
 - Host room deletion removes the room, invite-code lookup, and participant documents.
 - Two open clients in the same room receive updated participant/ranking/calendar state after one client changes availability.
 - Firestore listener failure does not lose the local saved change.
