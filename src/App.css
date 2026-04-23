@@ -1,9 +1,7 @@
 :root {
   --color-app-warm-bg-clear: rgba(255, 250, 242, 0);
   --color-app-warm-bg-subtle: #f7f2ea;
-  --color-app-warm-surface: #fffaf5;
   --color-app-warm-card: #f9f4eb;
-  --color-app-warm-chip: #f6efe5;
   --color-app-warm-highlight: #fff1e8;
   --color-app-white: #fff;
   --color-app-white-glass: rgba(255, 255, 255, 0.88);
@@ -11,7 +9,7 @@
   --color-app-day-line: rgba(126, 95, 66, 0.1);
   --color-app-line: rgba(126, 95, 66, 0.12);
   --color-app-input-line: rgba(126, 95, 66, 0.16);
-  --color-app-overlay: rgba(45, 36, 29, 0.38);
+  --color-app-overlay: rgba(31, 29, 45, 0.38);
   --shadow-app-card: 0 16px 40px rgba(143, 110, 79, 0.08);
   --shadow-app-modal: 0 20px 40px rgba(45, 36, 29, 0.18);
 
@@ -269,7 +267,7 @@
 
 .secondary-button {
   color: var(--text);
-  background: var(--color-app-accent-soft);
+  background: var(--color-landing-primary-soft);
 }
 
 .chip-button,
@@ -567,12 +565,16 @@
   flex: 1 1 0;
   min-height: 48px;
   border-radius: 16px;
-  background: var(--color-app-warm-chip);
+  background: var(--color-landing-primary-soft);
   color: var(--text);
 }
 
 .mode-button.is-active {
-  background: var(--accent);
+  background: linear-gradient(
+    135deg,
+    var(--color-landing-primary) 0%,
+    var(--color-landing-primary-end) 100%
+  );
   color: var(--color-app-white);
 }
 
@@ -679,7 +681,7 @@
   width: 100%;
   max-width: 398px;
   border-radius: 28px;
-  background: var(--color-app-warm-surface);
+  background: var(--color-app-white);
   box-shadow: var(--shadow-app-modal);
   padding: 20px;
 }
@@ -697,6 +699,7 @@
 
 .modal-title-row h2 {
   margin: 0;
+  font-weight: 800;
 }
 
 .modal-close-button {
@@ -726,8 +729,8 @@
   gap: 12px;
   padding: 14px 16px;
   border-radius: 16px;
-  background: var(--color-app-warm-card);
-  color: var(--muted);
+  background: var(--color-landing-primary-soft);
+  color: var(--color-landing-primary);
   font-weight: 600;
 }
 
@@ -736,7 +739,7 @@
   padding: 14px 16px;
   border-radius: 16px;
   background: var(--color-app-accent-alert);
-  color: var(--accent);
+  color: var(--color-landing-muted);
   font-size: 14px;
   font-weight: 700;
 }
