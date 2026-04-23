@@ -22,6 +22,7 @@ import {
   getRoomByInviteCode,
   getRoomSnapshot,
   joinRoom as joinFirebaseRoom,
+  leaveRoom as leaveFirebaseRoom,
   mapParticipantRow,
   mapRoomRowToDraftRoom,
   mapRoomSnapshotToDraftRoom,
@@ -662,6 +663,60 @@ export function useAppState() {
     }
   };
 
+  const leaveCurrentRoom = async () => {
+    if (!currentRoom || !currentParticipant) {
+      return false;
+    }
+
+    if (isCurrentUserHost) {
+      setRoomMessage("방장은 방 삭제 기능을 사용해 주세요.");
+      return false;
+    }
+
+    const roomId = currentRoom.id;
+    const participantId = currentParticipant.id;
+
+    if (isFirebaseConfigured) {
+      try {
+        await leaveFirebaseRoom({
+          clientKey: getOrCreateClientKey(),
+          participantId,
+          roomId,
+        });
+      } catch {
+        setRoomMessage("방을 나가지 못했어요. 잠시 후 다시 시도해 주세요.");
+        return false;
+      }
+    }
+
+    setStorage((previous) => {
+      const nextRoom = previous.rooms[roomId]
+        ? {
+            ...previous.rooms[roomId],
+            participants: previous.rooms[roomId].participants.filter(
+              (participant) => participant.id !== participantId
+            ),
+          }
+        : undefined;
+      const memberships = updateMembership(previous.memberships, roomId, undefined);
+
+      return {
+        ...previous,
+        memberships,
+        rooms: nextRoom
+          ? {
+              ...previous.rooms,
+              [roomId]: nextRoom,
+            }
+          : previous.rooms,
+      };
+    });
+    setRoomMessage("방에서 나갔어요.");
+    navigate({ name: "landing" });
+
+    return true;
+  };
+
   const deleteCurrentRoom = async () => {
     if (!currentRoom || !isCurrentUserHost) {
       setRoomMessage("방장만 방을 삭제할 수 있어요.");
@@ -785,6 +840,7 @@ export function useAppState() {
     isHydratingRoom,
     isCurrentUserHost,
     joinCurrentRoom,
+    leaveCurrentRoom,
     joinInviteCode,
     joinRoomByInviteCode,
     landingMessage,
