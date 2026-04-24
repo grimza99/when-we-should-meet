@@ -1,0 +1,47 @@
+import { useId, type ReactNode } from "react";
+
+type ModalProps = {
+  children: ReactNode;
+  description?: string;
+  onClose?: () => void;
+  title: string;
+};
+
+export function Modal({ children, description, onClose, title }: ModalProps) {
+  const titleId = useId();
+  const descriptionId = useId();
+
+  return (
+    <div className="modal-backdrop">
+      <section
+        className="modal-card"
+        aria-describedby={description ? descriptionId : undefined}
+        aria-labelledby={titleId}
+        aria-modal="true"
+        role="dialog"
+      >
+        <div className="modal-header">
+          <div className="modal-title-row">
+            <h2 id={titleId}>{title}</h2>
+            {onClose ? (
+              <button
+                aria-label={`${title} 닫기`}
+                className="modal-close-button"
+                onClick={onClose}
+                type="button"
+              >
+                ×
+              </button>
+            ) : null}
+          </div>
+          {description && (
+            <p className="modal-copy" id={descriptionId}>
+              {description}
+            </p>
+          )}
+        </div>
+        {children}
+      </section>
+    </div>
+  );
+}
