@@ -142,7 +142,11 @@ export function useAppState() {
               restoredParticipantId
             ),
           },
-          memberships: updateMembership(previous.memberships, room.id, restoredParticipantId),
+          memberships: updateMembership(
+            previous.memberships,
+            room.id,
+            restoredParticipantId
+          ),
         }));
       } catch {
         if (!isCancelled) {
@@ -387,7 +391,10 @@ export function useAppState() {
     }
 
     if (!isFirebaseConfigured) {
-      const nextParticipant = createParticipant(currentRoom, getOrCreateClientKey());
+      const nextParticipant = createParticipant(
+        currentRoom,
+        getOrCreateClientKey()
+      );
 
       nextParticipant.nickname = nickname;
       setRoomMessage(`${nickname} 님으로 방에 참여했어요.`);
@@ -698,7 +705,11 @@ export function useAppState() {
             ),
           }
         : undefined;
-      const memberships = updateMembership(previous.memberships, roomId, undefined);
+      const memberships = updateMembership(
+        previous.memberships,
+        roomId,
+        undefined
+      );
 
       return {
         ...previous,
@@ -865,7 +876,10 @@ export function useAppState() {
   };
 }
 
-function createRoomRecord(payload: CreateRoomPayload, hostClientKey: string): Room {
+function createRoomRecord(
+  payload: CreateRoomPayload,
+  hostClientKey: string
+): Room {
   const id = crypto.randomUUID();
   const createdAt = new Date().toISOString();
 
@@ -885,7 +899,7 @@ function createRoomRecord(payload: CreateRoomPayload, hostClientKey: string): Ro
 
 function createParticipant(
   room: Room,
-  participantId: string = crypto.randomUUID(),
+  participantId: string = crypto.randomUUID()
 ): Participant {
   const usedColorIndexes = new Set(
     room.participants.map((participant) => participant.colorIndex)

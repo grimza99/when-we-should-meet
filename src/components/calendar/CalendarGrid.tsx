@@ -1,35 +1,38 @@
-import type { CalendarDay } from '../../types'
+import type { CalendarDay } from "../../types";
 
 type CalendarGridProps = {
-  days: CalendarDay[]
-  rankByDate: Record<string, number>
-  onSelectDate: (isoDate: string) => void
-}
+  days: CalendarDay[];
+  rankByDate: Record<string, number>;
+  onSelectDate: (isoDate: string) => void;
+};
 
-export function CalendarGrid({ days, onSelectDate, rankByDate }: CalendarGridProps) {
+export function CalendarGrid({
+  days,
+  onSelectDate,
+  rankByDate,
+}: CalendarGridProps) {
   return (
     <>
       <div className="calendar-weekdays">
-        {['일', '월', '화', '수', '목', '금', '토'].map((day) => (
+        {["일", "월", "화", "수", "목", "금", "토"].map((day) => (
           <span key={day}>{day}</span>
         ))}
       </div>
 
       <div className="calendar-grid">
         {days.map((day) => {
-          const rank = day.isoDate ? rankByDate[day.isoDate] : undefined
-
+          const rank = day.isoDate ? rankByDate[day.isoDate] : undefined;
           return (
             <button
               key={day.key}
               className={[
-                'calendar-day',
-                !day.isCurrentMonth ? 'is-outside-month' : '',
-                day.isSelectedByCurrentUser ? 'is-highlighted' : '',
-                rank ? 'is-ranked' : '',
+                "calendar-day",
+                !day.isCurrentMonth ? "is-outside-month" : "",
+                day.isSelectedByCurrentUser ? "is-highlighted" : "",
+                rank ? "is-ranked" : "",
               ]
                 .filter(Boolean)
-                .join(' ')}
+                .join(" ")}
               disabled={!day.isoDate}
               onClick={() => day.isoDate && onSelectDate(day.isoDate)}
               type="button"
@@ -38,10 +41,6 @@ export function CalendarGrid({ days, onSelectDate, rankByDate }: CalendarGridPro
                 <span className="date-number">{day.dayNumber}</span>
                 {rank ? <span className="rank-badge">#{rank}</span> : null}
               </span>
-
-              {day.isoDate && day.availableCount > 0 ? (
-                <span className="available-count">{day.availableCount}명</span>
-              ) : null}
 
               {day.isoDate ? (
                 <span className="dot-row" aria-hidden="true">
@@ -55,9 +54,9 @@ export function CalendarGrid({ days, onSelectDate, rankByDate }: CalendarGridPro
                 </span>
               ) : null}
             </button>
-          )
+          );
         })}
       </div>
     </>
-  )
+  );
 }

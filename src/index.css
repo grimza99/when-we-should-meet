@@ -3,8 +3,8 @@
     "Noto Sans KR", sans-serif;
   line-height: 1.5;
   font-weight: 400;
-  color: #2d241d;
-  background: #e0e7ff;
+  color: var(--color-app-text);
+  background: var(--color-app-shell-bg);
   font-synthesis: none;
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
@@ -17,12 +17,7 @@
 
 html {
   min-height: 100%;
-  background: radial-gradient(
-      circle at top,
-      rgba(255, 250, 242, 0.9),
-      transparent 35%
-    ),
-    linear-gradient(180deg, #efe6d7 0%, #e7dbca 100%);
+  background: var(--color-app-shell-bg);
 }
 
 body {
@@ -48,7 +43,7 @@ button {
 
 button:focus-visible,
 input:focus-visible {
-  box-shadow: 0 0 0 2px var(--color-landing-primary);
+  box-shadow: 0 0 0 2px var(--color-app-primary);
 }
 
 h1,
