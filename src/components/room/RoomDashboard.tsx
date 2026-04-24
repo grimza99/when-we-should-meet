@@ -1,7 +1,6 @@
 import { useId } from "react";
 import { COLOR_PALETTE } from "../../lib/constants";
 import type { RankingItem, Room } from "../../types";
-import { Button } from "../ui/Button";
 
 type RoomDashboardProps = {
   rankings: RankingItem[];
