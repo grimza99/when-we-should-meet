@@ -1,17 +1,18 @@
-import type { ReactNode } from 'react'
+import type { ReactNode } from "react";
 
-type ButtonVariant = 'primary' | 'secondary' | 'chip'
+type ButtonVariant = "primary" | "secondary" | "chip";
 
 type ButtonProps = {
-  ariaControls?: string
-  ariaExpanded?: boolean
-  children: ReactNode
-  onClick?: () => void
-  type?: 'button' | 'submit'
-  variant?: ButtonVariant
-  block?: boolean
-  disabled?: boolean
-}
+  ariaControls?: string;
+  ariaExpanded?: boolean;
+  children: ReactNode;
+  onClick?: () => void;
+  type?: "button" | "submit";
+  variant?: ButtonVariant;
+  block?: boolean;
+  disabled?: boolean;
+  style?: React.CSSProperties;
+};
 
 export function Button({
   ariaControls,
@@ -20,19 +21,20 @@ export function Button({
   children,
   disabled = false,
   onClick,
-  type = 'button',
-  variant = 'primary',
+  type = "button",
+  variant = "primary",
+  style = {},
 }: ButtonProps) {
   const className = [
-    variant === 'chip'
-      ? 'chip-button'
-      : variant === 'secondary'
-        ? 'secondary-button'
-        : 'primary-button',
-    block ? 'is-block' : '',
+    variant === "chip"
+      ? "chip-button"
+      : variant === "secondary"
+      ? "secondary-button"
+      : "primary-button",
+    block ? "is-block" : "",
   ]
     .filter(Boolean)
-    .join(' ')
+    .join(" ");
 
   return (
     <button
@@ -42,8 +44,9 @@ export function Button({
       disabled={disabled}
       onClick={onClick}
       type={type}
+      style={style}
     >
       {children}
     </button>
-  )
+  );
 }

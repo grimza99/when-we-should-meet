@@ -1,15 +1,15 @@
-import { useId, type ReactNode } from 'react'
+import { useId, type ReactNode } from "react";
 
 type ModalProps = {
-  children: ReactNode
-  description?: string
-  onClose?: () => void
-  title: string
-}
+  children: ReactNode;
+  description?: string;
+  onClose?: () => void;
+  title: string;
+};
 
 export function Modal({ children, description, onClose, title }: ModalProps) {
-  const titleId = useId()
-  const descriptionId = useId()
+  const titleId = useId();
+  const descriptionId = useId();
 
   return (
     <div className="modal-backdrop">
@@ -34,14 +34,14 @@ export function Modal({ children, description, onClose, title }: ModalProps) {
               </button>
             ) : null}
           </div>
-          {description ? (
+          {description && (
             <p className="modal-copy" id={descriptionId}>
               {description}
             </p>
-          ) : null}
+          )}
         </div>
         {children}
       </section>
     </div>
-  )
+  );
 }

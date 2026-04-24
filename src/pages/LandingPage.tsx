@@ -5,6 +5,24 @@ import { TextInput } from '../components/ui/TextInput'
 import { normalizeInviteCodeInput } from '../lib/inviteCode'
 import type { CreateRoomPayload } from '../types'
 
+const landingFeatures = [
+  {
+    description: '아이디도 비번도 필요 없어요. 방 만들고 링크만 보내면 끝!',
+    icon: '🚀',
+    title: '1초만에 시작',
+  },
+  {
+    description: '모바일에 최적화된 달력으로 누구나 쉽게 일정을 입력해요.',
+    icon: '📱',
+    title: '손쉬운 터치',
+  },
+  {
+    description: '가장 많이 모이는 날이 언제인지 저희가 바로 계산해 드릴게요.',
+    icon: '🥇',
+    title: '최적의 날짜 추천',
+  },
+]
+
 type LandingPageProps = {
   joinInviteCode: string
   message: string
@@ -24,7 +42,7 @@ export function LandingPage({
   const [isJoiningRoom, setIsJoiningRoom] = useState(false)
 
   const submitJoin = async () => {
-    if (isJoiningRoom) {
+    if (isJoiningRoom || !joinInviteCode.trim()) {
       return
     }
 
@@ -39,60 +57,63 @@ export function LandingPage({
 
   return (
     <main className="page landing-page">
-      <section className="hero-card">
-        <p className="eyebrow">when should we meet?</p>
-        <h1>채팅 대신 달력에서 날짜를 정해요</h1>
+      <section className="landing-hero">
+        <div aria-hidden="true" className="landing-hero-icon">
+          📅
+        </div>
+        <h1>우리 언제 볼까?</h1>
         <p className="hero-copy">
-          친구, 가족, 지인과 함께 가능한 날짜를 고르고 가장 좋은 날짜를 바로
-          확인하는 가벼운 일정 조율 도구입니다.
+          번거로운 가입 없이, 링크 하나로
+          <br />
+          모두가 가능한 최적의 날짜를 찾아보세요.
         </p>
       </section>
 
-      <section className="panel stack-gap">
+      <section className="landing-cta" aria-label="방 만들기 또는 참여하기">
         <Button block onClick={() => setIsCreateModalOpen(true)}>
           방 만들기
         </Button>
 
-        <div className="divider" />
-
-        <div className="join-block">
+        <form
+          className="landing-join-form"
+          onSubmit={(event) => {
+            event.preventDefault()
+            void submitJoin()
+          }}
+        >
           <TextInput
             autoCapitalize="characters"
             autoCorrect="off"
             id="invite-code"
             inputMode="text"
-            label="초대 코드로 참여하기"
+            label="초대 코드 입력"
             maxLength={6}
             onChange={(value) => onJoinInviteCodeChange(normalizeInviteCodeInput(value))}
-            placeholder="예: ABC123"
+            placeholder="초대 코드 입력"
             spellCheck={false}
             value={joinInviteCode}
           />
           <Button
-            block
             disabled={!joinInviteCode.trim() || isJoiningRoom}
             variant="secondary"
-            onClick={() => void submitJoin()}
+            type="submit"
           >
-            {isJoiningRoom ? '참여 중...' : '참여하기'}
+            {isJoiningRoom ? '참여 중' : '참여'}
           </Button>
-          {message ? <p className="inline-feedback">{message}</p> : null}
-        </div>
+        </form>
+        {message ? <p className="inline-feedback">{message}</p> : null}
       </section>
 
-      <section className="info-grid">
-        <article className="mini-card">
-          <strong>가입 없음</strong>
-          <p>링크나 코드만 있으면 바로 입장합니다.</p>
-        </article>
-        <article className="mini-card">
-          <strong>모바일 중심</strong>
-          <p>모든 기기에서 동일한 모바일 폭 UI로 동작합니다.</p>
-        </article>
-        <article className="mini-card">
-          <strong>상위 날짜 집계</strong>
-          <p>가장 많이 가능한 날짜 1~3위를 빠르게 확인합니다.</p>
-        </article>
+      <section className="info-grid" aria-label="서비스 특징">
+        {landingFeatures.map((feature) => (
+          <article className="mini-card" key={feature.title}>
+            <span aria-hidden="true" className="mini-card-icon">
+              {feature.icon}
+            </span>
+            <strong>{feature.title}</strong>
+            <p>{feature.description}</p>
+          </article>
+        ))}
       </section>
 
       {isCreateModalOpen ? (

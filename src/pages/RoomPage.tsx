@@ -1,38 +1,38 @@
-import { useEffect, useMemo, useState } from 'react'
-import { CalendarGrid } from '../components/calendar/CalendarGrid'
-import { NicknameModal } from '../components/room/NicknameModal'
-import { RoomDashboard } from '../components/room/RoomDashboard'
-import { Button } from '../components/ui/Button'
-import { SegmentedButtonGroup } from '../components/ui/SegmentedButtonGroup'
-import { TextInput } from '../components/ui/TextInput'
-import type { DateMode, Participant, Room, RoomSummary } from '../types'
+import { useEffect, useMemo, useState } from "react";
+import { CalendarGrid } from "../components/calendar/CalendarGrid";
+import { NicknameModal } from "../components/room/NicknameModal";
+import { RoomDashboard } from "../components/room/RoomDashboard";
+import { Button } from "../components/ui/Button";
+import { SegmentedButtonGroup } from "../components/ui/SegmentedButtonGroup";
+import { TextInput } from "../components/ui/TextInput";
+import type { DateMode, Participant, Room, RoomSummary } from "../types";
 
-type ModeOption = { label: string; value: DateMode }
-type WeekdayOption = { label: string; value: number; selected: boolean }
+type ModeOption = { label: string; value: DateMode };
+type WeekdayOption = { label: string; value: number; selected: boolean };
 
 type RoomPageProps = {
-  currentParticipant?: Participant
-  isCurrentUserHost?: boolean
-  isHydratingRoom?: boolean
-  modeOptions: ModeOption[]
-  room?: Room
-  roomSummary?: RoomSummary
-  roomMessage: string
-  selectedMode: DateMode
-  weekdayOptions: WeekdayOption[]
-  onBackToLanding: () => void
-  onChangeMode: (mode: DateMode) => void
-  onChangeNickname: (nickname: string) => Promise<boolean>
-  onCopyInviteCode: () => void
-  onDeleteRoom: () => Promise<boolean>
-  onJoinRoom: (nickname: string) => Promise<boolean>
-  onLeaveRoom: () => Promise<boolean>
-  onMoveMonth: (offset: number) => void
-  onRemoveParticipant: (participantId: string) => Promise<boolean>
-  onSelectDate: (isoDate: string) => void
-  onShareRoom: () => void
-  onToggleWeekday: (weekday: number) => void
-}
+  currentParticipant?: Participant;
+  isCurrentUserHost?: boolean;
+  isHydratingRoom?: boolean;
+  modeOptions: ModeOption[];
+  room?: Room;
+  roomSummary?: RoomSummary;
+  roomMessage: string;
+  selectedMode: DateMode;
+  weekdayOptions: WeekdayOption[];
+  onBackToLanding: () => void;
+  onChangeMode: (mode: DateMode) => void;
+  onChangeNickname: (nickname: string) => Promise<boolean>;
+  onCopyInviteCode: () => void;
+  onDeleteRoom: () => Promise<boolean>;
+  onJoinRoom: (nickname: string) => Promise<boolean>;
+  onLeaveRoom: () => Promise<boolean>;
+  onMoveMonth: (offset: number) => void;
+  onRemoveParticipant: (participantId: string) => Promise<boolean>;
+  onSelectDate: (isoDate: string) => void;
+  onShareRoom: () => void;
+  onToggleWeekday: (weekday: number) => void;
+};
 
 export function RoomPage({
   currentParticipant,
@@ -58,32 +58,32 @@ export function RoomPage({
   weekdayOptions,
 }: RoomPageProps) {
   const [nicknameInput, setNicknameInput] = useState(
-    currentParticipant?.nickname ?? '',
-  )
-  const [isSavingNickname, setIsSavingNickname] = useState(false)
-  const [isDeletingRoom, setIsDeletingRoom] = useState(false)
-  const [isLeavingRoom, setIsLeavingRoom] = useState(false)
-  const [isNicknameModalOpen, setIsNicknameModalOpen] = useState(true)
+    currentParticipant?.nickname ?? ""
+  );
+  const [isSavingNickname, setIsSavingNickname] = useState(false);
+  const [isDeletingRoom, setIsDeletingRoom] = useState(false);
+  const [isLeavingRoom, setIsLeavingRoom] = useState(false);
+  const [isNicknameModalOpen, setIsNicknameModalOpen] = useState(true);
   const [removingParticipantId, setRemovingParticipantId] = useState<
     string | null
-  >(null)
+  >(null);
 
   useEffect(() => {
-    setNicknameInput(currentParticipant?.nickname ?? '')
-  }, [currentParticipant?.nickname])
+    setNicknameInput(currentParticipant?.nickname ?? "");
+  }, [currentParticipant?.nickname]);
 
   useEffect(() => {
-    setIsNicknameModalOpen(true)
-  }, [room?.id])
+    setIsNicknameModalOpen(true);
+  }, [room?.id]);
   const rankByDate = useMemo(
     () =>
       Object.fromEntries(
         roomSummary?.rankings
           .filter((ranking) => ranking.score > 0)
-          .map((ranking) => [ranking.date, ranking.rank]) ?? [],
+          .map((ranking) => [ranking.date, ranking.rank]) ?? []
       ),
-    [roomSummary?.rankings],
-  )
+    [roomSummary?.rankings]
+  );
 
   if (isHydratingRoom) {
     return (
@@ -91,10 +91,12 @@ export function RoomPage({
         <section className="hero-card">
           <p className="eyebrow">loading room</p>
           <h1>방 정보를 불러오는 중입니다</h1>
-          <p className="hero-copy">공유 링크와 참가자 정보를 확인하고 있어요.</p>
+          <p className="hero-copy">
+            공유 링크와 참가자 정보를 확인하고 있어요.
+          </p>
         </section>
       </main>
-    )
+    );
   }
 
   if (!room || !roomSummary) {
@@ -103,92 +105,93 @@ export function RoomPage({
         <section className="hero-card">
           <p className="eyebrow">room not found</p>
           <h1>존재하지 않는 방입니다</h1>
-          <p className="hero-copy">초대 코드를 다시 확인하거나 새 방을 만들어 주세요.</p>
+          <p className="hero-copy">
+            초대 코드를 다시 확인하거나 새 방을 만들어 주세요.
+          </p>
         </section>
         <Button block onClick={onBackToLanding}>
           랜딩으로 돌아가기
         </Button>
       </main>
-    )
+    );
   }
 
-  const isRoomFull = room.participants.length >= room.maxParticipants
-  const shouldPromptForNickname = !currentParticipant && !isRoomFull
-  const shouldShowNicknameModal = shouldPromptForNickname && isNicknameModalOpen
-  const trimmedNickname = nicknameInput.trim()
+  const isRoomFull = room.participants.length >= room.maxParticipants;
+  const shouldShowNicknameModal =
+    !currentParticipant && !isRoomFull && isNicknameModalOpen;
+  const trimmedNickname = nicknameInput.trim();
 
   const submitNicknameChange = async () => {
     if (!trimmedNickname || isSavingNickname) {
-      return
+      return;
     }
 
-    setIsSavingNickname(true)
+    setIsSavingNickname(true);
 
     try {
-      await onChangeNickname(trimmedNickname)
+      await onChangeNickname(trimmedNickname);
     } finally {
-      setIsSavingNickname(false)
+      setIsSavingNickname(false);
     }
-  }
+  };
 
   const submitRemoveParticipant = async (participantId: string) => {
     if (removingParticipantId) {
-      return
+      return;
     }
 
-    setRemovingParticipantId(participantId)
+    setRemovingParticipantId(participantId);
 
     try {
-      await onRemoveParticipant(participantId)
+      await onRemoveParticipant(participantId);
     } finally {
-      setRemovingParticipantId(null)
+      setRemovingParticipantId(null);
     }
-  }
+  };
 
   const submitDeleteRoom = async () => {
     if (
       isDeletingRoom ||
-      !window.confirm('이 방과 참가자 정보를 모두 삭제할까요?')
+      !window.confirm("이 방과 참가자 정보를 모두 삭제할까요?")
     ) {
-      return
+      return;
     }
 
-    setIsDeletingRoom(true)
+    setIsDeletingRoom(true);
 
     try {
-      await onDeleteRoom()
+      await onDeleteRoom();
     } finally {
-      setIsDeletingRoom(false)
+      setIsDeletingRoom(false);
     }
-  }
+  };
 
   const submitLeaveRoom = async () => {
     if (
       isLeavingRoom ||
-      !window.confirm('이 방에서 나가면 선택한 날짜도 함께 사라집니다. 나갈까요?')
+      !window.confirm(
+        "이 방에서 나가면 선택한 날짜도 함께 사라집니다. 나갈까요?"
+      )
     ) {
-      return
+      return;
     }
 
-    setIsLeavingRoom(true)
+    setIsLeavingRoom(true);
 
     try {
-      await onLeaveRoom()
+      await onLeaveRoom();
     } finally {
-      setIsLeavingRoom(false)
+      setIsLeavingRoom(false);
     }
-  }
+  };
 
   return (
     <main className="page room-page">
       <header className="room-header">
-        <div>
-          <p className="eyebrow">room code</p>
-          <h1 className="room-title">{room.inviteCode}</h1>
-        </div>
+        <h1 className="room-title">{room.inviteCode}</h1>
         <div className="header-actions">
           <Button onClick={onCopyInviteCode} variant="chip">
-            복사
+            입장 코드 복사
           </Button>
           <Button onClick={onShareRoom} variant="chip">
             공유
@@ -196,10 +199,9 @@ export function RoomPage({
         </div>
       </header>
 
-      {roomMessage ? <p className="inline-feedback">{roomMessage}</p> : null}
+      {roomMessage && <p className="inline-feedback">{roomMessage}</p>}
 
       <RoomDashboard
-        currentParticipant={currentParticipant}
         isCurrentUserHost={isCurrentUserHost}
         onRemoveParticipant={(participantId) =>
           void submitRemoveParticipant(participantId)
@@ -209,16 +211,17 @@ export function RoomPage({
         room={room}
       />
 
-      {currentParticipant ? (
+      {currentParticipant && (
         <section className="controls-card">
           <div className="control-group">
-            <p className="section-label">내 정보</p>
+            <p className="section-label">관리</p>
             <div className="nickname-edit-row">
               <TextInput
                 label="닉네임"
                 onChange={setNicknameInput}
                 placeholder="새 닉네임"
                 value={nicknameInput}
+                inputStyle={{ minHeight: "40px" }}
               />
               <Button
                 disabled={
@@ -228,21 +231,14 @@ export function RoomPage({
                 }
                 onClick={() => void submitNicknameChange()}
                 variant="secondary"
+                style={{ minHeight: "40px" }}
               >
-                {isSavingNickname ? '저장 중...' : '변경'}
+                {isSavingNickname ? "저장 중..." : "변경"}
               </Button>
             </div>
           </div>
 
           <div className="control-group danger-zone">
-            <p className="section-label">
-              {isCurrentUserHost ? '방장 관리' : '참여 관리'}
-            </p>
-            <p className="dashboard-summary">
-              {isCurrentUserHost
-                ? '방장은 참가자를 내보내거나 방 전체를 삭제할 수 있어요.'
-                : '방에서 나가면 내 닉네임과 선택한 날짜가 삭제돼요.'}
-            </p>
             {isCurrentUserHost ? (
               <Button
                 block
@@ -250,7 +246,7 @@ export function RoomPage({
                 onClick={() => void submitDeleteRoom()}
                 variant="secondary"
               >
-                {isDeletingRoom ? '삭제 중...' : '방 삭제'}
+                {isDeletingRoom ? "삭제 중..." : "방 삭제"}
               </Button>
             ) : (
               <Button
@@ -259,16 +255,16 @@ export function RoomPage({
                 onClick={() => void submitLeaveRoom()}
                 variant="secondary"
               >
-                {isLeavingRoom ? '나가는 중...' : '방 나가기'}
+                {isLeavingRoom ? "나가는 중..." : "방 나가기"}
               </Button>
             )}
           </div>
         </section>
-      ) : null}
+      )}
 
       <section className="controls-card">
         <div className="control-group">
-          <p className="section-label">선택 방식</p>
+          <p className="section-label">선택 필터</p>
           <SegmentedButtonGroup
             onChange={onChangeMode}
             options={modeOptions}
@@ -276,13 +272,12 @@ export function RoomPage({
           />
         </div>
 
-        <div className="control-group">
-          <p className="section-label">요일 일괄 적용</p>
+        <div className="control-group weekday-control-group">
           <div className="weekday-row">
             {weekdayOptions.map((option) => (
               <button
                 key={option.value}
-                className={`day-chip${option.selected ? ' is-active' : ''}`}
+                className={`day-chip${option.selected ? " is-active" : ""}`}
                 onClick={() => onToggleWeekday(option.value)}
                 type="button"
               >
@@ -311,7 +306,7 @@ export function RoomPage({
         />
       </section>
 
-      {!currentParticipant && isRoomFull ? (
+      {!currentParticipant && isRoomFull && (
         <section className="panel stack-gap">
           <p className="eyebrow">room is full</p>
           <h2>이 방은 정원이 모두 찼어요</h2>
@@ -323,24 +318,14 @@ export function RoomPage({
             랜딩으로 돌아가기
           </Button>
         </section>
-      ) : null}
+      )}
 
-      {shouldPromptForNickname && !isNicknameModalOpen ? (
-        <section className="panel stack-gap">
-          <p className="eyebrow">join room</p>
-          <h2>닉네임을 입력하면 일정 선택에 참여할 수 있어요</h2>
-          <Button block onClick={() => setIsNicknameModalOpen(true)}>
-            닉네임 입력하기
-          </Button>
-        </section>
-      ) : null}
-
-      {shouldShowNicknameModal ? (
+      {shouldShowNicknameModal && (
         <NicknameModal
           onClose={() => setIsNicknameModalOpen(false)}
           onJoinRoom={onJoinRoom}
         />
-      ) : null}
+      )}
     </main>
-  )
+  );
 }
