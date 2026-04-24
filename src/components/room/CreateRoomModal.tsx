@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { resolveDateRange } from "../../lib/date";
+import { getTodayDateString, resolveDateRange } from "../../lib/date";
 import { Button } from "../ui/Button";
 import { Modal } from "../ui/Modal";
 import { SegmentedButtonGroup } from "../ui/SegmentedButtonGroup";
@@ -20,7 +20,7 @@ export function CreateRoomModal({
     useState<DateRangeType>("this_month");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitMessage, setSubmitMessage] = useState("");
-  const today = new Date().toISOString().slice(0, 10);
+  const today = getTodayDateString();
   const [startDate, setStartDate] = useState(today);
   const [endDate, setEndDate] = useState(today);
   const participantCount = Number(maxParticipants);

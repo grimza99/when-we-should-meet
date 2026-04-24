@@ -28,8 +28,12 @@ export function buildCalendarDays(
   currentParticipantId?: string,
   visibleMonth?: string,
 ): CalendarDay[] {
-  const start = visibleMonth ? startOfMonth(new Date(visibleMonth)) : new Date(room.startDate)
-  const end = visibleMonth ? endOfMonth(new Date(visibleMonth)) : new Date(room.endDate)
+  const start = visibleMonth
+    ? startOfMonth(parseDateOnly(visibleMonth))
+    : parseDateOnly(room.startDate)
+  const end = visibleMonth
+    ? endOfMonth(parseDateOnly(visibleMonth))
+    : parseDateOnly(room.endDate)
   const calendarStart = new Date(start)
   calendarStart.setDate(calendarStart.getDate() - calendarStart.getDay())
 
@@ -70,8 +74,8 @@ export function buildCalendarDays(
 
 export function buildRankings(room: Room): RankingItem[] {
   const rankings: RankingItem[] = []
-  const start = new Date(room.startDate)
-  const end = new Date(room.endDate)
+  const start = parseDateOnly(room.startDate)
+  const end = parseDateOnly(room.endDate)
 
   for (const cursor = new Date(start); cursor <= end; cursor.setDate(cursor.getDate() + 1)) {
     const isoDate = formatDate(cursor)
@@ -103,9 +107,9 @@ export function buildRankings(room: Room): RankingItem[] {
 }
 
 export function clampVisibleMonth(room: Room, visibleMonth: string) {
-  const month = startOfMonth(new Date(visibleMonth))
-  const roomStart = startOfMonth(new Date(room.startDate))
-  const roomEnd = startOfMonth(new Date(room.endDate))
+  const month = startOfMonth(parseDateOnly(visibleMonth))
+  const roomStart = startOfMonth(parseDateOnly(room.startDate))
+  const roomEnd = startOfMonth(parseDateOnly(room.endDate))
 
   if (month < roomStart) {
     return formatDate(roomStart)
@@ -119,14 +123,14 @@ export function clampVisibleMonth(room: Room, visibleMonth: string) {
 }
 
 export function addMonths(isoDate: string, amount: number) {
-  const next = new Date(isoDate)
+  const next = parseDateOnly(isoDate)
   next.setDate(1)
   next.setMonth(next.getMonth() + amount)
   return formatDate(next)
 }
 
 export function formatMonthLabel(isoDate: string) {
-  const date = new Date(isoDate)
+  const date = parseDateOnly(isoDate)
   return `${date.getFullYear()}년 ${date.getMonth() + 1}월`
 }
 
@@ -139,7 +143,7 @@ export function isDateAvailable(
     return override === 'available'
   }
 
-  const weekday = new Date(isoDate).getDay()
+  const weekday = parseDateOnly(isoDate).getDay()
   const ruleMatched = participant.weekdayRules.includes(weekday)
 
   if (participant.selectionMode === 'available') {
@@ -150,7 +154,11 @@ export function isDateAvailable(
 }
 
 export function formatDate(date: Date) {
-  return date.toISOString().slice(0, 10)
+  const year = date.getFullYear()
+  const month = String(date.getMonth() + 1).padStart(2, '0')
+  const day = String(date.getDate()).padStart(2, '0')
+
+  return `${year}-${month}-${day}`
 }
 
 export function formatReadableDate(date: Date) {
@@ -163,6 +171,20 @@ function startOfMonth(date: Date) {
 
 function endOfMonth(date: Date) {
   return new Date(date.getFullYear(), date.getMonth() + 1, 0)
+}
+
+export function getTodayDateString() {
+  return formatDate(new Date())
+}
+
+function parseDateOnly(isoDate: string) {
+  const [year, month, day] = isoDate.split('-').map(Number)
+
+  if (!year || !month || !day) {
+    return new Date(isoDate)
+  }
+
+  return new Date(year, month - 1, day)
 }
 
 const COLOR_FALLBACKS = [

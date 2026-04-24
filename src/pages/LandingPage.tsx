@@ -1,35 +1,35 @@
-import { useState } from 'react'
-import { CreateRoomModal } from '../components/room/CreateRoomModal'
-import { Button } from '../components/ui/Button'
-import { TextInput } from '../components/ui/TextInput'
-import { normalizeInviteCodeInput } from '../lib/inviteCode'
-import type { CreateRoomPayload } from '../types'
+import { useState } from "react";
+import { CreateRoomModal } from "../components/room/CreateRoomModal";
+import { Button } from "../components/ui/Button";
+import { TextInput } from "../components/ui/TextInput";
+import { normalizeInviteCodeInput } from "../lib/inviteCode";
+import type { CreateRoomPayload } from "../types";
 
 const landingFeatures = [
   {
-    description: '아이디도 비번도 필요 없어요. 방 만들고 링크만 보내면 끝!',
-    icon: '🚀',
-    title: '1초만에 시작',
+    description: "아이디도 비번도 필요 없어요. 방 만들고 링크만 보내면 끝!",
+    icon: "🚀",
+    title: "1초만에 시작",
   },
   {
-    description: '모바일에 최적화된 달력으로 누구나 쉽게 일정을 입력해요.',
-    icon: '📱',
-    title: '손쉬운 터치',
+    description: "모바일에 최적화된 달력으로 누구나 쉽게 일정을 입력해요.",
+    icon: "📱",
+    title: "손쉬운 터치",
   },
   {
-    description: '가장 많이 모이는 날이 언제인지 저희가 바로 계산해 드릴게요.',
-    icon: '🥇',
-    title: '최적의 날짜 추천',
+    description: "가장 많이 모이는 날이 언제인지 저희가 바로 계산해 드릴게요.",
+    icon: "🥇",
+    title: "최적의 날짜 추천",
   },
-]
+];
 
 type LandingPageProps = {
-  joinInviteCode: string
-  message: string
-  onCreateRoom: (payload: CreateRoomPayload) => Promise<boolean>
-  onJoinInviteCodeChange: (inviteCode: string) => void
-  onJoinRoom: () => Promise<boolean>
-}
+  joinInviteCode: string;
+  message: string;
+  onCreateRoom: (payload: CreateRoomPayload) => Promise<boolean>;
+  onJoinInviteCodeChange: (inviteCode: string) => void;
+  onJoinRoom: () => Promise<boolean>;
+};
 
 export function LandingPage({
   joinInviteCode,
@@ -38,29 +38,32 @@ export function LandingPage({
   onJoinInviteCodeChange,
   onJoinRoom,
 }: LandingPageProps) {
-  const [isCreateModalOpen, setIsCreateModalOpen] = useState(false)
-  const [isJoiningRoom, setIsJoiningRoom] = useState(false)
+  const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+  const [isJoiningRoom, setIsJoiningRoom] = useState(false);
 
   const submitJoin = async () => {
     if (isJoiningRoom || !joinInviteCode.trim()) {
-      return
+      return;
     }
 
-    setIsJoiningRoom(true)
+    setIsJoiningRoom(true);
 
     try {
-      await onJoinRoom()
+      await onJoinRoom();
     } finally {
-      setIsJoiningRoom(false)
+      setIsJoiningRoom(false);
     }
-  }
+  };
 
   return (
     <main className="page landing-page">
       <section className="landing-hero">
-        <div aria-hidden="true" className="landing-hero-icon">
-          📅
-        </div>
+        <img
+          src="/logo.png"
+          className="landing-logo-img"
+          aria-label="app-logo"
+        />
+
         <h1>우리 언제 볼까?</h1>
         <p className="hero-copy">
           번거로운 가입 없이, 링크 하나로
@@ -77,8 +80,8 @@ export function LandingPage({
         <form
           className="landing-join-form"
           onSubmit={(event) => {
-            event.preventDefault()
-            void submitJoin()
+            event.preventDefault();
+            void submitJoin();
           }}
         >
           <TextInput
@@ -88,7 +91,9 @@ export function LandingPage({
             inputMode="text"
             label="초대 코드 입력"
             maxLength={6}
-            onChange={(value) => onJoinInviteCodeChange(normalizeInviteCodeInput(value))}
+            onChange={(value) =>
+              onJoinInviteCodeChange(normalizeInviteCodeInput(value))
+            }
             placeholder="초대 코드 입력"
             spellCheck={false}
             value={joinInviteCode}
@@ -98,7 +103,7 @@ export function LandingPage({
             variant="secondary"
             type="submit"
           >
-            {isJoiningRoom ? '참여 중' : '참여'}
+            {isJoiningRoom ? "참여 중" : "참여"}
           </Button>
         </form>
         {message ? <p className="inline-feedback">{message}</p> : null}
@@ -120,16 +125,16 @@ export function LandingPage({
         <CreateRoomModal
           onClose={() => setIsCreateModalOpen(false)}
           onCreateRoom={async (payload) => {
-            const didCreateRoom = await onCreateRoom(payload)
+            const didCreateRoom = await onCreateRoom(payload);
 
             if (didCreateRoom) {
-              setIsCreateModalOpen(false)
+              setIsCreateModalOpen(false);
             }
 
-            return didCreateRoom
+            return didCreateRoom;
           }}
         />
       ) : null}
     </main>
-  )
+  );
 }
