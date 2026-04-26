@@ -17,6 +17,7 @@ import { db } from '../client'
 
 type FirestoreRoomDocument = {
   inviteCode: string
+  blockedClientKeys?: string[]
   maxParticipants: number
   participantCount: number
   dateRangeType: Room['dateRangeType']
@@ -67,6 +68,7 @@ export async function createRoom(
   const inviteCode = await createUniqueInviteCode()
   const room: FirestoreRoomDocument = {
     inviteCode,
+    blockedClientKeys: [],
     maxParticipants: payload.maxParticipants,
     participantCount: 0,
     dateRangeType: payload.dateRangeType,
@@ -138,6 +140,10 @@ export async function joinRoom(params: {
 
     const room = roomSnapshot.data() as FirestoreRoomDocument
 
+    if (room.blockedClientKeys?.includes(params.clientKey)) {
+      throw new Error('ROOM_ACCESS_RESTRICTED')
+    }
+
     if (room.participantCount >= room.maxParticipants) {
       throw new Error('ROOM_CAPACITY_REACHED')
     }
@@ -167,6 +173,16 @@ export async function restoreParticipant(params: {
   clientKey: string
   roomId: string
 }) {
+  const roomSnapshot = await getDoc(roomRef(params.roomId))
+
+  if (roomSnapshot.exists()) {
+    const room = roomSnapshot.data() as FirestoreRoomDocument
+
+    if (room.blockedClientKeys?.includes(params.clientKey)) {
+      throw new Error('ROOM_ACCESS_RESTRICTED')
+    }
+  }
+
   const participantSnapshot = await getDoc(
     participantRef(params.roomId, params.clientKey),
   )
@@ -283,8 +299,14 @@ export async function removeParticipant(params: {
       return
     }
 
+    const participant = participantSnapshot.data() as FirestoreParticipantDocument
+    const blockedClientKeys = Array.from(
+      new Set([...(room.blockedClientKeys ?? []), participant.clientKey]),
+    )
+
     transaction.delete(participantDocumentRef)
     transaction.update(roomDocumentRef, {
+      blockedClientKeys,
       participantCount: increment(-1),
       updatedAt: now,
     })
@@ -331,6 +353,20 @@ export async function leaveRoom(params: {
       updatedAt: now,
     })
   })
+}
+
+export async function isRoomAccessRestricted(params: {
+  clientKey: string
+  roomId: string
+}) {
+  const roomSnapshot = await getDoc(roomRef(params.roomId))
+
+  if (!roomSnapshot.exists()) {
+    return false
+  }
+
+  const room = roomSnapshot.data() as FirestoreRoomDocument
+  return room.blockedClientKeys?.includes(params.clientKey) ?? false
 }
 
 export async function deleteRoom(params: {
