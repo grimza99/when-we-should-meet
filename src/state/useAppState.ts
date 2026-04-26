@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useLocalStorageState } from "../hooks/useLocalStorageState";
 import {
   addMonths,
@@ -22,6 +22,7 @@ import {
   getRoomByInviteCode,
   getRoomSnapshot,
   joinRoom as joinFirebaseRoom,
+  isRoomAccessRestricted,
   leaveRoom as leaveFirebaseRoom,
   mapParticipantRow,
   mapRoomRowToDraftRoom,
@@ -73,6 +74,15 @@ export function useAppState() {
     ? clampVisibleMonth(currentRoom, visibleMonth || currentRoom.startDate)
     : "";
 
+  const goToRoomAccessRestricted = useCallback((roomId: string) => {
+    setStorage((previous) => ({
+      ...previous,
+      memberships: updateMembership(previous.memberships, roomId, undefined),
+    }))
+    setRoomMessage("이 방은 다시 입장할 수 없도록 제한되었어요.")
+    navigate({ name: "room_access_restricted", roomId }, { replace: true })
+  }, [navigate, setStorage])
+
   const currentRoomSummary = useMemo(() => {
     if (!currentRoom) {
       return undefined;
@@ -121,10 +131,23 @@ export function useAppState() {
         }
 
         const room = mapRoomSnapshotToDraftRoom(roomSnapshot);
-        const restoredParticipant = await restoreParticipant({
-          clientKey: getOrCreateClientKey(),
-          roomId: routeRoomId,
-        });
+        let restoredParticipant = null
+
+        try {
+          restoredParticipant = await restoreParticipant({
+            clientKey: getOrCreateClientKey(),
+            roomId: routeRoomId,
+          })
+        } catch (error) {
+          if (String(error).includes("ROOM_ACCESS_RESTRICTED")) {
+            if (!isCancelled) {
+              goToRoomAccessRestricted(routeRoomId)
+            }
+            return
+          }
+
+          throw error
+        }
 
         if (isCancelled) {
           return;
@@ -170,6 +193,7 @@ export function useAppState() {
     currentParticipant,
     currentParticipantId,
     currentRoom,
+    goToRoomAccessRestricted,
     routeRoomId,
     setStorage,
     storage.memberships,
@@ -217,6 +241,27 @@ export function useAppState() {
             }
 
             const room = mapRoomSnapshotToDraftRoom(roomSnapshot);
+            const shouldCheckRestrictedAccess =
+              Boolean(currentParticipantId) &&
+              !room.participants.some(
+                (participant) => participant.id === currentParticipantId
+              )
+
+            if (shouldCheckRestrictedAccess) {
+              const isRestricted = await isRoomAccessRestricted({
+                clientKey: getOrCreateClientKey(),
+                roomId: routeRoomId,
+              })
+
+              if (isCancelled) {
+                return
+              }
+
+              if (isRestricted) {
+                goToRoomAccessRestricted(routeRoomId)
+                return
+              }
+            }
 
             setStorage((previous) => ({
               ...previous,
@@ -271,7 +316,7 @@ export function useAppState() {
 
       void unsubscribeFromRoomChanges(subscription);
     };
-  }, [routeRoomId, setStorage]);
+  }, [currentParticipantId, goToRoomAccessRestricted, routeRoomId, setStorage]);
 
   const createRoom = async (payload: CreateRoomPayload) => {
     const hostClientKey = getOrCreateClientKey();
@@ -357,6 +402,21 @@ export function useAppState() {
       const room = roomSnapshot
         ? mapRoomSnapshotToDraftRoom(roomSnapshot)
         : mapRoomRowToDraftRoom(roomRow);
+
+      try {
+        await restoreParticipant({
+          clientKey: getOrCreateClientKey(),
+          roomId: room.id,
+        })
+      } catch (error) {
+        if (String(error).includes("ROOM_ACCESS_RESTRICTED")) {
+          goToRoomAccessRestricted(room.id)
+          setLandingMessage("")
+          return false
+        }
+
+        throw error
+      }
 
       setStorage((previous) => ({
         ...previous,

@@ -47,10 +47,24 @@
 }
 
 .landing-page,
-.room-page {
+.room-page,
+.room-access-restricted-page {
   display: flex;
   flex-direction: column;
   gap: 16px;
+}
+
+.room-access-restricted-page {
+  justify-content: center;
+  min-height: 100svh;
+}
+
+.restricted-card {
+  text-align: center;
+}
+
+.restricted-card .hero-copy {
+  margin-top: 12px;
 }
 
 .hero-card,
