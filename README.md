@@ -46,9 +46,12 @@ VITE_FIREBASE_PROJECT_ID=your-project-id
 VITE_FIREBASE_STORAGE_BUCKET=your-project.appspot.com
 VITE_FIREBASE_MESSAGING_SENDER_ID=your-sender-id
 VITE_FIREBASE_APP_ID=your-app-id
+VITE_KAKAO_JAVASCRIPT_KEY=your-kakao-javascript-key
 ```
 
 If Firebase env variables are missing, the app falls back to localStorage-only behavior for development.
+
+If `VITE_KAKAO_JAVASCRIPT_KEY` is missing, room sharing falls back to the browser share sheet or clipboard instead of Kakao Talk Share.
 
 ## Firebase
 
@@ -61,6 +64,16 @@ Current Firestore model:
 - `inviteCodes/{inviteCode}` maps a six-character invite code to a room id.
 
 The current rules are MVP-oriented for a no-signup product. Room host actions are enforced by app logic with `hostClientKey`, but this is not a strong security boundary. Before public launch, consider Firebase Anonymous Auth or Cloud Functions for stronger authorization.
+
+## Kakao Talk Share
+
+To enable Kakao link sharing on the room page:
+
+1. Set `VITE_KAKAO_JAVASCRIPT_KEY` in `.env.local`.
+2. Register your web domain in Kakao Developers under JavaScript SDK domain.
+3. Register the same web domain in Product Link so shared buttons can open the room URL.
+
+The app shares the direct room URL (`/room/:roomId`), so a person who opens the Kakao link lands in the room screen immediately and can continue with nickname entry.
 
 ## Quality Gates
 
