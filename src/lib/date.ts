@@ -7,18 +7,19 @@ export function resolveDateRange(type: DateRangeType, start: string, end: string
   }
 
   const now = new Date()
+  const today = formatDate(now)
   const year = now.getFullYear()
   const month = now.getMonth()
 
   if (type === 'this_year') {
     return {
-      startDate: formatDate(new Date(year, 0, 1)),
+      startDate: today,
       endDate: formatDate(new Date(year, 11, 31)),
     }
   }
 
   return {
-    startDate: formatDate(new Date(year, month, 1)),
+    startDate: today,
     endDate: formatDate(new Date(year, month + 1, 0)),
   }
 }
@@ -99,6 +100,7 @@ export function buildRankings(room: Room): RankingItem[] {
 
       return left.date.localeCompare(right.date)
     })
+    .filter((item) => item.score > 0)
     .slice(0, 3)
     .map((item, index) => ({
       ...item,
