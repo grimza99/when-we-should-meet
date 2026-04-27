@@ -111,8 +111,8 @@
   align-items: center;
   gap: 10px;
   border: 0;
-  border-radius: 999px;
-  padding: 8px 14px 8px 10px;
+  border-radius: 16px;
+  padding: 8px;
   background: var(--color-app-white);
   box-shadow: 0 8px 20px var(--color-app-button-shadow);
   color: var(--color-app-text);
@@ -124,12 +124,6 @@
   width: 28px;
   height: 28px;
   flex: 0 0 auto;
-}
-
-.home-brand-text {
-  font-size: 14px;
-  font-weight: 800;
-  line-height: 1;
 }
 
 .landing-hero h1 {
@@ -422,12 +416,17 @@
 }
 
 .room-header-top {
+  width: 100%;
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 12px;
 }
 
+.brand-button-and-invite-code {
+  display: flex;
+  gap: 8px;
+}
 .room-title {
   margin: 14px 0 0;
   font-size: 28px;
