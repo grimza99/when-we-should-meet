@@ -723,16 +723,12 @@
   box-shadow: inset 0 0 0 1px var(--color-app-primary-soft);
 }
 
-.calendar-day:disabled {
-  opacity: 0;
-  pointer-events: none;
-}
-
 .calendar-day.is-highlighted {
   border-color: var(--color-app-primary);
 }
 
-.calendar-day.is-outside-month {
+.calendar-day.is-outside-month,
+.calendar-day.is-disabled {
   opacity: 0.52;
 }
 
