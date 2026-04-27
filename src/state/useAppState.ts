@@ -85,15 +85,6 @@ export function useAppState() {
         (currentParticipantId !== undefined && !hasCurrentParticipant))
   );
 
-  const goToRoomAccessRestricted = useCallback((roomId: string) => {
-    setStorage((previous) => ({
-      ...previous,
-      memberships: updateMembership(previous.memberships, roomId, undefined),
-    }))
-    setRoomMessage("이 방은 다시 입장할 수 없도록 제한되었어요.")
-    navigate({ name: "room_access_restricted", roomId }, { replace: true })
-  }, [navigate, setStorage])
-
   const currentRoomSummary = useMemo(() => {
     if (!currentRoom) {
       return undefined;
@@ -110,7 +101,7 @@ export function useAppState() {
     };
   }, [currentParticipant?.id, currentRoom, effectiveVisibleMonth]);
 
-  const showToast = (message: string) => {
+  function showToast(message: string) {
     setToastMessage(message);
 
     if (toastTimerRef.current) {
@@ -121,7 +112,16 @@ export function useAppState() {
       setToastMessage("");
       toastTimerRef.current = null;
     }, 3000);
-  };
+  }
+
+  const goToRoomAccessRestricted = useCallback((roomId: string) => {
+    setStorage((previous) => ({
+      ...previous,
+      memberships: updateMembership(previous.memberships, roomId, undefined),
+    }));
+    showToast("이 방은 다시 입장할 수 없도록 제한되었어요.");
+    navigate({ name: "room_access_restricted", roomId }, { replace: true });
+  }, [navigate, setStorage]);
 
   useEffect(() => {
     return () => {
@@ -428,7 +428,6 @@ export function useAppState() {
       } catch (error) {
         if (String(error).includes("ROOM_ACCESS_RESTRICTED")) {
           goToRoomAccessRestricted(room.id)
-          setLandingMessage("")
           return false
         }
 
