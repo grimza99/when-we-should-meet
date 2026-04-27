@@ -35,6 +35,8 @@ export function buildCalendarDays(
   const end = visibleMonth
     ? endOfMonth(parseDateOnly(visibleMonth))
     : parseDateOnly(room.endDate)
+  const roomStart = room.startDate
+  const roomEnd = room.endDate
   const calendarStart = new Date(start)
   calendarStart.setDate(calendarStart.getDate() - calendarStart.getDay())
 
@@ -49,20 +51,25 @@ export function buildCalendarDays(
     cursor.setDate(cursor.getDate() + 1)
   ) {
     const isoDate = formatDate(cursor)
-    const availableParticipants = room.participants.filter((participant) =>
-      isDateAvailable(participant, isoDate),
-    )
+    const isSelectable = isoDate >= roomStart && isoDate <= roomEnd
+    const availableParticipants = isSelectable
+      ? room.participants.filter((participant) =>
+          isDateAvailable(participant, isoDate),
+        )
+      : []
 
     days.push({
       key: `${isoDate}-${days.length}`,
       isoDate,
       dayNumber: String(cursor.getDate()),
       isCurrentMonth: cursor.getMonth() === start.getMonth(),
+      isSelectable,
       availableCount: availableParticipants.length,
       participantColors: availableParticipants.map(
         (participant) => COLOR_FALLBACKS[participant.colorIndex] ?? COLOR_FALLBACKS[0],
       ),
       isSelectedByCurrentUser: currentParticipantId
+        && isSelectable
         ? availableParticipants.some(
             (participant) => participant.id === currentParticipantId,
           )
