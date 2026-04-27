@@ -337,12 +337,12 @@
 }
 
 .toast {
-  position: absolute;
-  right: 16px;
+  position: fixed;
+  right: max(16px, calc((100vw - 430px) / 2 + 16px));
   bottom: 16px;
   left: auto;
-  z-index: 6;
-  max-width: min(320px, calc(100% - 32px));
+  z-index: 20;
+  width: min(320px, calc(100vw - 32px));
   margin: 0;
   padding: 12px 14px;
   border: 1px solid var(--color-app-line);
@@ -353,6 +353,7 @@
   font-size: 14px;
   font-weight: 600;
   line-height: 1.45;
+  pointer-events: none;
   animation: toast-slide-in 180ms ease;
 }
 
