@@ -105,6 +105,27 @@
   filter: drop-shadow(0 10px 30px var(--color-app-frame-shadow));
 }
 
+.home-brand-button {
+  display: inline-flex;
+  width: fit-content;
+  align-items: center;
+  gap: 10px;
+  border: 0;
+  border-radius: 16px;
+  padding: 8px;
+  background: var(--color-app-white);
+  box-shadow: 0 8px 20px var(--color-app-button-shadow);
+  color: var(--color-app-text);
+  cursor: pointer;
+  font: inherit;
+}
+
+.home-brand-logo {
+  width: 28px;
+  height: 28px;
+  flex: 0 0 auto;
+}
+
 .landing-hero h1 {
   margin: 0;
   font-size: 30px;
@@ -388,14 +409,26 @@
   top: 0;
   z-index: 2;
   margin: -24px -18px 0;
-  padding: 24px 18px 9px;
+  padding: 18px 18px 12px;
   border-bottom: 1px solid var(--color-app-line);
   background: var(--color-app-white-soft);
   backdrop-filter: blur(6px);
 }
 
+.room-header-top {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.brand-button-and-invite-code {
+  display: flex;
+  gap: 8px;
+}
 .room-title {
-  margin: 0;
+  margin: 14px 0 0;
   font-size: 28px;
   font-weight: 800;
   line-height: 30.8px;
@@ -410,6 +443,11 @@
 .toggle-row,
 .participant-row {
   gap: 8px;
+}
+
+.header-actions {
+  flex-wrap: wrap;
+  justify-content: flex-end;
 }
 
 .room-header .chip-button {
@@ -815,5 +853,17 @@
   to {
     opacity: 1;
     transform: translateY(0);
+  }
+}
+
+@media (max-width: 640px) {
+  .room-header-top {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .header-actions {
+    width: 100%;
+    justify-content: flex-start;
   }
 }

@@ -3,6 +3,7 @@ import { CalendarGrid } from "../components/calendar/CalendarGrid";
 import { NicknameModal } from "../components/room/NicknameModal";
 import { RoomDashboard } from "../components/room/RoomDashboard";
 import { Button } from "../components/ui/Button";
+import { HomeBrandButton } from "../components/ui/HomeBrandButton";
 import { SegmentedButtonGroup } from "../components/ui/SegmentedButtonGroup";
 import { TextInput } from "../components/ui/TextInput";
 import type { DateMode, Participant, Room, RoomSummary } from "../types";
@@ -88,8 +89,8 @@ export function RoomPage({
   if (isHydratingRoom) {
     return (
       <main className="page room-page">
+        <HomeBrandButton onClick={onBackToLanding} />
         <section className="hero-card">
-          <p className="eyebrow">loading room</p>
           <h1>방 정보를 불러오는 중입니다</h1>
           <p className="hero-copy">
             공유 링크와 참가자 정보를 확인하고 있어요.
@@ -102,8 +103,8 @@ export function RoomPage({
   if (!room || !roomSummary) {
     return (
       <main className="page room-page">
+        <HomeBrandButton onClick={onBackToLanding} />
         <section className="hero-card">
-          <p className="eyebrow">room not found</p>
           <h1>존재하지 않는 방입니다</h1>
           <p className="hero-copy">
             초대 코드를 다시 확인하거나 새 방을 만들어 주세요.
@@ -188,14 +189,19 @@ export function RoomPage({
   return (
     <main className="page room-page">
       <header className="room-header">
-        <h1 className="room-title">{room.inviteCode}</h1>
-        <div className="header-actions">
-          <Button onClick={onCopyInviteCode} variant="chip">
-            입장 코드 복사
-          </Button>
-          <Button onClick={onShareRoom} variant="chip">
-            공유
-          </Button>
+        <div className="room-header-top">
+          <div className="brand-button-and-invite-code">
+            <HomeBrandButton onClick={onBackToLanding} />
+            <h1 className="room-title">{room.inviteCode}</h1>
+          </div>
+          <div className="header-actions">
+            <Button onClick={onCopyInviteCode} variant="chip">
+              입장 코드 복사
+            </Button>
+            <Button onClick={onShareRoom} variant="chip">
+              공유
+            </Button>
+          </div>
         </div>
       </header>
 
