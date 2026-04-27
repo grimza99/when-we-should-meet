@@ -90,9 +90,7 @@ export function RoomPage({
     return (
       <main className="page room-page">
         <HomeBrandButton onClick={onBackToLanding} />
-
         <section className="hero-card">
-          <p className="eyebrow">loading room</p>
           <h1>방 정보를 불러오는 중입니다</h1>
           <p className="hero-copy">
             공유 링크와 참가자 정보를 확인하고 있어요.
@@ -106,9 +104,7 @@ export function RoomPage({
     return (
       <main className="page room-page">
         <HomeBrandButton onClick={onBackToLanding} />
-
         <section className="hero-card">
-          <p className="eyebrow">room not found</p>
           <h1>존재하지 않는 방입니다</h1>
           <p className="hero-copy">
             초대 코드를 다시 확인하거나 새 방을 만들어 주세요.
@@ -194,7 +190,10 @@ export function RoomPage({
     <main className="page room-page">
       <header className="room-header">
         <div className="room-header-top">
-          <HomeBrandButton onClick={onBackToLanding} />
+          <div className="brand-button-and-invite-code">
+            <HomeBrandButton onClick={onBackToLanding} />
+            <h1 className="room-title">{room.inviteCode}</h1>
+          </div>
           <div className="header-actions">
             <Button onClick={onCopyInviteCode} variant="chip">
               입장 코드 복사
@@ -204,7 +203,6 @@ export function RoomPage({
             </Button>
           </div>
         </div>
-        <h1 className="room-title">{room.inviteCode}</h1>
       </header>
 
       {roomMessage && <p className="inline-feedback">{roomMessage}</p>}
