@@ -17,6 +17,10 @@ import { useRouteState } from "../lib/router";
 import { getOrCreateClientKey } from "../lib/session/clientIdentity";
 import { isFirebaseConfigured } from "../integrations/firebase/client";
 import {
+  isKakaoConfigured,
+  shareRoomWithKakao,
+} from "../integrations/kakao/client";
+import {
   createRoom as createFirebaseRoom,
   deleteRoom as deleteFirebaseRoom,
   getRoomByInviteCode,
@@ -878,13 +882,26 @@ export function useAppState() {
       return;
     }
 
+    const roomUrl = new URL(
+      `/room/${currentRoom.id}`,
+      window.location.origin
+    ).toString();
     const shareData = {
       title: "when should we meet?",
       text: `초대 코드 ${currentRoom.inviteCode}로 방에 참여해 주세요.`,
-      url: window.location.href,
+      url: roomUrl,
     };
 
     try {
+      if (isKakaoConfigured) {
+        await shareRoomWithKakao({
+          inviteCode: currentRoom.inviteCode,
+          roomId: currentRoom.id,
+        });
+        setRoomMessage("카카오톡 공유 창을 열었어요.");
+        return;
+      }
+
       if (navigator.share) {
         await navigator.share(shareData);
         setRoomMessage("공유 시트를 열었어요.");

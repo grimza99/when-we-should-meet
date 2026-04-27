@@ -39,9 +39,12 @@ VITE_FIREBASE_PROJECT_ID=your-project-id
 VITE_FIREBASE_STORAGE_BUCKET=your-project.appspot.com
 VITE_FIREBASE_MESSAGING_SENDER_ID=your-sender-id
 VITE_FIREBASE_APP_ID=your-app-id
+VITE_KAKAO_JAVASCRIPT_KEY=your-kakao-javascript-key
 ```
 
 If these values are missing, the app keeps using the localStorage-only fallback for development.
+
+If `VITE_KAKAO_JAVASCRIPT_KEY` is missing, room share falls back to Web Share API or clipboard instead of Kakao Talk Share.
 
 ## Firestore Rules
 
