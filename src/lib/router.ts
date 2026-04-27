@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import type { RouteState } from '../types'
 
 export function parseRoute(pathname: string): RouteState {
@@ -28,26 +28,29 @@ export function useRouteState() {
     return () => window.removeEventListener('popstate', handlePopState)
   }, [])
 
-  const navigate = (nextRoute: RouteState, options?: { replace?: boolean }) => {
-    const nextPath = (() => {
-      if (nextRoute.name === 'landing') {
-        return '/'
+  const navigate = useCallback(
+    (nextRoute: RouteState, options?: { replace?: boolean }) => {
+      const nextPath = (() => {
+        if (nextRoute.name === 'landing') {
+          return '/'
+        }
+
+        if (nextRoute.name === 'room_access_restricted') {
+          return `/room/${nextRoute.roomId}/restricted`
+        }
+
+        return `/room/${nextRoute.roomId}`
+      })()
+
+      if (options?.replace) {
+        window.history.replaceState({}, '', nextPath)
+      } else {
+        window.history.pushState({}, '', nextPath)
       }
-
-      if (nextRoute.name === 'room_access_restricted') {
-        return `/room/${nextRoute.roomId}/restricted`
-      }
-
-      return `/room/${nextRoute.roomId}`
-    })()
-
-    if (options?.replace) {
-      window.history.replaceState({}, '', nextPath)
-    } else {
-      window.history.pushState({}, '', nextPath)
-    }
-    setRoute(nextRoute)
-  }
+      setRoute(nextRoute)
+    },
+    [],
+  )
 
   return { route, navigate }
 }

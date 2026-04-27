@@ -37,6 +37,7 @@ export function NicknameModal({ onClose, onJoinRoom }: NicknameModalProps) {
       description="방안에서 보여질 별명을 입력해주세요."
       onClose={onClose}
       title="별명 입력"
+      closeButtonVisible={false}
     >
       <div className="modal-body">
         <TextInput
