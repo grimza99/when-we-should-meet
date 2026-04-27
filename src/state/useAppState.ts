@@ -1056,23 +1056,12 @@ function mergeRoomSnapshot(
     return nextRoom;
   }
 
-  const mergedParticipants = nextRoom.participants.map((participant) =>
-    participant.id === localParticipant.id
-      ? {
-          ...participant,
-          selectionMode: localParticipant.selectionMode,
-          weekdayRules: localParticipant.weekdayRules,
-          overrides: localParticipant.overrides,
-        }
-      : participant
-  );
-
   return {
     ...nextRoom,
-    participants: mergedParticipants.some(
+    participants: nextRoom.participants.some(
       (participant) => participant.id === localParticipant.id
     )
-      ? mergedParticipants
-      : upsertParticipant(mergedParticipants, localParticipant),
+      ? nextRoom.participants
+      : upsertParticipant(nextRoom.participants, localParticipant),
   };
 }
