@@ -299,7 +299,11 @@ export function useAppState() {
                   : previous.memberships,
               rooms: {
                 ...previous.rooms,
-                [room.id]: room,
+                [room.id]: mergeRoomSnapshot(
+                  previous.rooms[room.id],
+                  room,
+                  previous.memberships[room.id]
+                ),
               },
             }));
           } catch {
@@ -534,9 +538,11 @@ export function useAppState() {
     }
 
     const previousParticipant = currentParticipant;
+    const updatedAt = new Date().toISOString();
     const nextParticipant = {
       ...currentParticipant,
       selectionMode: mode,
+      updatedAt,
     };
 
     updateCurrentParticipant(nextParticipant);
@@ -570,6 +576,7 @@ export function useAppState() {
     }
 
     const previousParticipant = currentParticipant;
+    const updatedAt = new Date().toISOString();
     const weekdayRules = currentParticipant.weekdayRules.includes(weekday)
       ? currentParticipant.weekdayRules.filter((value) => value !== weekday)
       : [...currentParticipant.weekdayRules, weekday].sort(
@@ -579,6 +586,7 @@ export function useAppState() {
     const nextParticipant = {
       ...currentParticipant,
       weekdayRules,
+      updatedAt,
     };
 
     updateCurrentParticipant(nextParticipant);
@@ -607,7 +615,13 @@ export function useAppState() {
       return;
     }
 
+    if (isoDate < currentRoom.startDate || isoDate > currentRoom.endDate) {
+      showToast("방에서 정한 날짜 범위 안에서만 선택할 수 있어요.");
+      return;
+    }
+
     const previousParticipant = currentParticipant;
+    const updatedAt = new Date().toISOString();
     const nextOverrides = { ...currentParticipant.overrides };
     const currentOverride = nextOverrides[isoDate];
     const nextStatus =
@@ -624,6 +638,7 @@ export function useAppState() {
     const nextParticipant = {
       ...currentParticipant,
       overrides: nextOverrides,
+      updatedAt,
     };
 
     updateCurrentParticipant(nextParticipant);
@@ -638,8 +653,7 @@ export function useAppState() {
         clientKey: getOrCreateClientKey(),
         participantId: nextParticipant.id,
         roomId: currentRoom.id,
-        status: nextStatus,
-        targetDate: isoDate,
+        overrides: nextParticipant.overrides,
       });
     } catch {
       updateCurrentParticipant(previousParticipant);
@@ -660,9 +674,11 @@ export function useAppState() {
     }
 
     const previousParticipant = currentParticipant;
+    const updatedAt = new Date().toISOString();
     const nextParticipant = {
       ...currentParticipant,
       nickname: trimmedNickname,
+      updatedAt,
     };
 
     updateCurrentParticipant(nextParticipant);
@@ -840,20 +856,28 @@ export function useAppState() {
       return;
     }
 
-    setStorage((previous) => ({
-      ...previous,
-      rooms: {
-        ...previous.rooms,
-        [currentRoom.id]: {
-          ...currentRoom,
-          participants: currentRoom.participants.map((participant) =>
-            participant.id === nextParticipant.id
-              ? nextParticipant
-              : participant
-          ),
+    setStorage((previous) => {
+      const previousRoom = previous.rooms[currentRoom.id];
+
+      if (!previousRoom) {
+        return previous;
+      }
+
+      return {
+        ...previous,
+        rooms: {
+          ...previous.rooms,
+          [currentRoom.id]: {
+            ...previousRoom,
+            participants: previousRoom.participants.map((participant) =>
+              participant.id === nextParticipant.id
+                ? nextParticipant
+                : participant
+            ),
+          },
         },
-      },
-    }));
+      };
+    });
   };
 
   const moveVisibleMonth = (offset: number) => {
@@ -997,6 +1021,7 @@ function createParticipant(
     selectionMode: "available",
     weekdayRules: [],
     overrides: {},
+    updatedAt: new Date().toISOString(),
   };
 }
 
@@ -1056,12 +1081,37 @@ function mergeRoomSnapshot(
     return nextRoom;
   }
 
+  const mergedParticipants = nextRoom.participants.map((participant) => {
+    if (participant.id !== localParticipant.id) {
+      return participant;
+    }
+
+    return isLocalParticipantNewer(localParticipant, participant)
+      ? localParticipant
+      : participant;
+  });
+
   return {
     ...nextRoom,
-    participants: nextRoom.participants.some(
+    participants: mergedParticipants.some(
       (participant) => participant.id === localParticipant.id
     )
-      ? nextRoom.participants
-      : upsertParticipant(nextRoom.participants, localParticipant),
+      ? mergedParticipants
+      : upsertParticipant(mergedParticipants, localParticipant),
   };
+}
+
+function isLocalParticipantNewer(
+  localParticipant: Participant,
+  remoteParticipant: Participant
+) {
+  if (!localParticipant.updatedAt) {
+    return false;
+  }
+
+  if (!remoteParticipant.updatedAt) {
+    return true;
+  }
+
+  return localParticipant.updatedAt > remoteParticipant.updatedAt;
 }

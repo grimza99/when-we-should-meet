@@ -28,13 +28,14 @@ export function CalendarGrid({
               className={[
                 "calendar-day",
                 !day.isCurrentMonth ? "is-outside-month" : "",
+                !day.isSelectable ? "is-disabled" : "",
                 day.isSelectedByCurrentUser ? "is-highlighted" : "",
                 rank ? "is-ranked" : "",
               ]
                 .filter(Boolean)
                 .join(" ")}
-              disabled={!day.isoDate}
-              onClick={() => day.isoDate && onSelectDate(day.isoDate)}
+              disabled={!day.isoDate || !day.isSelectable}
+              onClick={() => day.isoDate && day.isSelectable && onSelectDate(day.isoDate)}
               type="button"
             >
               <span className="calendar-day-topline">
