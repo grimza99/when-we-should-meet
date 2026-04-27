@@ -1,4 +1,5 @@
 import { Button } from '../components/ui/Button'
+import { HomeBrandButton } from '../components/ui/HomeBrandButton'
 
 type RoomAccessRestrictedPageProps = {
   onBackToLanding: () => void
@@ -9,6 +10,8 @@ export function RoomAccessRestrictedPage({
 }: RoomAccessRestrictedPageProps) {
   return (
     <main className="page room-access-restricted-page">
+      <HomeBrandButton onClick={onBackToLanding} />
+
       <section className="hero-card restricted-card">
         <p className="eyebrow">access limited</p>
         <h1>이 방에는 지금 다시 들어갈 수 없어요</h1>
