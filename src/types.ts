@@ -3,6 +3,7 @@ export type DateMode = 'available' | 'unavailable'
 export type RouteState =
   | { name: 'landing' }
   | { name: 'room'; roomId: string }
+  | { name: 'room_access_restricted'; roomId: string }
 
 export type CreateRoomPayload = {
   maxParticipants: number

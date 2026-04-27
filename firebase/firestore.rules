@@ -39,6 +39,7 @@ service cloud.firestore {
     function isValidRoomCreate() {
       return request.resource.data.keys().hasOnly([
         'inviteCode',
+        'blockedClientKeys',
         'maxParticipants',
         'participantCount',
         'dateRangeType',
@@ -53,6 +54,10 @@ service cloud.firestore {
       && request.resource.data.maxParticipants is int
       && request.resource.data.maxParticipants >= 2
       && request.resource.data.maxParticipants <= 10
+      && (
+        !request.resource.data.keys().hasAny(['blockedClientKeys'])
+        || isBlockedClientKeys(request.resource.data.blockedClientKeys)
+      )
       && request.resource.data.participantCount == 0
       && request.resource.data.dateRangeType in ['this_month', 'this_year', 'custom']
       && request.resource.data.startDate is string
@@ -90,6 +95,7 @@ service cloud.firestore {
 
     function isValidRoomParticipantCountUpdate() {
       return request.resource.data.diff(resource.data).changedKeys().hasOnly([
+        'blockedClientKeys',
         'participantCount',
         'updatedAt'
       ])
@@ -99,11 +105,20 @@ service cloud.firestore {
       )
       && request.resource.data.participantCount >= 0
       && request.resource.data.participantCount <= resource.data.maxParticipants
+      && (
+        !request.resource.data.keys().hasAny(['blockedClientKeys'])
+        || isBlockedClientKeys(request.resource.data.blockedClientKeys)
+      )
       && request.resource.data.updatedAt is string;
     }
 
     function isInviteCode(inviteCode) {
       return inviteCode is string && inviteCode.matches('^[A-Z0-9]{6}$');
+    }
+
+    function isBlockedClientKeys(value) {
+      return value is list
+        && value.size() <= 100;
     }
   }
 }

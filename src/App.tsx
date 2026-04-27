@@ -1,4 +1,5 @@
 import './App.css'
+import { RoomAccessRestrictedPage } from './pages/RoomAccessRestrictedPage'
 import { useAppState } from './state/useAppState'
 import { LandingPage } from './pages/LandingPage'
 import { RoomPage } from './pages/RoomPage'
@@ -17,6 +18,8 @@ function App() {
             onJoinInviteCodeChange={appState.setJoinInviteCode}
             onJoinRoom={appState.joinRoomByInviteCode}
           />
+        ) : appState.currentRoute.name === 'room_access_restricted' ? (
+          <RoomAccessRestrictedPage onBackToLanding={appState.goToLanding} />
         ) : (
           <RoomPage
             currentParticipant={appState.currentParticipant}

@@ -4,10 +4,17 @@ type ModalProps = {
   children: ReactNode;
   description?: string;
   onClose?: () => void;
+  closeButtonVisible?: boolean;
   title: string;
 };
 
-export function Modal({ children, description, onClose, title }: ModalProps) {
+export function Modal({
+  children,
+  description,
+  onClose,
+  closeButtonVisible = true,
+  title,
+}: ModalProps) {
   const titleId = useId();
   const descriptionId = useId();
 
@@ -23,7 +30,7 @@ export function Modal({ children, description, onClose, title }: ModalProps) {
         <div className="modal-header">
           <div className="modal-title-row">
             <h2 id={titleId}>{title}</h2>
-            {onClose ? (
+            {onClose && closeButtonVisible ? (
               <button
                 aria-label={`${title} 닫기`}
                 className="modal-close-button"
