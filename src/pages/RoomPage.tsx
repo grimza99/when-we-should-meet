@@ -119,6 +119,7 @@ export function RoomPage({
   const shouldShowNicknameModal =
     !currentParticipant && !isRoomFull && isNicknameModalOpen;
   const trimmedNickname = nicknameInput.trim();
+  const roomRangeLabel = formatRoomRange(room.startDate, room.endDate);
 
   const submitNicknameChange = async () => {
     if (!trimmedNickname || isSavingNickname) {
@@ -290,6 +291,7 @@ export function RoomPage({
       </section>
 
       <section className="calendar-card">
+        <p className="calendar-range-label">{roomRangeLabel}</p>
         <div className="calendar-header">
           <Button onClick={() => onMoveMonth(-1)} variant="chip">
             &lt;
@@ -329,4 +331,24 @@ export function RoomPage({
       )}
     </main>
   );
+}
+
+function formatRoomRange(startDate: string, endDate: string) {
+  const start = parseDateOnly(startDate);
+  const end = parseDateOnly(endDate);
+
+  if (startDate === endDate) {
+    return `${start.getMonth() + 1}월 ${start.getDate()}일`;
+  }
+
+  if (start.getFullYear() === end.getFullYear()) {
+    return `${start.getMonth() + 1}월 ${start.getDate()}일 - ${end.getMonth() + 1}월 ${end.getDate()}일`;
+  }
+
+  return `${start.getFullYear()}년 ${start.getMonth() + 1}월 ${start.getDate()}일 - ${end.getFullYear()}년 ${end.getMonth() + 1}월 ${end.getDate()}일`;
+}
+
+function parseDateOnly(isoDate: string) {
+  const [year, month, day] = isoDate.split("-").map(Number);
+  return new Date(year, month - 1, day);
 }
