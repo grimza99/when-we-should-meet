@@ -666,6 +666,10 @@
   font-weight: 700;
 }
 
+.day-chip.is-active {
+  border-color: var(--color-app-primary);
+}
+
 .calendar-header {
   display: flex;
   align-items: center;
