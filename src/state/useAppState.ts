@@ -540,6 +540,11 @@ export function useAppState() {
     };
 
     updateCurrentParticipant(nextParticipant);
+    showToast(
+      mode === "available"
+        ? "가능한 날짜를 고르는 모드로 바뀌었어요."
+        : "불가능한 날짜를 고르는 모드로 바뀌었어요."
+    );
 
     if (!isFirebaseConfigured) {
       return;
@@ -577,6 +582,7 @@ export function useAppState() {
     };
 
     updateCurrentParticipant(nextParticipant);
+    showToast(`${WEEKDAY_LABELS[weekday]}요일 규칙을 업데이트했어요.`);
 
     if (!isFirebaseConfigured) {
       return;
@@ -621,6 +627,7 @@ export function useAppState() {
     };
 
     updateCurrentParticipant(nextParticipant);
+    showToast(`${isoDate} 날짜 선택을 반영했어요.`);
 
     if (!isFirebaseConfigured) {
       return;
@@ -682,6 +689,7 @@ export function useAppState() {
 
   const removeParticipant = async (participantId: string) => {
     if (!currentRoom || !isCurrentUserHost) {
+      showToast("방장만 참가자를 관리할 수 있어요.");
       return false;
     }
 
@@ -783,6 +791,7 @@ export function useAppState() {
           : previous.rooms,
       };
     });
+    showToast("방에서 나갔어요.");
     navigate({ name: "landing" });
 
     return true;
@@ -878,18 +887,33 @@ export function useAppState() {
       return;
     }
 
+    const roomUrl = new URL(
+      `/room/${currentRoom.id}`,
+      window.location.origin
+    ).toString();
+    const shareData = {
+      title: "when should we meet?",
+      text: `초대 코드 ${currentRoom.inviteCode}로 방에 참여해 주세요.`,
+      url: roomUrl,
+    };
+
     try {
       if (isKakaoConfigured) {
         await shareRoomWithKakao({
           inviteCode: currentRoom.inviteCode,
           roomId: currentRoom.id,
         });
+        showToast("카카오톡 공유 창을 열었어요.");
         return;
-      } else {
-        showToast(
-          "링크를 복사하는데 문제가 생겼어요, 대신 초대코드로 입장할수있어요!"
-        );
       }
+
+      if (navigator.share) {
+        await navigator.share(shareData);
+        showToast("공유 시트를 열었어요.");
+        return;
+      }
+
+      await navigator.clipboard.writeText(shareData.url);
       showToast("공유 링크를 복사했어요.");
     } catch {
       showToast("공유를 완료하지 못했어요.");
