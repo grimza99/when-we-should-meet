@@ -446,6 +446,11 @@
   gap: 8px;
 }
 
+.header-actions {
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
 .room-header .chip-button {
   min-height: 40px;
   padding: 0 16px;
@@ -849,5 +854,17 @@
   to {
     opacity: 1;
     transform: translateY(0);
+  }
+}
+
+@media (max-width: 640px) {
+  .room-header-top {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .header-actions {
+    width: 100%;
+    justify-content: flex-start;
   }
 }

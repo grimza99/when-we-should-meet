@@ -3,6 +3,7 @@ import { CalendarGrid } from "../components/calendar/CalendarGrid";
 import { NicknameModal } from "../components/room/NicknameModal";
 import { RoomDashboard } from "../components/room/RoomDashboard";
 import { Button } from "../components/ui/Button";
+import { HomeBrandButton } from "../components/ui/HomeBrandButton";
 import { SegmentedButtonGroup } from "../components/ui/SegmentedButtonGroup";
 import { TextInput } from "../components/ui/TextInput";
 import type { DateMode, Participant, Room, RoomSummary } from "../types";
@@ -88,6 +89,8 @@ export function RoomPage({
   if (isHydratingRoom) {
     return (
       <main className="page room-page">
+        <HomeBrandButton onClick={onBackToLanding} />
+
         <section className="hero-card">
           <p className="eyebrow">loading room</p>
           <h1>방 정보를 불러오는 중입니다</h1>
@@ -102,6 +105,8 @@ export function RoomPage({
   if (!room || !roomSummary) {
     return (
       <main className="page room-page">
+        <HomeBrandButton onClick={onBackToLanding} />
+
         <section className="hero-card">
           <p className="eyebrow">room not found</p>
           <h1>존재하지 않는 방입니다</h1>
@@ -188,15 +193,18 @@ export function RoomPage({
   return (
     <main className="page room-page">
       <header className="room-header">
-        <h1 className="room-title">{room.inviteCode}</h1>
-        <div className="header-actions">
-          <Button onClick={onCopyInviteCode} variant="chip">
-            입장 코드 복사
-          </Button>
-          <Button onClick={onShareRoom} variant="chip">
-            공유
-          </Button>
+        <div className="room-header-top">
+          <HomeBrandButton onClick={onBackToLanding} />
+          <div className="header-actions">
+            <Button onClick={onCopyInviteCode} variant="chip">
+              입장 코드 복사
+            </Button>
+            <Button onClick={onShareRoom} variant="chip">
+              공유
+            </Button>
+          </div>
         </div>
+        <h1 className="room-title">{room.inviteCode}</h1>
       </header>
 
       {roomMessage && <p className="inline-feedback">{roomMessage}</p>}
