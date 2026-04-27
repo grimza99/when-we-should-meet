@@ -17,7 +17,6 @@ type RoomPageProps = {
   modeOptions: ModeOption[];
   room?: Room;
   roomSummary?: RoomSummary;
-  roomMessage: string;
   selectedMode: DateMode;
   weekdayOptions: WeekdayOption[];
   onBackToLanding: () => void;
@@ -52,7 +51,6 @@ export function RoomPage({
   onShareRoom,
   onToggleWeekday,
   room,
-  roomMessage,
   roomSummary,
   selectedMode,
   weekdayOptions,
@@ -198,9 +196,6 @@ export function RoomPage({
           </Button>
         </div>
       </header>
-
-      {roomMessage && <p className="inline-feedback">{roomMessage}</p>}
-
       <RoomDashboard
         isCurrentUserHost={isCurrentUserHost}
         onRemoveParticipant={(participantId) =>

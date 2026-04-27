@@ -56,11 +56,11 @@ export function useAppState() {
     DEFAULT_STORAGE
   );
   const [joinInviteCode, setJoinInviteCode] = useState("");
-  const [landingMessage, setLandingMessage] = useState("");
-  const [roomMessage, setRoomMessage] = useState("");
+  const [toastMessage, setToastMessage] = useState("");
   const [visibleMonth, setVisibleMonth] = useState("");
   const [isHydratingRoom, setIsHydratingRoom] = useState(false);
   const roomChangeSubscriptionRef = useRef<RoomChangeSubscription | null>(null);
+  const toastTimerRef = useRef<number | null>(null);
 
   const currentRoom =
     route.name === "room" ? storage.rooms[route.roomId] : undefined;
@@ -93,6 +93,27 @@ export function useAppState() {
     };
   }, [currentParticipant?.id, currentRoom, effectiveVisibleMonth]);
 
+  const showToast = (message: string) => {
+    setToastMessage(message);
+
+    if (toastTimerRef.current) {
+      window.clearTimeout(toastTimerRef.current);
+    }
+
+    toastTimerRef.current = window.setTimeout(() => {
+      setToastMessage("");
+      toastTimerRef.current = null;
+    }, 3000);
+  };
+
+  useEffect(() => {
+    return () => {
+      if (toastTimerRef.current) {
+        window.clearTimeout(toastTimerRef.current);
+      }
+    };
+  }, []);
+
   useEffect(() => {
     if (!isFirebaseConfigured || !routeRoomId) {
       setIsHydratingRoom(false);
@@ -117,9 +138,7 @@ export function useAppState() {
 
         if (!roomSnapshot) {
           if (!isCancelled) {
-            setRoomMessage(
-              "존재하지 않는 방이거나 이미 접근할 수 없는 방입니다."
-            );
+            showToast("존재하지 않는 방이거나 이미 접근할 수 없는 방입니다.");
           }
           return;
         }
@@ -154,9 +173,7 @@ export function useAppState() {
         }));
       } catch {
         if (!isCancelled) {
-          setRoomMessage(
-            "방 정보를 불러오지 못했어요. 잠시 후 다시 시도해 주세요."
-          );
+          showToast("방 정보를 불러오지 못했어요. 잠시 후 다시 시도해 주세요.");
         }
       } finally {
         if (!isCancelled) {
@@ -216,7 +233,7 @@ export function useAppState() {
                   rooms,
                 };
               });
-              setRoomMessage("방이 삭제되었거나 더 이상 접근할 수 없어요.");
+              showToast("방이 삭제되었거나 더 이상 접근할 수 없어요.");
               return;
             }
 
@@ -239,7 +256,7 @@ export function useAppState() {
             }));
           } catch {
             if (!isCancelled) {
-              setRoomMessage("최신 방 정보를 동기화하지 못했어요.");
+              showToast("최신 방 정보를 동기화하지 못했어요.");
             }
           }
         };
@@ -253,7 +270,7 @@ export function useAppState() {
       onChange: refreshRoomSnapshot,
       onStatusChange: (status) => {
         if (status === "SNAPSHOT_ERROR") {
-          setRoomMessage(
+          showToast(
             "실시간 연결에 문제가 있어요. 새로고침하면 최신 상태를 볼 수 있어요."
           );
         }
@@ -292,7 +309,6 @@ export function useAppState() {
       }));
 
       setVisibleMonth(room.startDate);
-      setLandingMessage("");
       navigate({ name: "room", roomId: room.id });
       return true;
     }
@@ -313,11 +329,10 @@ export function useAppState() {
       }));
 
       setVisibleMonth(room.startDate);
-      setLandingMessage("");
       navigate({ name: "room", roomId: room.id });
       return true;
     } catch {
-      setLandingMessage("방 생성에 실패했어요. 잠시 후 다시 시도해 주세요.");
+      showToast("방 생성에 실패했어요. 잠시 후 다시 시도해 주세요.");
       return false;
     }
   };
@@ -325,7 +340,7 @@ export function useAppState() {
   const joinRoomByInviteCode = async () => {
     const inviteCode = joinInviteCode.trim().toUpperCase();
     if (!inviteCode) {
-      setLandingMessage("초대 코드를 입력해 주세요.");
+      showToast("초대 코드를 입력해 주세요.");
       return false;
     }
 
@@ -335,14 +350,11 @@ export function useAppState() {
       );
 
       if (!room) {
-        setLandingMessage(
-          "일치하는 방을 찾지 못했어요. 코드를 다시 확인해 주세요."
-        );
+        showToast("일치하는 방을 찾지 못했어요. 코드를 다시 확인해 주세요.");
         return false;
       }
 
       setVisibleMonth(room.startDate);
-      setLandingMessage("");
       navigate({ name: "room", roomId: room.id });
       return true;
     }
@@ -351,9 +363,7 @@ export function useAppState() {
       const roomRow = await getRoomByInviteCode(inviteCode);
 
       if (!roomRow) {
-        setLandingMessage(
-          "일치하는 방을 찾지 못했어요. 코드를 다시 확인해 주세요."
-        );
+        showToast("일치하는 방을 찾지 못했어요. 코드를 다시 확인해 주세요.");
         return false;
       }
 
@@ -375,11 +385,10 @@ export function useAppState() {
       }));
 
       setVisibleMonth(room.startDate);
-      setLandingMessage("");
       navigate({ name: "room", roomId: room.id });
       return true;
     } catch {
-      setLandingMessage("방 조회에 실패했어요. 네트워크 상태를 확인해 주세요.");
+      showToast("방 조회에 실패했어요. 네트워크 상태를 확인해 주세요.");
       return false;
     }
   };
@@ -390,7 +399,7 @@ export function useAppState() {
     }
 
     if (currentRoom.participants.length >= currentRoom.maxParticipants) {
-      setRoomMessage("이 방은 정원이 모두 찼어요.");
+      showToast("이 방은 정원이 모두 찼어요.");
       return false;
     }
 
@@ -401,7 +410,7 @@ export function useAppState() {
       );
 
       nextParticipant.nickname = nickname;
-      setRoomMessage(`${nickname} 님으로 방에 참여했어요.`);
+      showToast(`${nickname} 님으로 방에 참여했어요.`);
 
       setStorage((previous) => ({
         rooms: {
@@ -428,7 +437,7 @@ export function useAppState() {
 
       const nextParticipant = mapParticipantRow(participantRow);
 
-      setRoomMessage(`${nickname} 님으로 방에 참여했어요.`);
+      showToast(`${nickname} 님으로 방에 참여했어요.`);
       setStorage((previous) => ({
         rooms: {
           ...previous.rooms,
@@ -448,7 +457,7 @@ export function useAppState() {
       return true;
     } catch (error) {
       const errorMessage = String(error);
-      setRoomMessage(
+      showToast(
         errorMessage.includes("ROOM_CAPACITY_REACHED")
           ? "이 방은 정원이 모두 찼어요."
           : "방 참여에 실패했어요. 잠시 후 다시 시도해 주세요."
@@ -469,11 +478,6 @@ export function useAppState() {
     };
 
     updateCurrentParticipant(nextParticipant);
-    setRoomMessage(
-      mode === "available"
-        ? "가능한 날짜를 고르는 모드로 바뀌었어요."
-        : "불가능한 날짜를 고르는 모드로 바뀌었어요."
-    );
 
     if (!isFirebaseConfigured) {
       return;
@@ -489,9 +493,7 @@ export function useAppState() {
       });
     } catch {
       updateCurrentParticipant(previousParticipant);
-      setRoomMessage(
-        "선택 방식을 저장하지 못했어요. 잠시 후 다시 시도해 주세요."
-      );
+      showToast("선택 방식을 저장하지 못했어요. 잠시 후 다시 시도해 주세요.");
     }
   };
 
@@ -513,7 +515,6 @@ export function useAppState() {
     };
 
     updateCurrentParticipant(nextParticipant);
-    setRoomMessage(`${WEEKDAY_LABELS[weekday]}요일 규칙을 업데이트했어요.`);
 
     if (!isFirebaseConfigured) {
       return;
@@ -529,9 +530,7 @@ export function useAppState() {
       });
     } catch {
       updateCurrentParticipant(previousParticipant);
-      setRoomMessage(
-        "요일 규칙을 저장하지 못했어요. 잠시 후 다시 시도해 주세요."
-      );
+      showToast("요일 규칙을 저장하지 못했어요. 잠시 후 다시 시도해 주세요.");
     }
   };
 
@@ -560,7 +559,6 @@ export function useAppState() {
     };
 
     updateCurrentParticipant(nextParticipant);
-    setRoomMessage(`${isoDate} 날짜 선택을 반영했어요.`);
 
     if (!isFirebaseConfigured) {
       return;
@@ -576,9 +574,7 @@ export function useAppState() {
       });
     } catch {
       updateCurrentParticipant(previousParticipant);
-      setRoomMessage(
-        "날짜 선택을 저장하지 못했어요. 잠시 후 다시 시도해 주세요."
-      );
+      showToast("날짜 선택을 저장하지 못했어요. 잠시 후 다시 시도해 주세요.");
     }
   };
 
@@ -590,7 +586,7 @@ export function useAppState() {
     const trimmedNickname = nickname.trim();
 
     if (!trimmedNickname) {
-      setRoomMessage("닉네임을 입력해 주세요.");
+      showToast("닉네임을 입력해 주세요.");
       return false;
     }
 
@@ -601,7 +597,7 @@ export function useAppState() {
     };
 
     updateCurrentParticipant(nextParticipant);
-    setRoomMessage("닉네임을 변경했어요.");
+    showToast("닉네임을 변경했어요.");
 
     if (!isFirebaseConfigured) {
       return true;
@@ -617,19 +613,18 @@ export function useAppState() {
       return true;
     } catch {
       updateCurrentParticipant(previousParticipant);
-      setRoomMessage("닉네임을 저장하지 못했어요. 잠시 후 다시 시도해 주세요.");
+      showToast("닉네임을 저장하지 못했어요. 잠시 후 다시 시도해 주세요.");
       return false;
     }
   };
 
   const removeParticipant = async (participantId: string) => {
     if (!currentRoom || !isCurrentUserHost) {
-      setRoomMessage("방장만 참가자를 관리할 수 있어요.");
       return false;
     }
 
     if (participantId === currentRoom.hostClientKey) {
-      setRoomMessage("방장은 참가자 목록에서 제거할 수 없어요.");
+      showToast("방장은 참가자 목록에서 제거할 수 없어요.");
       return false;
     }
 
@@ -648,7 +643,7 @@ export function useAppState() {
         [currentRoom.id]: nextRoom,
       },
     }));
-    setRoomMessage("참가자를 내보냈어요.");
+    showToast("참가자를 내보냈어요.");
 
     if (!isFirebaseConfigured) {
       return true;
@@ -669,7 +664,7 @@ export function useAppState() {
           [previousRoom.id]: previousRoom,
         },
       }));
-      setRoomMessage("참가자를 내보내지 못했어요. 잠시 후 다시 시도해 주세요.");
+      showToast("참가자를 내보내지 못했어요. 잠시 후 다시 시도해 주세요.");
       return false;
     }
   };
@@ -680,7 +675,7 @@ export function useAppState() {
     }
 
     if (isCurrentUserHost) {
-      setRoomMessage("방장은 방 삭제 기능을 사용해 주세요.");
+      showToast("방장은 방을 나갈 수 없어요. 방 삭제 기능을 사용해 주세요.");
       return false;
     }
 
@@ -695,7 +690,7 @@ export function useAppState() {
           roomId,
         });
       } catch {
-        setRoomMessage("방을 나가지 못했어요. 잠시 후 다시 시도해 주세요.");
+        showToast("방을 나가지 못했어요. 잠시 후 다시 시도해 주세요.");
         return false;
       }
     }
@@ -726,7 +721,6 @@ export function useAppState() {
           : previous.rooms,
       };
     });
-    setRoomMessage("방에서 나갔어요.");
     navigate({ name: "landing" });
 
     return true;
@@ -734,7 +728,7 @@ export function useAppState() {
 
   const deleteCurrentRoom = async () => {
     if (!currentRoom || !isCurrentUserHost) {
-      setRoomMessage("방장만 방을 삭제할 수 있어요.");
+      showToast("방장만 방을 삭제할 수 있어요.");
       return false;
     }
 
@@ -746,7 +740,7 @@ export function useAppState() {
           roomId,
         });
       } catch {
-        setRoomMessage("방을 삭제하지 못했어요. 잠시 후 다시 시도해 주세요.");
+        showToast("방을 삭제하지 못했어요. 잠시 후 다시 시도해 주세요.");
         return false;
       }
     }
@@ -764,7 +758,7 @@ export function useAppState() {
         rooms,
       };
     });
-    setRoomMessage("방을 삭제했어요.");
+    showToast("방을 삭제했어요.");
     navigate({ name: "landing" });
 
     return true;
@@ -811,9 +805,9 @@ export function useAppState() {
 
     try {
       await navigator.clipboard.writeText(currentRoom.inviteCode);
-      setRoomMessage("초대 코드가 복사되었어요.");
+      showToast("초대 코드가 복사되었어요.");
     } catch {
-      setRoomMessage("복사에 실패했어요. 브라우저 권한을 확인해 주세요.");
+      showToast("복사에 실패했어요. 브라우저 권한을 확인해 주세요.");
     }
   };
 
@@ -822,36 +816,21 @@ export function useAppState() {
       return;
     }
 
-    const roomUrl = new URL(
-      `/room/${currentRoom.id}`,
-      window.location.origin
-    ).toString();
-    const shareData = {
-      title: "when should we meet?",
-      text: `초대 코드 ${currentRoom.inviteCode}로 방에 참여해 주세요.`,
-      url: roomUrl,
-    };
-
     try {
       if (isKakaoConfigured) {
         await shareRoomWithKakao({
           inviteCode: currentRoom.inviteCode,
           roomId: currentRoom.id,
         });
-        setRoomMessage("카카오톡 공유 창을 열었어요.");
         return;
+      } else {
+        showToast(
+          "링크를 복사하는데 문제가 생겼어요, 대신 초대코드로 입장할수있어요!"
+        );
       }
-
-      if (navigator.share) {
-        await navigator.share(shareData);
-        setRoomMessage("공유 시트를 열었어요.");
-        return;
-      }
-
-      await navigator.clipboard.writeText(shareData.url);
-      setRoomMessage("공유 링크를 복사했어요.");
+      showToast("공유 링크를 복사했어요.");
     } catch {
-      setRoomMessage("공유를 완료하지 못했어요.");
+      showToast("공유를 완료하지 못했어요.");
     }
   };
 
@@ -871,19 +850,18 @@ export function useAppState() {
     leaveCurrentRoom,
     joinInviteCode,
     joinRoomByInviteCode,
-    landingMessage,
     modeOptions: (Object.keys(MODE_LABELS) as DateMode[]).map((value) => ({
       label: MODE_LABELS[value],
       value,
     })),
     moveVisibleMonth,
-    roomMessage,
     selectedMode: currentParticipant?.selectionMode ?? "available",
     setJoinInviteCode,
     shareRoom,
     changeNickname,
     removeParticipant,
     toggleDate,
+    toastMessage,
     toggleWeekday,
     weekdayOptions: WEEKDAY_LABELS.map((label, value) => ({
       label,

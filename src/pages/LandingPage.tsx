@@ -25,7 +25,6 @@ const landingFeatures = [
 
 type LandingPageProps = {
   joinInviteCode: string;
-  message: string;
   onCreateRoom: (payload: CreateRoomPayload) => Promise<boolean>;
   onJoinInviteCodeChange: (inviteCode: string) => void;
   onJoinRoom: () => Promise<boolean>;
@@ -33,7 +32,6 @@ type LandingPageProps = {
 
 export function LandingPage({
   joinInviteCode,
-  message,
   onCreateRoom,
   onJoinInviteCodeChange,
   onJoinRoom,
@@ -106,7 +104,6 @@ export function LandingPage({
             {isJoiningRoom ? "참여 중" : "참여"}
           </Button>
         </form>
-        {message ? <p className="inline-feedback">{message}</p> : null}
       </section>
 
       <section className="info-grid" aria-label="서비스 특징">
