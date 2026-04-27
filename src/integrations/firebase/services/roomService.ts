@@ -68,7 +68,6 @@ export async function createRoom(
   const inviteCode = await createUniqueInviteCode()
   const room: FirestoreRoomDocument = {
     inviteCode,
-    blockedClientKeys: [],
     maxParticipants: payload.maxParticipants,
     participantCount: 0,
     dateRangeType: payload.dateRangeType,

@@ -77,6 +77,13 @@ export function useAppState() {
   const effectiveVisibleMonth = currentRoom
     ? clampVisibleMonth(currentRoom, visibleMonth || currentRoom.startDate)
     : "";
+  const hasCurrentRoom = Boolean(currentRoom);
+  const hasCurrentParticipant = Boolean(currentParticipant);
+  const needsRoomSnapshot = Boolean(
+    routeRoomId &&
+      (!hasCurrentRoom ||
+        (currentParticipantId !== undefined && !hasCurrentParticipant))
+  );
 
   const goToRoomAccessRestricted = useCallback((roomId: string) => {
     setStorage((previous) => ({
@@ -108,10 +115,6 @@ export function useAppState() {
       setIsHydratingRoom(false);
       return;
     }
-
-    const needsRoomSnapshot =
-      !currentRoom ||
-      (currentParticipantId !== undefined && !currentParticipant);
 
     if (!needsRoomSnapshot) {
       setIsHydratingRoom(false);
@@ -194,13 +197,13 @@ export function useAppState() {
       isCancelled = true;
     };
   }, [
-    currentParticipant,
     currentParticipantId,
-    currentRoom,
     goToRoomAccessRestricted,
+    hasCurrentParticipant,
+    hasCurrentRoom,
+    needsRoomSnapshot,
     routeRoomId,
     setStorage,
-    storage.memberships,
   ]);
 
   useEffect(() => {
