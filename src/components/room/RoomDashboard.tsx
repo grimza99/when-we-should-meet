@@ -7,12 +7,14 @@ type RoomDashboardProps = {
   room: Room;
   isCurrentUserHost?: boolean;
   onRemoveParticipant?: (participantId: string) => void;
+  onShareRanking?: () => void;
   removingParticipantId?: string | null;
 };
 
 export function RoomDashboard({
   isCurrentUserHost = false,
   onRemoveParticipant,
+  onShareRanking,
   removingParticipantId = null,
   rankings,
   room,
@@ -28,16 +30,29 @@ export function RoomDashboard({
 
   return (
     <section className="dashboard-card">
-      <div className="dashboard-head">
-        <div>
+      <div
+        aria-controls={dashboardContentId}
+        aria-expanded={true}
+        className="dashboard-head"
+      >
+        <div className="dashboard-head-copy">
           <strong>선호 날짜 TOP3</strong>
           {!topRanking && (
             <p className="dashboard-summary">아직 모인 날짜 선택이 없어요.</p>
           )}
         </div>
+        <div className="dashboard-head-actions">
+          <button
+            className="dashboard-share-button"
+            onClick={() => onShareRanking?.()}
+            type="button"
+          >
+            공유
+          </button>
+        </div>
       </div>
 
-      <div className={`dashboard-content is-expanded`} id={dashboardContentId}>
+      <div className="dashboard-content is-expanded" id={dashboardContentId}>
         <div className="dashboard-content-inner">
           {hasRankings ? (
             <div className="ranking-list">
@@ -59,7 +74,7 @@ export function RoomDashboard({
           {participantCount > 0 ? (
             <div className="participant-list">
               {participants.map((participant) => (
-                <div key={participant.id} className={`participant-pill`}>
+                <div key={participant.id} className="participant-pill">
                   <span className="participant-name-with-dot">
                     <span
                       aria-hidden="true"

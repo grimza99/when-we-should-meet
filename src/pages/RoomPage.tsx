@@ -29,6 +29,7 @@ type RoomPageProps = {
   onLeaveRoom: () => Promise<boolean>;
   onMoveMonth: (offset: number) => void;
   onRemoveParticipant: (participantId: string) => Promise<boolean>;
+  onShareRanking: () => Promise<void> | void;
   onSelectDate: (isoDate: string) => void;
   onShareRoom: () => void;
   onToggleWeekday: (weekday: number) => void;
@@ -48,6 +49,7 @@ export function RoomPage({
   onLeaveRoom,
   onMoveMonth,
   onRemoveParticipant,
+  onShareRanking,
   onSelectDate,
   onShareRoom,
   onToggleWeekday,
@@ -208,6 +210,7 @@ export function RoomPage({
         onRemoveParticipant={(participantId) =>
           void submitRemoveParticipant(participantId)
         }
+        onShareRanking={() => void onShareRanking()}
         removingParticipantId={removingParticipantId}
         rankings={roomSummary.rankings}
         room={room}

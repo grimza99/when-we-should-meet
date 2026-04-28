@@ -38,6 +38,7 @@ function App() {
             onLeaveRoom={appState.leaveCurrentRoom}
             onMoveMonth={appState.moveVisibleMonth}
             onRemoveParticipant={appState.removeParticipant}
+            onShareRanking={appState.shareRanking}
             onSelectDate={appState.toggleDate}
             onShareRoom={appState.shareRoom}
             onToggleWeekday={appState.toggleWeekday}
