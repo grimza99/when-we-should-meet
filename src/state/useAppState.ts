@@ -541,8 +541,10 @@ export function useAppState() {
     const updatedAt = new Date().toISOString();
     const nextParticipant = {
       ...currentParticipant,
+      overrides: {},
       selectionMode: mode,
       updatedAt,
+      weekdayRules: [],
     };
 
     updateCurrentParticipant(nextParticipant);
@@ -559,6 +561,7 @@ export function useAppState() {
     try {
       await updateParticipantAvailability({
         clientKey: getOrCreateClientKey(),
+        overrides: nextParticipant.overrides,
         participantId: nextParticipant.id,
         roomId: currentRoom.id,
         selectionMode: nextParticipant.selectionMode,
@@ -599,6 +602,7 @@ export function useAppState() {
     try {
       await updateParticipantAvailability({
         clientKey: getOrCreateClientKey(),
+        overrides: nextParticipant.overrides,
         participantId: nextParticipant.id,
         roomId: currentRoom.id,
         selectionMode: nextParticipant.selectionMode,
