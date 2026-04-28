@@ -479,6 +479,17 @@
   line-height: 1.4;
 }
 
+.dashboard-card {
+  position: relative;
+}
+
+.dashboard-card.is-sticky {
+  position: sticky;
+  top: 86px;
+  z-index: 3;
+  box-shadow: 0 10px 28px rgba(48, 37, 72, 0.12);
+}
+
 .dashboard-head strong {
   color: var(--color-app-text);
   font-size: 16px;
@@ -490,6 +501,10 @@
   gap: 12px;
 }
 
+.dashboard-head.is-interactive {
+  cursor: pointer;
+}
+
 .dashboard-head-copy {
   min-width: 0;
 }
@@ -499,6 +514,14 @@
   color: var(--color-app-muted);
   font-size: 14px;
   line-height: 1.4;
+}
+
+.dashboard-sticky-summary {
+  margin-top: 4px;
+  color: var(--color-app-muted);
+  font-size: 12px;
+  font-weight: 700;
+  line-height: 1.35;
 }
 
 .dashboard-head-actions {
@@ -517,6 +540,21 @@
   color: var(--color-app-primary);
   font-size: 12px;
   font-weight: 800;
+}
+
+.dashboard-chevron {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  color: var(--color-app-muted);
+  font-size: 18px;
+  transform: rotate(0deg);
+  transition: transform 180ms ease;
+}
+
+.dashboard-chevron.is-expanded {
+  transform: rotate(180deg);
 }
 
 .dashboard-head .chip-button {
@@ -540,6 +578,10 @@
 
 .dashboard-content-inner {
   overflow: hidden;
+}
+
+.dashboard-card.is-sticky .dashboard-content {
+  margin-top: 2px;
 }
 
 .ranking-list {
