@@ -642,7 +642,6 @@ export function useAppState() {
     };
 
     updateCurrentParticipant(nextParticipant);
-    showToast(`${isoDate} 날짜 선택을 반영했어요.`);
 
     if (!isFirebaseConfigured) {
       return;
