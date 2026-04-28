@@ -3,6 +3,7 @@ import { RoomAccessRestrictedPage } from './pages/RoomAccessRestrictedPage'
 import { useAppState } from './state/useAppState'
 import { LandingPage } from './pages/LandingPage'
 import { RoomPage } from './pages/RoomPage'
+import { Toast } from './components/ui/Toast'
 
 function App() {
   const appState = useAppState()
@@ -13,7 +14,6 @@ function App() {
         {appState.currentRoute.name === 'landing' ? (
           <LandingPage
             joinInviteCode={appState.joinInviteCode}
-            message={appState.landingMessage}
             onCreateRoom={appState.createRoom}
             onJoinInviteCodeChange={appState.setJoinInviteCode}
             onJoinRoom={appState.joinRoomByInviteCode}
@@ -27,7 +27,6 @@ function App() {
             modeOptions={appState.modeOptions}
             room={appState.currentRoom}
             roomSummary={appState.currentRoomSummary}
-            roomMessage={appState.roomMessage}
             selectedMode={appState.selectedMode}
             weekdayOptions={appState.weekdayOptions}
             onBackToLanding={appState.goToLanding}
@@ -45,6 +44,7 @@ function App() {
             isCurrentUserHost={appState.isCurrentUserHost}
           />
         )}
+        <Toast message={appState.toastMessage} />
       </div>
     </div>
   )

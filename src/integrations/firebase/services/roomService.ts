@@ -1,6 +1,5 @@
 import {
   collection,
-  deleteField,
   doc,
   getDoc,
   getDocs,
@@ -237,13 +236,12 @@ export async function setParticipantDateOverride(params: {
   clientKey: string
   participantId: string
   roomId: string
-  status: Participant['selectionMode'] | null
-  targetDate: string
+  overrides: Participant['overrides']
 }) {
   assertParticipantOwnership(params)
 
   await updateDoc(participantRef(params.roomId, params.participantId), {
-    [`overrides.${params.targetDate}`]: params.status ?? deleteField(),
+    overrides: params.overrides,
     updatedAt: new Date().toISOString(),
   })
 }
@@ -455,6 +453,7 @@ export function mapParticipantRow(row: ParticipantRow) {
     selectionMode: row.selectionMode,
     weekdayRules: row.weekdayRules,
     overrides: row.overrides,
+    updatedAt: row.updatedAt,
   }
 }
 

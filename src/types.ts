@@ -19,6 +19,7 @@ export type Participant = {
   selectionMode: DateMode
   weekdayRules: number[]
   overrides: Record<string, DateMode>
+  updatedAt?: string
 }
 
 export type Room = {
@@ -51,6 +52,7 @@ export type CalendarDay = {
   isoDate: string | null
   dayNumber: string
   isCurrentMonth: boolean
+  isSelectable: boolean
   availableCount: number
   participantColors: string[]
   isSelectedByCurrentUser: boolean
