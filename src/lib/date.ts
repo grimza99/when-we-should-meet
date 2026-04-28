@@ -44,6 +44,9 @@ export function buildCalendarDays(
   calendarEnd.setDate(calendarEnd.getDate() + (6 - calendarEnd.getDay()))
 
   const days: CalendarDay[] = []
+  const currentParticipant = currentParticipantId
+    ? room.participants.find((participant) => participant.id === currentParticipantId)
+    : undefined
 
   for (
     const cursor = new Date(calendarStart);
@@ -68,12 +71,10 @@ export function buildCalendarDays(
       participantColors: availableParticipants.map(
         (participant) => COLOR_FALLBACKS[participant.colorIndex] ?? COLOR_FALLBACKS[0],
       ),
-      isSelectedByCurrentUser: currentParticipantId
-        && isSelectable
-        ? availableParticipants.some(
-            (participant) => participant.id === currentParticipantId,
-          )
-        : false,
+      isSelectedByCurrentUser:
+        currentParticipant && isSelectable
+          ? isDateSelectedByParticipant(currentParticipant, isoDate)
+          : false,
     })
   }
 
@@ -160,6 +161,19 @@ export function isDateAvailable(
   }
 
   return !ruleMatched
+}
+
+function isDateSelectedByParticipant(
+  participant: Room['participants'][number],
+  isoDate: string,
+) {
+  const override = participant.overrides[isoDate]
+  if (override) {
+    return override === participant.selectionMode
+  }
+
+  const weekday = parseDateOnly(isoDate).getDay()
+  return participant.weekdayRules.includes(weekday)
 }
 
 export function formatDate(date: Date) {
