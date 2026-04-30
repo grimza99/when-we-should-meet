@@ -115,14 +115,17 @@ export function useAppState() {
     }, 3000);
   }
 
-  const goToRoomAccessRestricted = useCallback((roomId: string) => {
-    setStorage((previous) => ({
-      ...previous,
-      memberships: updateMembership(previous.memberships, roomId, undefined),
-    }));
-    showToast("이 방은 다시 입장할 수 없도록 제한되었어요.");
-    navigate({ name: "room_access_restricted", roomId }, { replace: true });
-  }, [navigate, setStorage]);
+  const goToRoomAccessRestricted = useCallback(
+    (roomId: string) => {
+      setStorage((previous) => ({
+        ...previous,
+        memberships: updateMembership(previous.memberships, roomId, undefined),
+      }));
+      showToast("이 방은 다시 입장할 수 없도록 제한되었어요.");
+      navigate({ name: "room_access_restricted", roomId }, { replace: true });
+    },
+    [navigate, setStorage]
+  );
 
   useEffect(() => {
     return () => {
@@ -158,22 +161,22 @@ export function useAppState() {
         }
 
         const room = mapRoomSnapshotToDraftRoom(roomSnapshot);
-        let restoredParticipant = null
+        let restoredParticipant = null;
 
         try {
           restoredParticipant = await restoreParticipant({
             clientKey: getOrCreateClientKey(),
             roomId: routeRoomId,
-          })
+          });
         } catch (error) {
           if (String(error).includes("ROOM_ACCESS_RESTRICTED")) {
             if (!isCancelled) {
-              goToRoomAccessRestricted(routeRoomId)
+              goToRoomAccessRestricted(routeRoomId);
             }
-            return
+            return;
           }
 
-          throw error
+          throw error;
         }
 
         if (isCancelled) {
@@ -270,21 +273,21 @@ export function useAppState() {
               Boolean(currentParticipantId) &&
               !room.participants.some(
                 (participant) => participant.id === currentParticipantId
-              )
+              );
 
             if (shouldCheckRestrictedAccess) {
               const isRestricted = await isRoomAccessRestricted({
                 clientKey: getOrCreateClientKey(),
                 roomId: routeRoomId,
-              })
+              });
 
               if (isCancelled) {
-                return
+                return;
               }
 
               if (isRestricted) {
-                goToRoomAccessRestricted(routeRoomId)
-                return
+                goToRoomAccessRestricted(routeRoomId);
+                return;
               }
             }
 
@@ -429,14 +432,14 @@ export function useAppState() {
         await restoreParticipant({
           clientKey: getOrCreateClientKey(),
           roomId: room.id,
-        })
+        });
       } catch (error) {
         if (String(error).includes("ROOM_ACCESS_RESTRICTED")) {
-          goToRoomAccessRestricted(room.id)
-          return false
+          goToRoomAccessRestricted(room.id);
+          return false;
         }
 
-        throw error
+        throw error;
       }
 
       setStorage((previous) => ({
@@ -963,7 +966,7 @@ export function useAppState() {
             )
             .join("\n")
         : "아직 공유할 랭킹이 없어요.";
-    const shareText = `우리 언제 볼까? 일정 랭킹이에요.\n초대 코드 ${currentRoom.inviteCode}\n${rankingText}`;
+    const shareText = `우리 언제 볼까? 일정 랭킹이에요.\n${rankingText}`;
 
     try {
       if (isKakaoConfigured) {
