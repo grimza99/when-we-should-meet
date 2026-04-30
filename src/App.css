@@ -479,6 +479,22 @@
   line-height: 1.4;
 }
 
+.dashboard-card {
+  position: relative;
+}
+
+.dashboard-sticky-sentinel {
+  height: 0;
+}
+
+.dashboard-card.is-sticky {
+  background-color: white;
+  position: sticky;
+  top: var(--dashboard-sticky-top, 80px);
+  z-index: 3;
+  box-shadow: 0 10px 28px rgba(48, 37, 72, 0.12);
+}
+
 .dashboard-head strong {
   color: var(--color-app-text);
   font-size: 16px;
@@ -486,11 +502,64 @@
   line-height: 25.5px;
 }
 
+.dashboard-head {
+  gap: 12px;
+}
+
+.dashboard-head.is-interactive {
+  cursor: pointer;
+}
+
+.dashboard-head-copy {
+  min-width: 0;
+}
+
 .dashboard-summary {
   margin-top: 6px;
   color: var(--color-app-muted);
   font-size: 14px;
   line-height: 1.4;
+}
+
+.dashboard-sticky-summary {
+  margin-top: 4px;
+  color: var(--color-app-muted);
+  font-size: 12px;
+  font-weight: 700;
+  line-height: 1.35;
+}
+
+.dashboard-head-actions {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  flex: 0 0 auto;
+}
+
+.dashboard-share-button {
+  min-height: 34px;
+  padding: 0 12px;
+  border: 1px solid var(--color-app-line);
+  border-radius: 999px;
+  background: var(--color-app-white);
+  color: var(--color-app-primary);
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.dashboard-chevron {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  color: var(--color-app-muted);
+  font-size: 18px;
+  transform: rotate(0deg);
+  transition: transform 180ms ease;
+}
+
+.dashboard-chevron.is-expanded {
+  transform: rotate(180deg);
 }
 
 .dashboard-head .chip-button {
@@ -514,6 +583,10 @@
 
 .dashboard-content-inner {
   overflow: hidden;
+}
+
+.dashboard-card.is-sticky .dashboard-content {
+  margin-top: 2px;
 }
 
 .ranking-list {

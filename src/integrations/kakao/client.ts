@@ -44,30 +44,25 @@ export async function shareRoomWithKakao(params: {
   inviteCode: string;
   roomId: string;
 }) {
-  const roomUrl = new URL(
-    `/room/${params.roomId}`,
-    window.location.origin
-  ).toString();
-  const sdk = await getKakaoSdk();
-
-  sdk.Share.sendDefault({
-    objectType: "text",
+  const roomUrl = new URL(`/room/${params.roomId}`, window.location.origin).toString();
+  await shareTextWithKakao({
+    buttonTitle: "약속 일정 잡기",
+    roomUrl,
     text: `친구가 일정방에 초대했어요!\n아래 링크를 통해 로그인 없이도\n쉽게 약속을 잡아봐요!`,
-    link: {
-      mobileWebUrl: roomUrl,
-      webUrl: roomUrl,
-    },
-    buttons: [
-      {
-        title: "약속 일정 잡기",
-        link: {
-          mobileWebUrl: roomUrl,
-          webUrl: roomUrl,
-        },
-      },
-    ],
   });
+  return roomUrl;
+}
 
+export async function shareRankingWithKakao(params: {
+  roomId: string;
+  text: string;
+}) {
+  const roomUrl = new URL(`/room/${params.roomId}`, window.location.origin).toString();
+  await shareTextWithKakao({
+    buttonTitle: "랭킹 일정 확인하기",
+    roomUrl,
+    text: params.text,
+  });
   return roomUrl;
 }
 
@@ -92,6 +87,32 @@ function initializeKakao(sdk: KakaoSdk, key: string) {
   if (!sdk.isInitialized()) {
     sdk.init(key);
   }
+}
+
+async function shareTextWithKakao(params: {
+  buttonTitle: string;
+  roomUrl: string;
+  text: string;
+}) {
+  const sdk = await getKakaoSdk();
+
+  sdk.Share.sendDefault({
+    objectType: "text",
+    text: params.text,
+    link: {
+      mobileWebUrl: params.roomUrl,
+      webUrl: params.roomUrl,
+    },
+    buttons: [
+      {
+        title: params.buttonTitle,
+        link: {
+          mobileWebUrl: params.roomUrl,
+          webUrl: params.roomUrl,
+        },
+      },
+    ],
+  });
 }
 
 function loadKakaoSdk(key: string) {
