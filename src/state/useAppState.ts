@@ -5,6 +5,7 @@ import {
   buildCalendarDays,
   buildRankings,
   clampVisibleMonth,
+  convertParticipantSelectionMode,
   formatMonthLabel,
 } from "../lib/date";
 import {
@@ -539,12 +540,17 @@ export function useAppState() {
 
     const previousParticipant = currentParticipant;
     const updatedAt = new Date().toISOString();
+    const nextSelection = convertParticipantSelectionMode(
+      currentRoom,
+      currentParticipant,
+      mode
+    );
     const nextParticipant = {
       ...currentParticipant,
-      overrides: {},
-      selectionMode: mode,
+      overrides: nextSelection.overrides,
+      selectionMode: nextSelection.selectionMode,
       updatedAt,
-      weekdayRules: [],
+      weekdayRules: nextSelection.weekdayRules,
     };
 
     updateCurrentParticipant(nextParticipant);
