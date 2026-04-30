@@ -483,10 +483,14 @@
   position: relative;
 }
 
+.dashboard-sticky-sentinel {
+  height: 0;
+}
+
 .dashboard-card.is-sticky {
   background-color: white;
   position: sticky;
-  top: 80px;
+  top: var(--dashboard-sticky-top, 80px);
   z-index: 3;
   box-shadow: 0 10px 28px rgba(48, 37, 72, 0.12);
 }

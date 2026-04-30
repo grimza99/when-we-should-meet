@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
 import { CalendarGrid } from "../components/calendar/CalendarGrid";
 import { NicknameModal } from "../components/room/NicknameModal";
 import { RoomDashboard } from "../components/room/RoomDashboard";
@@ -58,6 +58,7 @@ export function RoomPage({
   selectedMode,
   weekdayOptions,
 }: RoomPageProps) {
+  const headerRef = useRef<HTMLElement | null>(null);
   const [nicknameInput, setNicknameInput] = useState(
     currentParticipant?.nickname ?? ""
   );
@@ -65,6 +66,7 @@ export function RoomPage({
   const [isDeletingRoom, setIsDeletingRoom] = useState(false);
   const [isLeavingRoom, setIsLeavingRoom] = useState(false);
   const [isNicknameModalOpen, setIsNicknameModalOpen] = useState(true);
+  const [dashboardStickyTop, setDashboardStickyTop] = useState(80);
   const [removingParticipantId, setRemovingParticipantId] = useState<
     string | null
   >(null);
@@ -76,6 +78,32 @@ export function RoomPage({
   useEffect(() => {
     setIsNicknameModalOpen(true);
   }, [room?.id]);
+
+  useEffect(() => {
+    const headerElement = headerRef.current;
+
+    if (!headerElement) {
+      return;
+    }
+
+    const updateDashboardStickyTop = () => {
+      setDashboardStickyTop(headerElement.offsetHeight + 8);
+    };
+
+    updateDashboardStickyTop();
+
+    const resizeObserver = new ResizeObserver(() => {
+      updateDashboardStickyTop();
+    });
+
+    resizeObserver.observe(headerElement);
+    window.addEventListener("resize", updateDashboardStickyTop);
+
+    return () => {
+      resizeObserver.disconnect();
+      window.removeEventListener("resize", updateDashboardStickyTop);
+    };
+  }, []);
   const rankByDate = useMemo(
     () =>
       Object.fromEntries(
@@ -188,8 +216,15 @@ export function RoomPage({
   };
 
   return (
-    <main className="page room-page">
-      <header className="room-header">
+    <main
+      className="page room-page"
+      style={
+        {
+          "--dashboard-sticky-top": `${dashboardStickyTop}px`,
+        } as CSSProperties
+      }
+    >
+      <header className="room-header" ref={headerRef}>
         <div className="room-header-top">
           <div className="brand-button-and-invite-code">
             <HomeBrandButton onClick={onBackToLanding} />
@@ -214,6 +249,7 @@ export function RoomPage({
         removingParticipantId={removingParticipantId}
         rankings={roomSummary.rankings}
         room={room}
+        stickyTopOffset={dashboardStickyTop}
       />
 
       {currentParticipant && (
