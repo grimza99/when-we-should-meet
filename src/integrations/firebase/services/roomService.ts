@@ -218,6 +218,7 @@ export async function getRoomSnapshot(roomId: string) {
 
 export async function updateParticipantAvailability(params: {
   clientKey: string
+  overrides: Participant['overrides']
   participantId: string
   roomId: string
   selectionMode: Participant['selectionMode']
@@ -226,6 +227,7 @@ export async function updateParticipantAvailability(params: {
   assertParticipantOwnership(params)
 
   await updateDoc(participantRef(params.roomId, params.participantId), {
+    overrides: params.overrides,
     selectionMode: params.selectionMode,
     weekdayRules: params.weekdayRules,
     updatedAt: new Date().toISOString(),

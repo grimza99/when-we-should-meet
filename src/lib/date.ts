@@ -1,5 +1,5 @@
 import { WEEKDAY_LABELS } from './constants'
-import type { CalendarDay, DateRangeType, RankingItem, Room } from '../types'
+import type { CalendarDay, DateMode, DateRangeType, Participant, RankingItem, Room } from '../types'
 
 export function resolveDateRange(type: DateRangeType, start: string, end: string) {
   if (type === 'custom') {
@@ -44,6 +44,9 @@ export function buildCalendarDays(
   calendarEnd.setDate(calendarEnd.getDate() + (6 - calendarEnd.getDay()))
 
   const days: CalendarDay[] = []
+  const currentParticipant = currentParticipantId
+    ? room.participants.find((participant) => participant.id === currentParticipantId)
+    : undefined
 
   for (
     const cursor = new Date(calendarStart);
@@ -68,12 +71,10 @@ export function buildCalendarDays(
       participantColors: availableParticipants.map(
         (participant) => COLOR_FALLBACKS[participant.colorIndex] ?? COLOR_FALLBACKS[0],
       ),
-      isSelectedByCurrentUser: currentParticipantId
-        && isSelectable
-        ? availableParticipants.some(
-            (participant) => participant.id === currentParticipantId,
-          )
-        : false,
+      isSelectedByCurrentUser:
+        currentParticipant && isSelectable
+          ? isDateSelectedByParticipant(currentParticipant, isoDate)
+          : false,
     })
   }
 
@@ -143,6 +144,32 @@ export function formatMonthLabel(isoDate: string) {
   return `${date.getFullYear()}년 ${date.getMonth() + 1}월`
 }
 
+export function convertParticipantSelectionMode(
+  room: Room,
+  participant: Participant,
+  nextMode: DateMode,
+) {
+  const overrides: Participant['overrides'] = {}
+
+  for (const isoDate of enumerateDateRange(room.startDate, room.endDate)) {
+    const isAvailable = isDateAvailable(participant, isoDate)
+
+    if (nextMode === 'available' && isAvailable) {
+      overrides[isoDate] = 'available'
+    }
+
+    if (nextMode === 'unavailable' && !isAvailable) {
+      overrides[isoDate] = 'unavailable'
+    }
+  }
+
+  return {
+    overrides,
+    selectionMode: nextMode,
+    weekdayRules: [],
+  }
+}
+
 export function isDateAvailable(
   participant: Room['participants'][number],
   isoDate: string,
@@ -160,6 +187,19 @@ export function isDateAvailable(
   }
 
   return !ruleMatched
+}
+
+function isDateSelectedByParticipant(
+  participant: Room['participants'][number],
+  isoDate: string,
+) {
+  const override = participant.overrides[isoDate]
+  if (override) {
+    return override === participant.selectionMode
+  }
+
+  const weekday = parseDateOnly(isoDate).getDay()
+  return participant.weekdayRules.includes(weekday)
 }
 
 export function formatDate(date: Date) {
@@ -184,6 +224,18 @@ function endOfMonth(date: Date) {
 
 export function getTodayDateString() {
   return formatDate(new Date())
+}
+
+function enumerateDateRange(startDate: string, endDate: string) {
+  const dates: string[] = []
+  const start = parseDateOnly(startDate)
+  const end = parseDateOnly(endDate)
+
+  for (const cursor = new Date(start); cursor <= end; cursor.setDate(cursor.getDate() + 1)) {
+    dates.push(formatDate(cursor))
+  }
+
+  return dates
 }
 
 function parseDateOnly(isoDate: string) {
