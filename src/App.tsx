@@ -39,6 +39,7 @@ function App() {
             onMoveMonth={appState.moveVisibleMonth}
             onRemoveParticipant={appState.removeParticipant}
             onShareRanking={appState.shareRanking}
+            onResetSelection={appState.resetCurrentSelection}
             onSelectDate={appState.toggleDate}
             onShareRoom={appState.shareRoom}
             onToggleWeekday={appState.toggleWeekday}

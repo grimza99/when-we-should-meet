@@ -750,6 +750,12 @@
   margin-bottom: 4px;
 }
 
+.calendar-header-actions {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
 .calendar-range-label {
   margin: 0 0 10px;
   color: var(--color-app-muted);
@@ -770,6 +776,27 @@
   border-radius: 999px;
   background: var(--color-app-primary-soft);
   color: var(--color-app-primary);
+}
+
+.calendar-reset-button {
+  width: 40px;
+  min-height: 40px;
+  padding: 0;
+  border: 1px solid var(--color-app-line);
+  border-radius: 999px;
+  background: var(--color-app-white);
+  box-shadow: 0 1px 2px var(--color-app-soft-shadow);
+  color: var(--color-app-primary);
+  cursor: pointer;
+  font: inherit;
+  font-size: 18px;
+  font-weight: 700;
+  line-height: 1;
+}
+
+.calendar-reset-button:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
 }
 
 .calendar-weekdays,
