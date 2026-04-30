@@ -59,3 +59,18 @@ export async function trackPageView(route: RouteState) {
     page_title: document.title,
   })
 }
+
+export async function trackShareEvent(params: {
+  eventName: 'share_room_click' | 'share_ranking_click'
+  method: 'kakao' | 'web_share' | 'clipboard'
+}) {
+  const analytics = await getFirebaseAnalytics()
+
+  if (!analytics) {
+    return
+  }
+
+  logEvent(analytics, params.eventName, {
+    method: params.method,
+  })
+}
