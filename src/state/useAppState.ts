@@ -32,6 +32,7 @@ import {
   mapRoomRowToDraftRoom,
   mapRoomSnapshotToDraftRoom,
   removeParticipant as removeFirebaseParticipant,
+  resetParticipantSelections as resetFirebaseParticipantSelections,
   restoreParticipant,
   setParticipantDateOverride,
   subscribeToRoomChanges,
@@ -660,6 +661,47 @@ export function useAppState() {
     }
   };
 
+  const resetCurrentSelection = async () => {
+    if (!currentRoom || !currentParticipant) {
+      return;
+    }
+
+    const hasSelectionToReset =
+      currentParticipant.weekdayRules.length > 0 ||
+      Object.keys(currentParticipant.overrides).length > 0;
+
+    if (!hasSelectionToReset) {
+      return;
+    }
+
+    const previousParticipant = currentParticipant;
+    const updatedAt = new Date().toISOString();
+    const nextParticipant = {
+      ...currentParticipant,
+      overrides: {},
+      updatedAt,
+      weekdayRules: [],
+    };
+
+    updateCurrentParticipant(nextParticipant);
+    showToast("선택한 날짜와 요일 규칙을 초기화했어요.");
+
+    if (!isFirebaseConfigured) {
+      return;
+    }
+
+    try {
+      await resetFirebaseParticipantSelections({
+        clientKey: getOrCreateClientKey(),
+        participantId: nextParticipant.id,
+        roomId: currentRoom.id,
+      });
+    } catch {
+      updateCurrentParticipant(previousParticipant);
+      showToast("선택 내용을 초기화하지 못했어요. 잠시 후 다시 시도해 주세요.");
+    }
+  };
+
   const changeNickname = async (nickname: string) => {
     if (!currentRoom || !currentParticipant) {
       return false;
@@ -969,6 +1011,7 @@ export function useAppState() {
     shareRoom,
     changeNickname,
     removeParticipant,
+    resetCurrentSelection,
     toggleDate,
     toastMessage,
     toggleWeekday,

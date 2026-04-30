@@ -232,6 +232,20 @@ export async function updateParticipantAvailability(params: {
   })
 }
 
+export async function resetParticipantSelections(params: {
+  clientKey: string
+  participantId: string
+  roomId: string
+}) {
+  assertParticipantOwnership(params)
+
+  await updateDoc(participantRef(params.roomId, params.participantId), {
+    overrides: {},
+    updatedAt: new Date().toISOString(),
+    weekdayRules: [],
+  })
+}
+
 export async function setParticipantDateOverride(params: {
   clientKey: string
   participantId: string

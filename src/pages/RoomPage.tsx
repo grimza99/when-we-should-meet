@@ -29,6 +29,7 @@ type RoomPageProps = {
   onLeaveRoom: () => Promise<boolean>;
   onMoveMonth: (offset: number) => void;
   onRemoveParticipant: (participantId: string) => Promise<boolean>;
+  onResetSelection: () => Promise<void> | void;
   onSelectDate: (isoDate: string) => void;
   onShareRoom: () => void;
   onToggleWeekday: (weekday: number) => void;
@@ -48,6 +49,7 @@ export function RoomPage({
   onLeaveRoom,
   onMoveMonth,
   onRemoveParticipant,
+  onResetSelection,
   onSelectDate,
   onShareRoom,
   onToggleWeekday,
@@ -120,6 +122,10 @@ export function RoomPage({
     !currentParticipant && !isRoomFull && isNicknameModalOpen;
   const trimmedNickname = nicknameInput.trim();
   const roomRangeLabel = formatRoomRange(room.startDate, room.endDate);
+  const hasSelectionToReset = currentParticipant
+    ? currentParticipant.weekdayRules.length > 0 ||
+      Object.keys(currentParticipant.overrides).length > 0
+    : false;
 
   const submitNicknameChange = async () => {
     if (!trimmedNickname || isSavingNickname) {
@@ -297,9 +303,20 @@ export function RoomPage({
             &lt;
           </Button>
           <strong>{roomSummary.monthLabel}</strong>
-          <Button onClick={() => onMoveMonth(1)} variant="chip">
-            &gt;
-          </Button>
+          <div className="calendar-header-actions">
+            <button
+              aria-label="선택 초기화"
+              className="calendar-reset-button"
+              disabled={!hasSelectionToReset}
+              onClick={() => void onResetSelection()}
+              type="button"
+            >
+              ↺
+            </button>
+            <Button onClick={() => onMoveMonth(1)} variant="chip">
+              &gt;
+            </Button>
+          </div>
         </div>
 
         <CalendarGrid
