@@ -46,12 +46,15 @@ VITE_FIREBASE_PROJECT_ID=your-project-id
 VITE_FIREBASE_STORAGE_BUCKET=your-project.appspot.com
 VITE_FIREBASE_MESSAGING_SENDER_ID=your-sender-id
 VITE_FIREBASE_APP_ID=your-app-id
+VITE_FIREBASE_MEASUREMENT_ID=G-XXXXXXXXXX
 VITE_KAKAO_JAVASCRIPT_KEY=your-kakao-javascript-key
 ```
 
 If Firebase env variables are missing, the app falls back to localStorage-only behavior for development.
 
 If `VITE_KAKAO_JAVASCRIPT_KEY` is missing, room sharing falls back to the browser share sheet or clipboard instead of Kakao Talk Share.
+
+If `VITE_FIREBASE_MEASUREMENT_ID` is set, Firebase Analytics page views are sent automatically on route changes.
 
 ## Firebase
 

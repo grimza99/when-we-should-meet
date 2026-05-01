@@ -22,6 +22,7 @@ import {
   shareRankingWithKakao,
   shareRoomWithKakao,
 } from "../integrations/kakao/client";
+import { trackShareEvent } from "../integrations/firebase/analytics";
 import {
   createRoom as createFirebaseRoom,
   deleteRoom as deleteFirebaseRoom,
@@ -978,6 +979,10 @@ export function useAppState() {
 
     try {
       if (isKakaoConfigured) {
+        void trackShareEvent({
+          eventName: "share_room_click",
+          method: "kakao",
+        });
         await shareRoomWithKakao({
           inviteCode: currentRoom.inviteCode,
           roomId: currentRoom.id,
@@ -987,11 +992,19 @@ export function useAppState() {
       }
 
       if (navigator.share) {
+        void trackShareEvent({
+          eventName: "share_room_click",
+          method: "web_share",
+        });
         await navigator.share(shareData);
         showToast("공유 시트를 열었어요.");
         return;
       }
 
+      void trackShareEvent({
+        eventName: "share_room_click",
+        method: "clipboard",
+      });
       await navigator.clipboard.writeText(shareData.url);
       showToast("공유 링크를 복사했어요.");
     } catch {
@@ -1022,6 +1035,10 @@ export function useAppState() {
 
     try {
       if (isKakaoConfigured) {
+        void trackShareEvent({
+          eventName: "share_ranking_click",
+          method: "kakao",
+        });
         await shareRankingWithKakao({
           roomId: currentRoom.id,
           text: shareText,
@@ -1031,6 +1048,10 @@ export function useAppState() {
       }
 
       if (navigator.share) {
+        void trackShareEvent({
+          eventName: "share_ranking_click",
+          method: "web_share",
+        });
         await navigator.share({
           text: shareText,
           title: "when should we meet?",
@@ -1040,6 +1061,10 @@ export function useAppState() {
         return;
       }
 
+      void trackShareEvent({
+        eventName: "share_ranking_click",
+        method: "clipboard",
+      });
       await navigator.clipboard.writeText(`${shareText}\n${roomUrl}`);
       showToast("랭킹 공유 문구를 복사했어요.");
     } catch {
