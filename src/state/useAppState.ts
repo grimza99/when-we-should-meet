@@ -5,6 +5,7 @@ import {
   buildCalendarDays,
   buildRankings,
   clampVisibleMonth,
+  convertParticipantSelectionMode,
   formatMonthLabel,
 } from "../lib/date";
 import {
@@ -18,8 +19,10 @@ import { getOrCreateClientKey } from "../lib/session/clientIdentity";
 import { isFirebaseConfigured } from "../integrations/firebase/client";
 import {
   isKakaoConfigured,
+  shareRankingWithKakao,
   shareRoomWithKakao,
 } from "../integrations/kakao/client";
+import { trackShareEvent } from "../integrations/firebase/analytics";
 import {
   createRoom as createFirebaseRoom,
   deleteRoom as deleteFirebaseRoom,
@@ -32,6 +35,7 @@ import {
   mapRoomRowToDraftRoom,
   mapRoomSnapshotToDraftRoom,
   removeParticipant as removeFirebaseParticipant,
+  resetParticipantSelections as resetFirebaseParticipantSelections,
   restoreParticipant,
   setParticipantDateOverride,
   subscribeToRoomChanges,
@@ -114,14 +118,17 @@ export function useAppState() {
     }, 3000);
   }
 
-  const goToRoomAccessRestricted = useCallback((roomId: string) => {
-    setStorage((previous) => ({
-      ...previous,
-      memberships: updateMembership(previous.memberships, roomId, undefined),
-    }));
-    showToast("이 방은 다시 입장할 수 없도록 제한되었어요.");
-    navigate({ name: "room_access_restricted", roomId }, { replace: true });
-  }, [navigate, setStorage]);
+  const goToRoomAccessRestricted = useCallback(
+    (roomId: string) => {
+      setStorage((previous) => ({
+        ...previous,
+        memberships: updateMembership(previous.memberships, roomId, undefined),
+      }));
+      showToast("이 방은 다시 입장할 수 없도록 제한되었어요.");
+      navigate({ name: "room_access_restricted", roomId }, { replace: true });
+    },
+    [navigate, setStorage]
+  );
 
   useEffect(() => {
     return () => {
@@ -157,22 +164,22 @@ export function useAppState() {
         }
 
         const room = mapRoomSnapshotToDraftRoom(roomSnapshot);
-        let restoredParticipant = null
+        let restoredParticipant = null;
 
         try {
           restoredParticipant = await restoreParticipant({
             clientKey: getOrCreateClientKey(),
             roomId: routeRoomId,
-          })
+          });
         } catch (error) {
           if (String(error).includes("ROOM_ACCESS_RESTRICTED")) {
             if (!isCancelled) {
-              goToRoomAccessRestricted(routeRoomId)
+              goToRoomAccessRestricted(routeRoomId);
             }
-            return
+            return;
           }
 
-          throw error
+          throw error;
         }
 
         if (isCancelled) {
@@ -269,21 +276,21 @@ export function useAppState() {
               Boolean(currentParticipantId) &&
               !room.participants.some(
                 (participant) => participant.id === currentParticipantId
-              )
+              );
 
             if (shouldCheckRestrictedAccess) {
               const isRestricted = await isRoomAccessRestricted({
                 clientKey: getOrCreateClientKey(),
                 roomId: routeRoomId,
-              })
+              });
 
               if (isCancelled) {
-                return
+                return;
               }
 
               if (isRestricted) {
-                goToRoomAccessRestricted(routeRoomId)
-                return
+                goToRoomAccessRestricted(routeRoomId);
+                return;
               }
             }
 
@@ -428,14 +435,14 @@ export function useAppState() {
         await restoreParticipant({
           clientKey: getOrCreateClientKey(),
           roomId: room.id,
-        })
+        });
       } catch (error) {
         if (String(error).includes("ROOM_ACCESS_RESTRICTED")) {
-          goToRoomAccessRestricted(room.id)
-          return false
+          goToRoomAccessRestricted(room.id);
+          return false;
         }
 
-        throw error
+        throw error;
       }
 
       setStorage((previous) => ({
@@ -539,10 +546,17 @@ export function useAppState() {
 
     const previousParticipant = currentParticipant;
     const updatedAt = new Date().toISOString();
+    const nextSelection = convertParticipantSelectionMode(
+      currentRoom,
+      currentParticipant,
+      mode
+    );
     const nextParticipant = {
       ...currentParticipant,
-      selectionMode: mode,
+      overrides: nextSelection.overrides,
+      selectionMode: nextSelection.selectionMode,
       updatedAt,
+      weekdayRules: nextSelection.weekdayRules,
     };
 
     updateCurrentParticipant(nextParticipant);
@@ -559,6 +573,7 @@ export function useAppState() {
     try {
       await updateParticipantAvailability({
         clientKey: getOrCreateClientKey(),
+        overrides: nextParticipant.overrides,
         participantId: nextParticipant.id,
         roomId: currentRoom.id,
         selectionMode: nextParticipant.selectionMode,
@@ -599,6 +614,7 @@ export function useAppState() {
     try {
       await updateParticipantAvailability({
         clientKey: getOrCreateClientKey(),
+        overrides: nextParticipant.overrides,
         participantId: nextParticipant.id,
         roomId: currentRoom.id,
         selectionMode: nextParticipant.selectionMode,
@@ -657,6 +673,47 @@ export function useAppState() {
     } catch {
       updateCurrentParticipant(previousParticipant);
       showToast("날짜 선택을 저장하지 못했어요. 잠시 후 다시 시도해 주세요.");
+    }
+  };
+
+  const resetCurrentSelection = async () => {
+    if (!currentRoom || !currentParticipant) {
+      return;
+    }
+
+    const hasSelectionToReset =
+      currentParticipant.weekdayRules.length > 0 ||
+      Object.keys(currentParticipant.overrides).length > 0;
+
+    if (!hasSelectionToReset) {
+      return;
+    }
+
+    const previousParticipant = currentParticipant;
+    const updatedAt = new Date().toISOString();
+    const nextParticipant = {
+      ...currentParticipant,
+      overrides: {},
+      updatedAt,
+      weekdayRules: [],
+    };
+
+    updateCurrentParticipant(nextParticipant);
+    showToast("선택한 날짜와 요일 규칙을 초기화했어요.");
+
+    if (!isFirebaseConfigured) {
+      return;
+    }
+
+    try {
+      await resetFirebaseParticipantSelections({
+        clientKey: getOrCreateClientKey(),
+        participantId: nextParticipant.id,
+        roomId: currentRoom.id,
+      });
+    } catch {
+      updateCurrentParticipant(previousParticipant);
+      showToast("선택 내용을 초기화하지 못했어요. 잠시 후 다시 시도해 주세요.");
     }
   };
 
@@ -922,6 +979,10 @@ export function useAppState() {
 
     try {
       if (isKakaoConfigured) {
+        void trackShareEvent({
+          eventName: "share_room_click",
+          method: "kakao",
+        });
         await shareRoomWithKakao({
           inviteCode: currentRoom.inviteCode,
           roomId: currentRoom.id,
@@ -931,15 +992,83 @@ export function useAppState() {
       }
 
       if (navigator.share) {
+        void trackShareEvent({
+          eventName: "share_room_click",
+          method: "web_share",
+        });
         await navigator.share(shareData);
         showToast("공유 시트를 열었어요.");
         return;
       }
 
+      void trackShareEvent({
+        eventName: "share_room_click",
+        method: "clipboard",
+      });
       await navigator.clipboard.writeText(shareData.url);
       showToast("공유 링크를 복사했어요.");
     } catch {
       showToast("공유를 완료하지 못했어요.");
+    }
+  };
+
+  const shareRanking = async () => {
+    if (!currentRoom || !currentRoomSummary) {
+      return;
+    }
+
+    const roomUrl = new URL(
+      `/room/${currentRoom.id}`,
+      window.location.origin
+    ).toString();
+    const topRankings = currentRoomSummary.rankings.slice(0, 3);
+    const rankingText =
+      topRankings.length > 0
+        ? topRankings
+            .map(
+              (ranking) =>
+                `${ranking.rank}위 ${ranking.label} · ${ranking.score}명 가능`
+            )
+            .join("\n")
+        : "아직 공유할 랭킹이 없어요.";
+    const shareText = `우리 언제 볼까? 일정 랭킹이에요.\n${rankingText}`;
+
+    try {
+      if (isKakaoConfigured) {
+        void trackShareEvent({
+          eventName: "share_ranking_click",
+          method: "kakao",
+        });
+        await shareRankingWithKakao({
+          roomId: currentRoom.id,
+          text: shareText,
+        });
+        showToast("카카오톡 공유 창을 열었어요.");
+        return;
+      }
+
+      if (navigator.share) {
+        void trackShareEvent({
+          eventName: "share_ranking_click",
+          method: "web_share",
+        });
+        await navigator.share({
+          text: shareText,
+          title: "when should we meet?",
+          url: roomUrl,
+        });
+        showToast("공유 시트를 열었어요.");
+        return;
+      }
+
+      void trackShareEvent({
+        eventName: "share_ranking_click",
+        method: "clipboard",
+      });
+      await navigator.clipboard.writeText(`${shareText}\n${roomUrl}`);
+      showToast("랭킹 공유 문구를 복사했어요.");
+    } catch {
+      showToast("랭킹을 공유하지 못했어요.");
     }
   };
 
@@ -966,9 +1095,11 @@ export function useAppState() {
     moveVisibleMonth,
     selectedMode: currentParticipant?.selectionMode ?? "available",
     setJoinInviteCode,
+    shareRanking,
     shareRoom,
     changeNickname,
     removeParticipant,
+    resetCurrentSelection,
     toggleDate,
     toastMessage,
     toggleWeekday,

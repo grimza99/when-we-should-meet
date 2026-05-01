@@ -1,12 +1,18 @@
+import { useEffect } from 'react'
 import './App.css'
 import { RoomAccessRestrictedPage } from './pages/RoomAccessRestrictedPage'
 import { useAppState } from './state/useAppState'
 import { LandingPage } from './pages/LandingPage'
 import { RoomPage } from './pages/RoomPage'
 import { Toast } from './components/ui/Toast'
+import { trackPageView } from './integrations/firebase/analytics'
 
 function App() {
   const appState = useAppState()
+
+  useEffect(() => {
+    void trackPageView(appState.currentRoute)
+  }, [appState.currentRoute])
 
   return (
     <div className="shell">
@@ -38,6 +44,8 @@ function App() {
             onLeaveRoom={appState.leaveCurrentRoom}
             onMoveMonth={appState.moveVisibleMonth}
             onRemoveParticipant={appState.removeParticipant}
+            onShareRanking={appState.shareRanking}
+            onResetSelection={appState.resetCurrentSelection}
             onSelectDate={appState.toggleDate}
             onShareRoom={appState.shareRoom}
             onToggleWeekday={appState.toggleWeekday}

@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
 import { CalendarGrid } from "../components/calendar/CalendarGrid";
 import { NicknameModal } from "../components/room/NicknameModal";
 import { RoomDashboard } from "../components/room/RoomDashboard";
@@ -29,6 +29,8 @@ type RoomPageProps = {
   onLeaveRoom: () => Promise<boolean>;
   onMoveMonth: (offset: number) => void;
   onRemoveParticipant: (participantId: string) => Promise<boolean>;
+  onShareRanking: () => Promise<void> | void;
+  onResetSelection: () => Promise<void> | void;
   onSelectDate: (isoDate: string) => void;
   onShareRoom: () => void;
   onToggleWeekday: (weekday: number) => void;
@@ -48,6 +50,8 @@ export function RoomPage({
   onLeaveRoom,
   onMoveMonth,
   onRemoveParticipant,
+  onShareRanking,
+  onResetSelection,
   onSelectDate,
   onShareRoom,
   onToggleWeekday,
@@ -56,6 +60,7 @@ export function RoomPage({
   selectedMode,
   weekdayOptions,
 }: RoomPageProps) {
+  const headerRef = useRef<HTMLElement | null>(null);
   const [nicknameInput, setNicknameInput] = useState(
     currentParticipant?.nickname ?? ""
   );
@@ -63,6 +68,7 @@ export function RoomPage({
   const [isDeletingRoom, setIsDeletingRoom] = useState(false);
   const [isLeavingRoom, setIsLeavingRoom] = useState(false);
   const [isNicknameModalOpen, setIsNicknameModalOpen] = useState(true);
+  const [dashboardStickyTop, setDashboardStickyTop] = useState(80);
   const [removingParticipantId, setRemovingParticipantId] = useState<
     string | null
   >(null);
@@ -74,6 +80,32 @@ export function RoomPage({
   useEffect(() => {
     setIsNicknameModalOpen(true);
   }, [room?.id]);
+
+  useEffect(() => {
+    const headerElement = headerRef.current;
+
+    if (!headerElement) {
+      return;
+    }
+
+    const updateDashboardStickyTop = () => {
+      setDashboardStickyTop(headerElement.offsetHeight + 8);
+    };
+
+    updateDashboardStickyTop();
+
+    const resizeObserver = new ResizeObserver(() => {
+      updateDashboardStickyTop();
+    });
+
+    resizeObserver.observe(headerElement);
+    window.addEventListener("resize", updateDashboardStickyTop);
+
+    return () => {
+      resizeObserver.disconnect();
+      window.removeEventListener("resize", updateDashboardStickyTop);
+    };
+  }, []);
   const rankByDate = useMemo(
     () =>
       Object.fromEntries(
@@ -120,6 +152,10 @@ export function RoomPage({
     !currentParticipant && !isRoomFull && isNicknameModalOpen;
   const trimmedNickname = nicknameInput.trim();
   const roomRangeLabel = formatRoomRange(room.startDate, room.endDate);
+  const hasSelectionToReset = currentParticipant
+    ? currentParticipant.weekdayRules.length > 0 ||
+      Object.keys(currentParticipant.overrides).length > 0
+    : false;
 
   const submitNicknameChange = async () => {
     if (!trimmedNickname || isSavingNickname) {
@@ -186,8 +222,15 @@ export function RoomPage({
   };
 
   return (
-    <main className="page room-page">
-      <header className="room-header">
+    <main
+      className="page room-page"
+      style={
+        {
+          "--dashboard-sticky-top": `${dashboardStickyTop}px`,
+        } as CSSProperties
+      }
+    >
+      <header className="room-header" ref={headerRef}>
         <div className="room-header-top">
           <div className="brand-button-and-invite-code">
             <HomeBrandButton onClick={onBackToLanding} />
@@ -208,9 +251,11 @@ export function RoomPage({
         onRemoveParticipant={(participantId) =>
           void submitRemoveParticipant(participantId)
         }
+        onShareRanking={() => void onShareRanking()}
         removingParticipantId={removingParticipantId}
         rankings={roomSummary.rankings}
         room={room}
+        stickyTopOffset={dashboardStickyTop}
       />
 
       {currentParticipant && (
@@ -297,9 +342,20 @@ export function RoomPage({
             &lt;
           </Button>
           <strong>{roomSummary.monthLabel}</strong>
-          <Button onClick={() => onMoveMonth(1)} variant="chip">
-            &gt;
-          </Button>
+          <div className="calendar-header-actions">
+            <button
+              aria-label="선택 초기화"
+              className="calendar-reset-button"
+              disabled={!hasSelectionToReset}
+              onClick={() => void onResetSelection()}
+              type="button"
+            >
+              ↺
+            </button>
+            <Button onClick={() => onMoveMonth(1)} variant="chip">
+              &gt;
+            </Button>
+          </div>
         </div>
 
         <CalendarGrid
