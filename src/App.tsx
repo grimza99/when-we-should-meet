@@ -6,6 +6,8 @@ import { LandingPage } from './pages/LandingPage'
 import { RoomPage } from './pages/RoomPage'
 import { Toast } from './components/ui/Toast'
 import { trackPageView } from './integrations/firebase/analytics'
+import { ReportPage } from './pages/ReportPage'
+import { ReportEntryButton } from './components/ui/ReportEntryButton'
 
 function App() {
   const appState = useAppState()
@@ -24,6 +26,8 @@ function App() {
             onJoinInviteCodeChange={appState.setJoinInviteCode}
             onJoinRoom={appState.joinRoomByInviteCode}
           />
+        ) : appState.currentRoute.name === 'report' ? (
+          <ReportPage onBackToLanding={appState.goToLanding} />
         ) : appState.currentRoute.name === 'room_access_restricted' ? (
           <RoomAccessRestrictedPage onBackToLanding={appState.goToLanding} />
         ) : (
@@ -52,6 +56,9 @@ function App() {
             isCurrentUserHost={appState.isCurrentUserHost}
           />
         )}
+        {appState.currentRoute.name !== 'report' ? (
+          <ReportEntryButton onClick={appState.goToReport} />
+        ) : null}
         <Toast message={appState.toastMessage} />
       </div>
     </div>

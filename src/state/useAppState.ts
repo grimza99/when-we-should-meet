@@ -1082,6 +1082,7 @@ export function useAppState() {
     currentRoute: route,
     deleteCurrentRoom,
     goToLanding: () => navigate({ name: "landing" }),
+    goToReport: () => navigate({ name: "report" }),
     isHydratingRoom,
     isCurrentUserHost,
     joinCurrentRoom,
