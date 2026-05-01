@@ -2,6 +2,7 @@ export type DateRangeType = 'this_month' | 'this_year' | 'custom'
 export type DateMode = 'available' | 'unavailable'
 export type RouteState =
   | { name: 'landing' }
+  | { name: 'report' }
   | { name: 'room'; roomId: string }
   | { name: 'room_access_restricted'; roomId: string }
 

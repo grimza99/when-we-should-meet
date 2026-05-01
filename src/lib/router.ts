@@ -2,6 +2,10 @@ import { useCallback, useEffect, useState } from 'react'
 import type { RouteState } from '../types'
 
 export function parseRoute(pathname: string): RouteState {
+  if (pathname === '/page/report') {
+    return { name: 'report' }
+  }
+
   const matchedRestrictedRoom = pathname.match(/^\/room\/([^/]+)\/restricted$/)
   if (matchedRestrictedRoom) {
     return { name: 'room_access_restricted', roomId: matchedRestrictedRoom[1] }
@@ -33,6 +37,10 @@ export function useRouteState() {
       const nextPath = (() => {
         if (nextRoute.name === 'landing') {
           return '/'
+        }
+
+        if (nextRoute.name === 'report') {
+          return '/page/report'
         }
 
         if (nextRoute.name === 'room_access_restricted') {
