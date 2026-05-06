@@ -3,15 +3,15 @@ import { HomeBrandButton } from "../components/ui/HomeBrandButton";
 
 const reportLinks = [
   {
-    href: "https://example.com/report-error",
+    href: "https://docs.google.com/forms/d/1thtkHygu01tSqrUC0jndw5FBtRLUYiG9c-Rwdt87wzk/edit",
     label: "오류사항",
   },
   {
-    href: "https://example.com/report-feature",
-    label: "추가기능사항",
+    href: "https://docs.google.com/forms/d/1VyrJLTaR0jUhFnEqtc_0UeaX1xbCTz8MeEQZqbfjTVU/edit",
+    label: "추가기능요청",
   },
   {
-    href: "https://example.com/report-etc",
+    href: "https://docs.google.com/forms/d/1iGLCj23fIN8YW709chmNfcG6oRz82lmWpdokK4KOsuE/edit",
     label: "기타 문의사항",
   },
 ];
