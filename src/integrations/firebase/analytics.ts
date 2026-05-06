@@ -15,6 +15,10 @@ function getRoutePath(route: RouteState) {
     return '/'
   }
 
+  if (route.name === 'report') {
+    return '/page/report'
+  }
+
   if (route.name === 'room_access_restricted') {
     return `/room/${route.roomId}/restricted`
   }
