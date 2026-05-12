@@ -48,7 +48,8 @@
 
 .landing-page,
 .room-page,
-.room-access-restricted-page {
+.room-access-restricted-page,
+.report-page {
   display: flex;
   flex-direction: column;
   gap: 16px;
@@ -65,6 +66,16 @@
 
 .restricted-card .hero-copy {
   margin-top: 12px;
+}
+
+.report-hero-card {
+  text-align: center;
+}
+
+.report-links-card {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
 }
 
 .hero-card,
@@ -118,6 +129,27 @@
   color: var(--color-app-text);
   cursor: pointer;
   font: inherit;
+}
+
+.report-entry-button {
+  position: absolute;
+  right: 16px;
+  bottom: 18px;
+  z-index: 20;
+  border: 0;
+  border-radius: 999px;
+  padding: 12px 16px;
+  background: linear-gradient(
+    135deg,
+    var(--color-app-primary) 0%,
+    var(--color-app-primary-end) 100%
+  );
+  box-shadow: 0 12px 24px var(--color-app-button-shadow);
+  color: var(--color-app-white);
+  cursor: pointer;
+  font: inherit;
+  font-size: 14px;
+  font-weight: 800;
 }
 
 .home-brand-logo {
@@ -985,6 +1017,11 @@
 }
 
 @media (max-width: 640px) {
+  .report-entry-button {
+    right: 14px;
+    bottom: 14px;
+  }
+
   .room-header-top {
     align-items: flex-start;
     flex-direction: column;
