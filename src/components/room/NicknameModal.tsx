@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { ARIA_LABELS } from "../../lib/ariaLabels";
 import { Button } from "../ui/Button";
 import { Modal } from "../ui/Modal";
 import { TextInput } from "../ui/TextInput";
@@ -34,6 +35,7 @@ export function NicknameModal({ onClose, onJoinRoom }: NicknameModalProps) {
 
   return (
     <Modal
+      ariaLabel={ARIA_LABELS.nickname.dialog}
       description="방안에서 보여질 별명을 입력해주세요."
       onClose={onClose}
       title="별명 입력"
@@ -41,12 +43,14 @@ export function NicknameModal({ onClose, onJoinRoom }: NicknameModalProps) {
     >
       <div className="modal-body">
         <TextInput
+          ariaLabel={ARIA_LABELS.nickname.input}
           label="별명"
           onChange={setNickname}
           placeholder="예: 민준"
           value={nickname}
         />
         <Button
+          ariaLabel={ARIA_LABELS.nickname.submitButton}
           block
           disabled={!nickname.trim() || isSubmitting}
           onClick={() => void submit()}

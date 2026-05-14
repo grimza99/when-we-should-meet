@@ -1,4 +1,8 @@
 import { useEffect, useId, useRef, useState } from "react";
+import {
+  ARIA_LABELS,
+  getParticipantRemoveAriaLabel,
+} from "../../lib/ariaLabels";
 import { COLOR_PALETTE } from "../../lib/constants";
 import type { RankingItem, Room } from "../../types";
 
@@ -101,6 +105,7 @@ export function RoomDashboard({
           </div>
           <div className="dashboard-head-actions">
             <button
+              aria-label={ARIA_LABELS.room.shareRankingButton}
               className="dashboard-share-button"
               onClick={(event) => {
                 event.stopPropagation();
@@ -160,6 +165,9 @@ export function RoomDashboard({
                     {isCurrentUserHost &&
                       participant.id !== room.hostClientKey && (
                         <button
+                          aria-label={getParticipantRemoveAriaLabel(
+                            participant.nickname
+                          )}
                           className="text-icon-button"
                           disabled={removingParticipantId === participant.id}
                           onClick={() => onRemoveParticipant?.(participant.id)}

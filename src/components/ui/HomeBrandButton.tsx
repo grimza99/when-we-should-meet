@@ -1,10 +1,19 @@
 type HomeBrandButtonProps = {
+  ariaLabel?: string;
   onClick: () => void;
 };
 
-export function HomeBrandButton({ onClick }: HomeBrandButtonProps) {
+export function HomeBrandButton({
+  ariaLabel,
+  onClick,
+}: HomeBrandButtonProps) {
   return (
-    <button className="home-brand-button" onClick={onClick} type="button">
+    <button
+      aria-label={ariaLabel}
+      className="home-brand-button"
+      onClick={onClick}
+      type="button"
+    >
       <img
         alt="brand-logo"
         aria-hidden="true"

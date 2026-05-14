@@ -6,6 +6,7 @@ import { Button } from "../components/ui/Button";
 import { HomeBrandButton } from "../components/ui/HomeBrandButton";
 import { SegmentedButtonGroup } from "../components/ui/SegmentedButtonGroup";
 import { TextInput } from "../components/ui/TextInput";
+import { ARIA_LABELS, getWeekdayRuleAriaLabel } from "../lib/ariaLabels";
 import type { DateMode, Participant, Room, RoomSummary } from "../types";
 
 type ModeOption = { label: string; value: DateMode };
@@ -118,8 +119,11 @@ export function RoomPage({
 
   if (isHydratingRoom) {
     return (
-      <main className="page room-page">
-        <HomeBrandButton onClick={onBackToLanding} />
+      <main aria-label={ARIA_LABELS.room.page} className="page room-page">
+        <HomeBrandButton
+          ariaLabel={ARIA_LABELS.room.homeButton}
+          onClick={onBackToLanding}
+        />
         <section className="hero-card">
           <h1>방 정보를 불러오는 중입니다</h1>
           <p className="hero-copy">
@@ -132,15 +136,22 @@ export function RoomPage({
 
   if (!room || !roomSummary) {
     return (
-      <main className="page room-page">
-        <HomeBrandButton onClick={onBackToLanding} />
+      <main aria-label={ARIA_LABELS.room.page} className="page room-page">
+        <HomeBrandButton
+          ariaLabel={ARIA_LABELS.room.homeButton}
+          onClick={onBackToLanding}
+        />
         <section className="hero-card">
           <h1>존재하지 않는 방입니다</h1>
           <p className="hero-copy">
             초대 코드를 다시 확인하거나 새 방을 만들어 주세요.
           </p>
         </section>
-        <Button block onClick={onBackToLanding}>
+        <Button
+          ariaLabel={ARIA_LABELS.room.homeButton}
+          block
+          onClick={onBackToLanding}
+        >
           랜딩으로 돌아가기
         </Button>
       </main>
@@ -223,6 +234,7 @@ export function RoomPage({
 
   return (
     <main
+      aria-label={ARIA_LABELS.room.page}
       className="page room-page"
       style={
         {
@@ -233,14 +245,30 @@ export function RoomPage({
       <header className="room-header" ref={headerRef}>
         <div className="room-header-top">
           <div className="brand-button-and-invite-code">
-            <HomeBrandButton onClick={onBackToLanding} />
-            <h1 className="room-title">{room.inviteCode}</h1>
+            <HomeBrandButton
+              ariaLabel={ARIA_LABELS.room.homeButton}
+              onClick={onBackToLanding}
+            />
+            <h1
+              aria-label={ARIA_LABELS.room.inviteCodeHeading}
+              className="room-title"
+            >
+              {room.inviteCode}
+            </h1>
           </div>
           <div className="header-actions">
-            <Button onClick={onCopyInviteCode} variant="chip">
+            <Button
+              ariaLabel={ARIA_LABELS.room.copyInviteCodeButton}
+              onClick={onCopyInviteCode}
+              variant="chip"
+            >
               입장 코드 복사
             </Button>
-            <Button onClick={onShareRoom} variant="chip">
+            <Button
+              ariaLabel={ARIA_LABELS.room.shareRoomButton}
+              onClick={onShareRoom}
+              variant="chip"
+            >
               공유
             </Button>
           </div>
@@ -264,6 +292,7 @@ export function RoomPage({
             <p className="section-label">관리</p>
             <div className="nickname-edit-row">
               <TextInput
+                ariaLabel={ARIA_LABELS.room.nicknameInput}
                 label="닉네임"
                 onChange={setNicknameInput}
                 placeholder="새 닉네임"
@@ -271,6 +300,7 @@ export function RoomPage({
                 inputStyle={{ minHeight: "40px" }}
               />
               <Button
+                ariaLabel={ARIA_LABELS.room.nicknameSaveButton}
                 disabled={
                   !trimmedNickname ||
                   trimmedNickname === currentParticipant.nickname ||
@@ -288,6 +318,7 @@ export function RoomPage({
           <div className="control-group danger-zone">
             {isCurrentUserHost ? (
               <Button
+                ariaLabel={ARIA_LABELS.room.deleteRoomButton}
                 block
                 disabled={isDeletingRoom}
                 onClick={() => void submitDeleteRoom()}
@@ -297,6 +328,7 @@ export function RoomPage({
               </Button>
             ) : (
               <Button
+                ariaLabel={ARIA_LABELS.room.leaveRoomButton}
                 block
                 disabled={isLeavingRoom}
                 onClick={() => void submitLeaveRoom()}
@@ -314,7 +346,13 @@ export function RoomPage({
           <p className="section-label">선택 필터</p>
           <SegmentedButtonGroup
             onChange={onChangeMode}
-            options={modeOptions}
+            options={modeOptions.map((option) => ({
+              ...option,
+              ariaLabel:
+                option.value === "available"
+                  ? ARIA_LABELS.room.availableModeButton
+                  : ARIA_LABELS.room.unavailableModeButton,
+            }))}
             selectedValue={selectedMode}
           />
         </div>
@@ -323,6 +361,7 @@ export function RoomPage({
           <div className="weekday-row">
             {weekdayOptions.map((option) => (
               <button
+                aria-label={getWeekdayRuleAriaLabel(option.label)}
                 key={option.value}
                 className={`day-chip${option.selected ? " is-active" : ""}`}
                 onClick={() => onToggleWeekday(option.value)}
@@ -335,16 +374,23 @@ export function RoomPage({
         </div>
       </section>
 
-      <section className="calendar-card">
+      <section
+        aria-label={ARIA_LABELS.room.calendarCard}
+        className="calendar-card"
+      >
         <p className="calendar-range-label">{roomRangeLabel}</p>
         <div className="calendar-header">
-          <Button onClick={() => onMoveMonth(-1)} variant="chip">
+          <Button
+            ariaLabel={ARIA_LABELS.room.previousMonthButton}
+            onClick={() => onMoveMonth(-1)}
+            variant="chip"
+          >
             &lt;
           </Button>
           <strong>{roomSummary.monthLabel}</strong>
           <div className="calendar-header-actions">
             <button
-              aria-label="선택 초기화"
+              aria-label={ARIA_LABELS.room.resetSelectionButton}
               className="calendar-reset-button"
               disabled={!hasSelectionToReset}
               onClick={() => void onResetSelection()}
@@ -352,7 +398,11 @@ export function RoomPage({
             >
               ↺
             </button>
-            <Button onClick={() => onMoveMonth(1)} variant="chip">
+            <Button
+              ariaLabel={ARIA_LABELS.room.nextMonthButton}
+              onClick={() => onMoveMonth(1)}
+              variant="chip"
+            >
               &gt;
             </Button>
           </div>
@@ -373,7 +423,12 @@ export function RoomPage({
             방 만든 사람에게 정원 추가를 요청하거나, 새 방을 만들어 일정을 다시
             조율해 주세요.
           </p>
-          <Button block onClick={onBackToLanding} variant="secondary">
+          <Button
+            ariaLabel={ARIA_LABELS.room.homeButton}
+            block
+            onClick={onBackToLanding}
+            variant="secondary"
+          >
             랜딩으로 돌아가기
           </Button>
         </section>

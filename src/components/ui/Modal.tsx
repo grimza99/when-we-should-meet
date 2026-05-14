@@ -1,6 +1,7 @@
 import { useId, type ReactNode } from "react";
 
 type ModalProps = {
+  ariaLabel?: string;
   children: ReactNode;
   description?: string;
   onClose?: () => void;
@@ -9,6 +10,7 @@ type ModalProps = {
 };
 
 export function Modal({
+  ariaLabel,
   children,
   description,
   onClose,
@@ -22,8 +24,9 @@ export function Modal({
     <div className="modal-backdrop">
       <section
         className="modal-card"
+        aria-label={ariaLabel}
         aria-describedby={description ? descriptionId : undefined}
-        aria-labelledby={titleId}
+        aria-labelledby={ariaLabel ? undefined : titleId}
         aria-modal="true"
         role="dialog"
       >

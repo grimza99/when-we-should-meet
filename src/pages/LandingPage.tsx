@@ -2,6 +2,7 @@ import { useState } from "react";
 import { CreateRoomModal } from "../components/room/CreateRoomModal";
 import { Button } from "../components/ui/Button";
 import { TextInput } from "../components/ui/TextInput";
+import { ARIA_LABELS } from "../lib/ariaLabels";
 import { normalizeInviteCodeInput } from "../lib/inviteCode";
 import type { CreateRoomPayload } from "../types";
 
@@ -54,15 +55,15 @@ export function LandingPage({
   };
 
   return (
-    <main className="page landing-page">
+    <main aria-label={ARIA_LABELS.landing.page} className="page landing-page">
       <section className="landing-hero">
         <img
           src="/logo.png"
           className="landing-logo-img"
-          aria-label="app-logo"
+          aria-label={ARIA_LABELS.landing.logo}
         />
 
-        <h1>우리 언제 볼까?</h1>
+        <h1 aria-label={ARIA_LABELS.landing.heading}>우리 언제 볼까?</h1>
         <p className="hero-copy">
           번거로운 가입 없이, 링크 하나로
           <br />
@@ -70,8 +71,15 @@ export function LandingPage({
         </p>
       </section>
 
-      <section className="landing-cta" aria-label="방 만들기 또는 참여하기">
-        <Button block onClick={() => setIsCreateModalOpen(true)}>
+      <section
+        className="landing-cta"
+        aria-label={ARIA_LABELS.landing.createOrJoinSection}
+      >
+        <Button
+          ariaLabel={ARIA_LABELS.landing.createRoomButton}
+          block
+          onClick={() => setIsCreateModalOpen(true)}
+        >
           방 만들기
         </Button>
 
@@ -83,6 +91,7 @@ export function LandingPage({
           }}
         >
           <TextInput
+            ariaLabel={ARIA_LABELS.landing.inviteCodeInput}
             autoCapitalize="characters"
             autoCorrect="off"
             id="invite-code"
@@ -97,6 +106,7 @@ export function LandingPage({
             value={joinInviteCode}
           />
           <Button
+            ariaLabel={ARIA_LABELS.landing.joinRoomButton}
             disabled={!joinInviteCode.trim() || isJoiningRoom}
             variant="secondary"
             type="submit"
@@ -106,7 +116,10 @@ export function LandingPage({
         </form>
       </section>
 
-      <section className="info-grid" aria-label="서비스 특징">
+      <section
+        className="info-grid"
+        aria-label={ARIA_LABELS.landing.featureSection}
+      >
         {landingFeatures.map((feature) => (
           <article className="mini-card" key={feature.title}>
             <span aria-hidden="true" className="mini-card-icon">
