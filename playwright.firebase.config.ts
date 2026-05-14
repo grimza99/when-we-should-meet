@@ -15,7 +15,7 @@ const firebaseEmulatorEnv = [
 
 export default defineConfig({
   testDir: './tests/e2e',
-  testMatch: '**/firebase-room-flow.spec.ts',
+  testMatch: '**/firebase-*.spec.ts',
   fullyParallel: false,
   forbidOnly: Boolean(process.env.CI),
   reporter: 'list',

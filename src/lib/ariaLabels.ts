@@ -30,6 +30,7 @@ export const ARIA_LABELS = {
     restrictedPage: "방 접근 제한 페이지",
     homeButton: "랜딩으로 돌아가기 버튼",
     inviteCodeHeading: "방 초대 코드 헤더",
+    monthHeading: "달력 월 헤더",
     copyInviteCodeButton: "입장 코드 복사 버튼",
     shareRoomButton: "방 공유 버튼",
     shareRankingButton: "랭킹 공유 버튼",
