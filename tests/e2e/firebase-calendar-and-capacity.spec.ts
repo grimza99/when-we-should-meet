@@ -194,6 +194,57 @@ test.describe('Firebase emulator calendar and capacity flows', () => {
       await closeContext(hostContext)
     }
   })
+
+  test('preserves availability when switching to unavailable mode and persists unavailable overrides after refresh', async ({
+    browser,
+  }) => {
+    const hostContext = await createMobileContext(browser)
+    const hostPage = await hostContext.newPage()
+
+    try {
+      const roomRange = createUpcomingWorkweekRange()
+      await createRoomAndJoinAsHost(hostPage, '호스트', {
+        range: roomRange,
+      })
+
+      const mondayButton = hostPage.locator(
+        byAriaLabel(getCalendarDayAriaLabel(roomRange.mondayDate)),
+      )
+      const unavailableModeButton = hostPage.locator(
+        byAriaLabel(ARIA_LABELS.room.unavailableModeButton),
+      )
+      const rankingItems = hostPage.locator('.ranking-item')
+      const dashboardEmptyState = hostPage.getByText(
+        '아직 모인 날짜 선택이 없어요. 먼저 참가자들이 닉네임을 입력하고 달력에서 가능한 날짜를 골라보세요.',
+      )
+
+      await mondayButton.click()
+      await expect(rankingItems).toHaveCount(1)
+      await expect(rankingItems.nth(0)).toContainText(formatReadableDate(roomRange.mondayDate))
+      await expect(rankingItems.nth(0)).toContainText('1명 가능')
+
+      await unavailableModeButton.click()
+      await expect(unavailableModeButton).toHaveAttribute('aria-pressed', 'true')
+      await expect(rankingItems).toHaveCount(1)
+      await expect(rankingItems.nth(0)).toContainText(formatReadableDate(roomRange.mondayDate))
+
+      await mondayButton.click()
+      await expect(rankingItems).toHaveCount(0)
+      await expect(dashboardEmptyState).toBeVisible()
+
+      await hostPage.reload()
+      await expect(unavailableModeButton).toHaveAttribute('aria-pressed', 'true')
+      await expect(rankingItems).toHaveCount(0)
+      await expect(dashboardEmptyState).toBeVisible()
+
+      await mondayButton.click()
+      await expect(rankingItems).toHaveCount(1)
+      await expect(rankingItems.nth(0)).toContainText(formatReadableDate(roomRange.mondayDate))
+      await expect(rankingItems.nth(0)).toContainText('1명 가능')
+    } finally {
+      await closeContext(hostContext)
+    }
+  })
 })
 
 async function createMobileContext(browser: Browser) {
