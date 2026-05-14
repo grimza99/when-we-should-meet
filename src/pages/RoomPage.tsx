@@ -362,6 +362,7 @@ export function RoomPage({
             {weekdayOptions.map((option) => (
               <button
                 aria-label={getWeekdayRuleAriaLabel(option.label)}
+                aria-pressed={option.selected}
                 key={option.value}
                 className={`day-chip${option.selected ? " is-active" : ""}`}
                 onClick={() => onToggleWeekday(option.value)}
@@ -387,7 +388,9 @@ export function RoomPage({
           >
             &lt;
           </Button>
-          <strong>{roomSummary.monthLabel}</strong>
+          <strong aria-label={ARIA_LABELS.room.monthHeading}>
+            {roomSummary.monthLabel}
+          </strong>
           <div className="calendar-header-actions">
             <button
               aria-label={ARIA_LABELS.room.resetSelectionButton}
