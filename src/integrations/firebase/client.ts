@@ -1,5 +1,5 @@
 import { getApp, getApps, initializeApp } from 'firebase/app'
-import { getFirestore } from 'firebase/firestore'
+import { connectFirestoreEmulator, getFirestore } from 'firebase/firestore'
 
 const firebaseConfig = {
   apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
@@ -21,6 +21,15 @@ const placeholderFirebaseConfig = {
   measurementId: 'G-PLACEHOLDER',
 }
 
+const useFirestoreEmulator =
+  import.meta.env.VITE_FIREBASE_USE_EMULATOR?.trim() === 'true'
+const firestoreEmulatorHost =
+  import.meta.env.VITE_FIRESTORE_EMULATOR_HOST?.trim() || '127.0.0.1'
+const firestoreEmulatorPort = Number(
+  import.meta.env.VITE_FIRESTORE_EMULATOR_PORT?.trim() || '8080',
+)
+const emulatorConnectionFlag = '__WSWM_FIRESTORE_EMULATOR_CONNECTED__'
+
 export const isFirebaseConfigured = Boolean(
   firebaseConfig.apiKey &&
     firebaseConfig.authDomain &&
@@ -39,4 +48,16 @@ const app = getApps().length > 0
   : initializeApp(isFirebaseConfigured ? firebaseConfig : placeholderFirebaseConfig)
 
 export const db = getFirestore(app)
+
+if (useFirestoreEmulator) {
+  const globalState = globalThis as typeof globalThis & {
+    [emulatorConnectionFlag]?: boolean
+  }
+
+  if (!globalState[emulatorConnectionFlag]) {
+    connectFirestoreEmulator(db, firestoreEmulatorHost, firestoreEmulatorPort)
+    globalState[emulatorConnectionFlag] = true
+  }
+}
+
 export { app }
