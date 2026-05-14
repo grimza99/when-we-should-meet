@@ -1,4 +1,4 @@
-import { expect, test, type Browser, type Page } from '@playwright/test'
+import { expect, test, type Browser, type BrowserContext, type Page } from '@playwright/test'
 import { ARIA_LABELS, getParticipantRemoveAriaLabel } from '../../src/lib/ariaLabels'
 
 function byAriaLabel(label: string) {
@@ -55,6 +55,7 @@ test.describe('Firebase emulator room flows', () => {
   }) => {
     const hostContext = await createMobileContext(browser)
     const guestContext = await createMobileContext(browser)
+    let viewerContext: BrowserContext | null = null
     const hostPage = await hostContext.newPage()
     const guestPage = await guestContext.newPage()
 
@@ -78,11 +79,15 @@ test.describe('Firebase emulator room flows', () => {
 
       await expect(hostPage).toHaveURL('http://127.0.0.1:4174/')
 
-      await guestPage.goto(roomUrl)
-      await expect(guestPage.getByText('존재하지 않는 방입니다')).toBeVisible()
+      viewerContext = await createMobileContext(browser)
+      const viewerPage = await viewerContext.newPage()
+
+      await viewerPage.goto(roomUrl)
+      await expect(viewerPage.getByText('존재하지 않는 방입니다')).toBeVisible()
     } finally {
-      await guestContext.close()
-      await hostContext.close()
+      await closeContext(viewerContext)
+      await closeContext(guestContext)
+      await closeContext(hostContext)
     }
   })
 })
@@ -123,4 +128,16 @@ async function joinCurrentRoom(page: Page, nickname: string) {
 
   await expect(page.locator(byAriaLabel(ARIA_LABELS.nickname.dialog))).toBeHidden()
   await expect(page.getByText(nickname, { exact: true })).toBeVisible()
+}
+
+async function closeContext(context: BrowserContext | null) {
+  if (!context) {
+    return
+  }
+
+  try {
+    await context.close()
+  } catch {
+    // Timeout이나 브라우저 종료 이후 정리 단계에서 던지는 close 에러는 무시한다.
+  }
 }
