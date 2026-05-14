@@ -1,4 +1,5 @@
 type SegmentedOption<T extends string> = {
+  ariaLabel?: string
   label: string
   value: T
 }
@@ -18,6 +19,7 @@ export function SegmentedButtonGroup<T extends string>({
     <div className="toggle-row">
       {options.map((option) => (
         <button
+          aria-label={option.ariaLabel}
           key={option.value}
           aria-pressed={selectedValue === option.value}
           className={`mode-button${selectedValue === option.value ? ' is-active' : ''}`}

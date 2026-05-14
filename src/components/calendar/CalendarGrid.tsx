@@ -1,3 +1,4 @@
+import { getCalendarDayAriaLabel } from "../../lib/ariaLabels";
 import type { CalendarDay } from "../../types";
 
 type CalendarGridProps = {
@@ -24,6 +25,7 @@ export function CalendarGrid({
           const rank = day.isoDate ? rankByDate[day.isoDate] : undefined;
           return (
             <button
+              aria-label={day.isoDate ? getCalendarDayAriaLabel(day.isoDate) : undefined}
               key={day.key}
               className={[
                 "calendar-day",
