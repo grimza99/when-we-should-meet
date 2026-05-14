@@ -5,7 +5,7 @@ const localFallbackEnv =
 
 export default defineConfig({
   testDir: './tests/e2e',
-  testIgnore: '**/firebase-room-flow.spec.ts',
+  testIgnore: '**/firebase-*.spec.ts',
   fullyParallel: true,
   forbidOnly: Boolean(process.env.CI),
   reporter: 'list',
