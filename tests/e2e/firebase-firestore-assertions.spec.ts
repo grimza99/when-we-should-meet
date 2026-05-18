@@ -64,11 +64,20 @@ test.describe('Firebase emulator document assertions', () => {
       await leaveGuestPage.goto(roomUrl)
       await joinCurrentRoom(leaveGuestPage, '나갈게스트')
 
+      await expect(hostPage.getByText('제거될게스트', { exact: true })).toBeVisible()
+      await expect(hostPage.getByText('나갈게스트', { exact: true })).toBeVisible()
+      await expect(hostPage.getByText('3 / 6명 참여 중')).toBeVisible()
+      await expect(
+        hostPage.locator(byAriaLabel(getParticipantRemoveAriaLabel('제거될게스트'))),
+      ).toBeVisible()
+
       const guestParticipant = await findParticipantByNickname(roomId, '제거될게스트')
       const leaveParticipant = await findParticipantByNickname(roomId, '나갈게스트')
 
       await hostPage.locator(byAriaLabel(getParticipantRemoveAriaLabel('제거될게스트'))).click()
       await expect(hostPage.getByText('2 / 6명 참여 중')).toBeVisible()
+      await expect.poll(async () => getParticipantCount(roomId)).toBe(2)
+      await expect.poll(async () => listParticipantIds(roomId)).toHaveLength(2)
 
       const roomAfterRemoval = await getDocument(`rooms/${roomId}`)
       const participantsAfterRemoval = await listDocuments(`rooms/${roomId}/participants`)
@@ -84,6 +93,8 @@ test.describe('Firebase emulator document assertions', () => {
       await leaveGuestPage.locator(byAriaLabel(ARIA_LABELS.room.leaveRoomButton)).click()
       await expect(leaveGuestPage).toHaveURL('/')
       await expect(hostPage.getByText('1 / 6명 참여 중')).toBeVisible()
+      await expect.poll(async () => getParticipantCount(roomId)).toBe(1)
+      await expect.poll(async () => listParticipantIds(roomId)).toHaveLength(1)
 
       const roomAfterLeave = await getDocument(`rooms/${roomId}`)
       const participantsAfterLeave = await listDocuments(`rooms/${roomId}/participants`)
@@ -96,9 +107,9 @@ test.describe('Firebase emulator document assertions', () => {
       await hostPage.locator(byAriaLabel(ARIA_LABELS.room.deleteRoomButton)).click()
       await expect(hostPage).toHaveURL('/')
 
-      await expectDocumentMissing(`rooms/${roomId}`)
-      await expectDocumentMissing(`inviteCodes/${inviteCode}`)
-      expect(await listDocuments(`rooms/${roomId}/participants`)).toHaveLength(0)
+      await expect.poll(async () => getDocumentStatus(`rooms/${roomId}`)).toBe(404)
+      await expect.poll(async () => getDocumentStatus(`inviteCodes/${inviteCode}`)).toBe(404)
+      await expect.poll(async () => listParticipantIds(roomId)).toHaveLength(0)
     } finally {
       await closeContext(leaveGuestContext)
       await closeContext(guestContext)
@@ -183,9 +194,9 @@ async function getDocument(path: string) {
   return parseDocument((await response.json()) as FirestoreRestDocument)
 }
 
-async function expectDocumentMissing(path: string) {
+async function getDocumentStatus(path: string) {
   const response = await fetch(`${FIRESTORE_REST_BASE}/${path}`)
-  expect(response.status).toBe(404)
+  return response.status
 }
 
 async function listDocuments(path: string) {
@@ -229,6 +240,14 @@ async function findParticipantByNickname(roomId: string, nickname: string) {
   }
 
   return participant
+}
+
+async function getParticipantCount(roomId: string) {
+  return readInteger(await getDocument(`rooms/${roomId}`), 'participantCount')
+}
+
+async function listParticipantIds(roomId: string) {
+  return (await listDocuments(`rooms/${roomId}/participants`)).map((document) => document.id)
 }
 
 async function closeContext(context: BrowserContext | null) {
