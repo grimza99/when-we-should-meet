@@ -30,7 +30,7 @@ test.describe('Firebase emulator room flows', () => {
         .first()
         .click()
 
-      await expect(hostPage.getByText(/1명 가능/)).toBeVisible()
+      await expect(hostPage.locator('.ranking-item').first()).toContainText('1명 가능')
 
       await guestPage.reload()
       await expect(guestPage.locator(byAriaLabel(ARIA_LABELS.nickname.dialog))).toBeHidden()

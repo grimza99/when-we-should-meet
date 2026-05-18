@@ -100,9 +100,11 @@ test.describe('Firebase emulator calendar and capacity flows', () => {
       await hostPage.locator(byAriaLabel(ARIA_LABELS.room.previousMonthButton)).click()
       await expect(monthHeading).toHaveText(currentMonthLabel)
 
-      await mondayRuleButton.click()
-      await expect(mondayRuleButton).toHaveAttribute('aria-pressed', 'true')
-      await expect(hostPage.getByText(/1명 가능/).first()).toBeVisible()
+      await expect(async () => {
+        await mondayRuleButton.click()
+        await expect(mondayRuleButton).toHaveAttribute('aria-pressed', 'true')
+      }).toPass()
+      await expect(hostPage.locator('.ranking-item').first()).toContainText('1명 가능')
       await expect(resetButton).toBeEnabled()
 
       await hostPage.reload()
