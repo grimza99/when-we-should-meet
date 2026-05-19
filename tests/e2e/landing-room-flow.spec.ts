@@ -74,12 +74,17 @@ test.describe("랜딩페이지", () => {
     const inviteCodeInput = page.locator(
       byAriaLabel(ARIA_LABELS.landing.inviteCodeInput)
     );
+    const joinRoomButton = page.locator(
+      byAriaLabel(ARIA_LABELS.landing.joinRoomButton)
+    );
+
+    await expect(joinRoomButton).toBeDisabled();
     await inviteCodeInput.fill("ab 12c");
     await expect(inviteCodeInput).toHaveValue("AB12C");
     await inviteCodeInput.fill("abc1234");
     await expect(inviteCodeInput).toHaveValue("ABC123");
 
-    await page.locator(byAriaLabel(ARIA_LABELS.landing.joinRoomButton)).click();
+    await joinRoomButton.click();
     await expect(page.locator(byAriaLabel(ARIA_LABELS.toast))).toHaveText(
       "일치하는 방을 찾지 못했어요. 코드를 다시 확인해 주세요."
     );
