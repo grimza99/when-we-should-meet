@@ -1,15 +1,21 @@
 import { expect, test } from "@playwright/test";
 import { ARIA_LABELS } from "../../src/lib/ariaLabels";
+import {
+  byAriaLabel,
+  createRoomWithoutJoin,
+  expectRoomUrl,
+  joinCurrentRoom,
+} from "./helpers/roomFlow";
 
-function byAriaLabel(label: string) {
-  return `[aria-label="${label}"]`;
-}
-
-test.describe("랜딩페이지", () => {
-  test("랜딩페이지 렌더, 방만들기", async ({ page }) => {
+test.describe("랜딩 페이지", () => {
+  test("랜딩 페이지를 렌더링하고 방 만들기 폼 유효성을 검증한다", async ({
+    page,
+  }) => {
     await page.goto("/");
 
-    await expect(page.locator(byAriaLabel(ARIA_LABELS.landing.page))).toBeVisible();
+    await expect(
+      page.locator(byAriaLabel(ARIA_LABELS.landing.page))
+    ).toBeVisible();
     await expect(
       page.locator(byAriaLabel(ARIA_LABELS.landing.heading))
     ).toBeVisible();
@@ -23,9 +29,13 @@ test.describe("랜딩페이지", () => {
     await expect(page.getByText("손쉬운 터치")).toBeVisible();
     await expect(page.getByText("최적의 날짜 추천")).toBeVisible();
 
-    await page.locator(byAriaLabel(ARIA_LABELS.landing.createRoomButton)).click();
+    await page
+      .locator(byAriaLabel(ARIA_LABELS.landing.createRoomButton))
+      .click();
 
-    const createDialog = page.locator(byAriaLabel(ARIA_LABELS.createRoom.dialog));
+    const createDialog = page.locator(
+      byAriaLabel(ARIA_LABELS.createRoom.dialog)
+    );
     await expect(createDialog).toBeVisible();
     await expect(
       page.locator(byAriaLabel(ARIA_LABELS.createRoom.participantCountInput))
@@ -66,7 +76,7 @@ test.describe("랜딩페이지", () => {
     ).toBeDisabled();
   });
 
-  test("creates a room, joins with a nickname, and rejects an invalid invite code", async ({
+  test("방을 만들고 닉네임으로 입장하며 잘못된 초대 코드를 거절한다", async ({
     page,
   }) => {
     await page.goto("/");
@@ -88,15 +98,13 @@ test.describe("랜딩페이지", () => {
     await expect(page.locator(byAriaLabel(ARIA_LABELS.toast))).toHaveText(
       "일치하는 방을 찾지 못했어요. 코드를 다시 확인해 주세요."
     );
-    await expect(page).toHaveURL("http://127.0.0.1:4173/");
+    await expect(page).toHaveURL("/");
 
-    await page.locator(byAriaLabel(ARIA_LABELS.landing.createRoomButton)).click();
-    await page.locator(byAriaLabel(ARIA_LABELS.createRoom.submitButton)).click();
+    const { inviteCode } = await createRoomWithoutJoin(page);
 
-    await expect(page).toHaveURL(/\/room\/[^/]+$/);
     await expect(
       page.locator(byAriaLabel(ARIA_LABELS.room.inviteCodeHeading))
-    ).toHaveText(/^[A-Z0-9]{6}$/);
+    ).toHaveText(inviteCode);
     await expect(
       page.locator(byAriaLabel(ARIA_LABELS.nickname.dialog))
     ).toBeVisible();
@@ -106,13 +114,9 @@ test.describe("랜딩페이지", () => {
     );
     await expect(joinButton).toBeDisabled();
 
-    await page.locator(byAriaLabel(ARIA_LABELS.nickname.input)).fill("민준");
-    await joinButton.click();
+    await joinCurrentRoom(page, "민준");
 
-    await expect(
-      page.locator(byAriaLabel(ARIA_LABELS.nickname.dialog))
-    ).toBeHidden();
-    await expect(page.getByText("민준", { exact: true })).toBeVisible();
+    await expectRoomUrl(page);
     await expect(page.getByText("1 / 6명 참여 중")).toBeVisible();
     await expect(
       page.getByText(

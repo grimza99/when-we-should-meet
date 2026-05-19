@@ -1,15 +1,19 @@
-import { expect, test, type Browser, type BrowserContext, type Page } from '@playwright/test'
+import { expect, test } from '@playwright/test'
 import { ARIA_LABELS, getParticipantRemoveAriaLabel } from '../../src/lib/ariaLabels'
+import {
+  byAriaLabel,
+  closeContext,
+  createMobileContext,
+  createRoomAndJoin,
+  createRoomWithoutJoin,
+  joinCurrentRoom,
+} from './helpers/roomFlow'
 
 const FIRESTORE_REST_BASE =
   'http://127.0.0.1:8080/v1/projects/demo-when-should-we-meet/databases/(default)/documents'
 
-function byAriaLabel(label: string) {
-  return `[aria-label="${label}"]`
-}
-
-test.describe('Firebase emulator document assertions', () => {
-  test('creates room and invite code documents, then writes the host participant on join', async ({
+test.describe('Firebase 에뮬레이터 문서 단언', () => {
+  test('방과 초대 코드 문서를 만들고 호스트 참가자 문서를 기록한다', async ({
     browser,
   }) => {
     const hostContext = await createMobileContext(browser)
@@ -45,7 +49,7 @@ test.describe('Firebase emulator document assertions', () => {
     }
   })
 
-  test('updates Firestore documents when a guest is removed, leaves, and the host deletes the room', async ({
+  test('참가자 제거, 참가자 나가기, 방 삭제 시 Firestore 문서 상태를 갱신한다', async ({
     browser,
   }) => {
     const hostContext = await createMobileContext(browser)
@@ -56,7 +60,7 @@ test.describe('Firebase emulator document assertions', () => {
     const leaveGuestPage = await leaveGuestContext.newPage()
 
     try {
-      const { roomId, roomUrl, inviteCode } = await createRoomAndJoinAsHost(hostPage, '방장')
+      const { roomId, roomUrl, inviteCode } = await createRoomAndJoin(hostPage, '방장')
 
       await guestPage.goto(roomUrl)
       await joinCurrentRoom(guestPage, '제거될게스트')
@@ -117,59 +121,6 @@ test.describe('Firebase emulator document assertions', () => {
     }
   })
 })
-
-async function createMobileContext(browser: Browser) {
-  return browser.newContext({
-    viewport: {
-      width: 390,
-      height: 844,
-    },
-  })
-}
-
-async function createRoomWithoutJoin(
-  page: Page,
-  options: {
-    maxParticipants?: number
-  } = {},
-) {
-  await page.goto('/')
-  await page.locator(byAriaLabel(ARIA_LABELS.landing.createRoomButton)).click()
-
-  if (options.maxParticipants) {
-    await page
-      .locator(byAriaLabel(ARIA_LABELS.createRoom.participantCountInput))
-      .fill(String(options.maxParticipants))
-  }
-
-  await page.locator(byAriaLabel(ARIA_LABELS.createRoom.submitButton)).click()
-  await expect(page).toHaveURL(/\/room\/[^/]+$/)
-
-  const roomUrl = new URL(page.url())
-  const roomId = roomUrl.pathname.split('/').at(-1) ?? ''
-  const inviteCode =
-    (await page.locator(byAriaLabel(ARIA_LABELS.room.inviteCodeHeading)).textContent())?.trim() ||
-    ''
-
-  await expect(page.locator(byAriaLabel(ARIA_LABELS.nickname.dialog))).toBeVisible()
-
-  return { inviteCode, roomId, roomUrl: page.url() }
-}
-
-async function createRoomAndJoinAsHost(page: Page, nickname: string) {
-  const room = await createRoomWithoutJoin(page)
-  await joinCurrentRoom(page, nickname)
-  await expect(page.locator(byAriaLabel(ARIA_LABELS.room.calendarCard))).toBeVisible()
-  return room
-}
-
-async function joinCurrentRoom(page: Page, nickname: string) {
-  await expect(page.locator(byAriaLabel(ARIA_LABELS.nickname.dialog))).toBeVisible()
-  await page.locator(byAriaLabel(ARIA_LABELS.nickname.input)).fill(nickname)
-  await page.locator(byAriaLabel(ARIA_LABELS.nickname.submitButton)).click()
-  await expect(page.locator(byAriaLabel(ARIA_LABELS.nickname.dialog))).toBeHidden()
-  await expect(page.getByText(nickname, { exact: true })).toBeVisible()
-}
 
 type FirestoreRestDocument = {
   name: string
@@ -248,16 +199,4 @@ async function getParticipantCount(roomId: string) {
 
 async function listParticipantIds(roomId: string) {
   return (await listDocuments(`rooms/${roomId}/participants`)).map((document) => document.id)
-}
-
-async function closeContext(context: BrowserContext | null) {
-  if (!context) {
-    return
-  }
-
-  try {
-    await context.close()
-  } catch {
-    // 브라우저 종료 이후 정리 단계에서 던지는 close 에러는 무시한다.
-  }
 }

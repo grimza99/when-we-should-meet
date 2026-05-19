@@ -1,12 +1,15 @@
-import { expect, test, type Browser, type BrowserContext, type Page } from '@playwright/test'
+import { expect, test, type BrowserContext } from '@playwright/test'
 import { ARIA_LABELS, getParticipantRemoveAriaLabel } from '../../src/lib/ariaLabels'
+import {
+  byAriaLabel,
+  closeContext,
+  createMobileContext,
+  createRoomAndJoin,
+  joinCurrentRoom,
+} from './helpers/roomFlow'
 
-function byAriaLabel(label: string) {
-  return `[aria-label="${label}"]`
-}
-
-test.describe('Firebase emulator room flows', () => {
-  test('joins by invite code, syncs across clients, restores after reload, and blocks removed participants', async ({
+test.describe('Firebase 에뮬레이터 방 플로우', () => {
+  test('초대 코드 참여, 실시간 동기화, 새로고침 복원, 강제 퇴장을 검증한다', async ({
     browser,
   }) => {
     const hostContext = await createMobileContext(browser)
@@ -15,7 +18,7 @@ test.describe('Firebase emulator room flows', () => {
     const guestPage = await guestContext.newPage()
 
     try {
-      const { inviteCode } = await createRoomAndJoinAsHost(hostPage, '호스트')
+      const { inviteCode } = await createRoomAndJoin(hostPage, '호스트')
 
       await guestPage.goto('/')
       await guestPage.locator(byAriaLabel(ARIA_LABELS.landing.inviteCodeInput)).fill(inviteCode)
@@ -45,12 +48,12 @@ test.describe('Firebase emulator room flows', () => {
         guestPage.locator(byAriaLabel(ARIA_LABELS.room.restrictedPage)),
       ).toBeVisible()
     } finally {
-      await guestContext.close()
-      await hostContext.close()
+      await closeContext(guestContext)
+      await closeContext(hostContext)
     }
   })
 
-  test('supports deep-link join, guest leave, and host room deletion', async ({
+  test('딥링크 참여, 참가자 나가기, 방 삭제를 지원한다', async ({
     browser,
   }) => {
     const hostContext = await createMobileContext(browser)
@@ -60,7 +63,7 @@ test.describe('Firebase emulator room flows', () => {
     const guestPage = await guestContext.newPage()
 
     try {
-      const { roomUrl } = await createRoomAndJoinAsHost(hostPage, '방장')
+      const { roomUrl } = await createRoomAndJoin(hostPage, '방장')
 
       await guestPage.goto(roomUrl)
       await joinCurrentRoom(guestPage, '참가자')
@@ -70,14 +73,14 @@ test.describe('Firebase emulator room flows', () => {
       guestPage.once('dialog', (dialog) => dialog.accept())
       await guestPage.locator(byAriaLabel(ARIA_LABELS.room.leaveRoomButton)).click()
 
-      await expect(guestPage).toHaveURL('http://127.0.0.1:4174/')
+      await expect(guestPage).toHaveURL('/')
       await expect(hostPage.getByText('1 / 6명 참여 중')).toBeVisible()
       await expect(hostPage.getByText('참가자', { exact: true })).toHaveCount(0)
 
       hostPage.once('dialog', (dialog) => dialog.accept())
       await hostPage.locator(byAriaLabel(ARIA_LABELS.room.deleteRoomButton)).click()
 
-      await expect(hostPage).toHaveURL('http://127.0.0.1:4174/')
+      await expect(hostPage).toHaveURL('/')
 
       viewerContext = await createMobileContext(browser)
       const viewerPage = await viewerContext.newPage()
@@ -91,53 +94,3 @@ test.describe('Firebase emulator room flows', () => {
     }
   })
 })
-
-async function createMobileContext(browser: Browser) {
-  return browser.newContext({
-    viewport: {
-      width: 390,
-      height: 844,
-    },
-  })
-}
-
-async function createRoomAndJoinAsHost(page: Page, nickname: string) {
-  await page.goto('/')
-  await page.locator(byAriaLabel(ARIA_LABELS.landing.createRoomButton)).click()
-  await page.locator(byAriaLabel(ARIA_LABELS.createRoom.submitButton)).click()
-
-  await expect(page).toHaveURL(/\/room\/[^/]+$/)
-
-  const roomUrl = page.url()
-  const inviteCode =
-    (await page.locator(byAriaLabel(ARIA_LABELS.room.inviteCodeHeading)).textContent())?.trim() ||
-    ''
-
-  await joinCurrentRoom(page, nickname)
-  await expect(page.locator(byAriaLabel(ARIA_LABELS.room.calendarCard))).toBeVisible()
-
-  return { inviteCode, roomUrl }
-}
-
-async function joinCurrentRoom(page: Page, nickname: string) {
-  const joinButton = page.locator(byAriaLabel(ARIA_LABELS.nickname.submitButton))
-
-  await expect(page.locator(byAriaLabel(ARIA_LABELS.nickname.dialog))).toBeVisible()
-  await page.locator(byAriaLabel(ARIA_LABELS.nickname.input)).fill(nickname)
-  await joinButton.click()
-
-  await expect(page.locator(byAriaLabel(ARIA_LABELS.nickname.dialog))).toBeHidden()
-  await expect(page.getByText(nickname, { exact: true })).toBeVisible()
-}
-
-async function closeContext(context: BrowserContext | null) {
-  if (!context) {
-    return
-  }
-
-  try {
-    await context.close()
-  } catch {
-    // Timeout이나 브라우저 종료 이후 정리 단계에서 던지는 close 에러는 무시한다.
-  }
-}

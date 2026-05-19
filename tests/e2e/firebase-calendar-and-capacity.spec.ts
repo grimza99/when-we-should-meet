@@ -1,4 +1,4 @@
-import { expect, test, type Browser, type BrowserContext, type Page } from '@playwright/test'
+import { expect, test } from '@playwright/test'
 import {
   ARIA_LABELS,
   getCalendarDayAriaLabel,
@@ -6,13 +6,16 @@ import {
   getWeekdayRuleAriaLabel,
 } from '../../src/lib/ariaLabels'
 import { WEEKDAY_LABELS } from '../../src/lib/constants'
+import {
+  byAriaLabel,
+  closeContext,
+  createMobileContext,
+  createRoomAndJoin,
+  joinCurrentRoom,
+} from './helpers/roomFlow'
 
-function byAriaLabel(label: string) {
-  return `[aria-label="${label}"]`
-}
-
-test.describe('Firebase emulator calendar and capacity flows', () => {
-  test('shows the full-room state to newcomers while existing participants can still edit and refresh', async ({
+test.describe('Firebase 에뮬레이터 달력 및 정원 플로우', () => {
+  test('정원이 찬 방은 신규 참가를 막고 기존 참가자는 계속 수정하고 새로고침할 수 있다', async ({
     browser,
   }) => {
     const hostContext = await createMobileContext(browser)
@@ -23,7 +26,7 @@ test.describe('Firebase emulator calendar and capacity flows', () => {
     const viewerPage = await viewerContext.newPage()
 
     try {
-      const { roomUrl } = await createRoomAndJoinAsHost(hostPage, '방장', {
+      const { roomUrl } = await createRoomAndJoin(hostPage, '방장', {
         maxParticipants: 2,
       })
 
@@ -62,7 +65,7 @@ test.describe('Firebase emulator calendar and capacity flows', () => {
     }
   })
 
-  test('persists weekday rules and nickname changes, resets selections, and clamps month navigation', async ({
+  test('요일 규칙과 닉네임 변경을 유지하고 선택 초기화와 월 이동 범위를 검증한다', async ({
     browser,
   }) => {
     const hostContext = await createMobileContext(browser)
@@ -70,7 +73,7 @@ test.describe('Firebase emulator calendar and capacity flows', () => {
 
     try {
       const roomRange = createTwoMonthRoomRange()
-      await createRoomAndJoinAsHost(hostPage, '달력왕', {
+      await createRoomAndJoin(hostPage, '달력왕', {
         range: roomRange,
       })
 
@@ -149,7 +152,7 @@ test.describe('Firebase emulator calendar and capacity flows', () => {
     }
   })
 
-  test('keeps dashboard rankings and calendar badges in sync across participants', async ({
+  test('대시보드 랭킹과 달력 배지가 참가자 선택과 동기화된다', async ({
     browser,
   }) => {
     const hostContext = await createMobileContext(browser)
@@ -159,7 +162,7 @@ test.describe('Firebase emulator calendar and capacity flows', () => {
 
     try {
       const roomRange = createUpcomingWorkweekRange()
-      const { roomUrl } = await createRoomAndJoinAsHost(hostPage, '호스트', {
+      const { roomUrl } = await createRoomAndJoin(hostPage, '호스트', {
         range: roomRange,
       })
 
@@ -198,7 +201,7 @@ test.describe('Firebase emulator calendar and capacity flows', () => {
     }
   })
 
-  test('preserves availability when switching to unavailable mode and persists unavailable overrides after refresh', async ({
+  test('불가능 모드 전환 시 가용성 의미를 유지하고 새로고침 후에도 선택을 복원한다', async ({
     browser,
   }) => {
     const hostContext = await createMobileContext(browser)
@@ -206,7 +209,7 @@ test.describe('Firebase emulator calendar and capacity flows', () => {
 
     try {
       const roomRange = createUpcomingWorkweekRange()
-      await createRoomAndJoinAsHost(hostPage, '호스트', {
+      await createRoomAndJoin(hostPage, '호스트', {
         range: roomRange,
       })
 
@@ -249,7 +252,7 @@ test.describe('Firebase emulator calendar and capacity flows', () => {
     }
   })
 
-  test('hides host controls from guests and removes calendar dots after participant removal or self-leave', async ({
+  test('게스트에게 호스트 제어를 숨기고 제거 또는 나가기 후 달력 점을 정리한다', async ({
     browser,
   }) => {
     const hostContext = await createMobileContext(browser)
@@ -261,7 +264,7 @@ test.describe('Firebase emulator calendar and capacity flows', () => {
 
     try {
       const roomRange = createUpcomingWorkweekRange()
-      const { roomUrl } = await createRoomAndJoinAsHost(hostPage, '방장', {
+      const { roomUrl } = await createRoomAndJoin(hostPage, '방장', {
         range: roomRange,
       })
 
@@ -309,71 +312,6 @@ test.describe('Firebase emulator calendar and capacity flows', () => {
     }
   })
 })
-
-async function createMobileContext(browser: Browser) {
-  return browser.newContext({
-    viewport: {
-      width: 390,
-      height: 844,
-    },
-  })
-}
-
-async function createRoomAndJoinAsHost(
-  page: Page,
-  nickname: string,
-  options: {
-    maxParticipants?: number
-    range?: {
-      startDate: string
-      endDate: string
-    }
-  } = {},
-) {
-  await page.goto('/')
-  await page.locator(byAriaLabel(ARIA_LABELS.landing.createRoomButton)).click()
-
-  if (options.maxParticipants) {
-    await page
-      .locator(byAriaLabel(ARIA_LABELS.createRoom.participantCountInput))
-      .fill(String(options.maxParticipants))
-  }
-
-  if (options.range) {
-    await page.locator(byAriaLabel(ARIA_LABELS.createRoom.customRangeButton)).click()
-    await page
-      .locator(byAriaLabel(ARIA_LABELS.createRoom.startDateInput))
-      .fill(options.range.startDate)
-    await page
-      .locator(byAriaLabel(ARIA_LABELS.createRoom.endDateInput))
-      .fill(options.range.endDate)
-  }
-
-  await page.locator(byAriaLabel(ARIA_LABELS.createRoom.submitButton)).click()
-
-  await expect(page).toHaveURL(/\/room\/[^/]+$/)
-
-  const roomUrl = page.url()
-  const inviteCode =
-    (await page.locator(byAriaLabel(ARIA_LABELS.room.inviteCodeHeading)).textContent())?.trim() ||
-    ''
-
-  await joinCurrentRoom(page, nickname)
-  await expect(page.locator(byAriaLabel(ARIA_LABELS.room.calendarCard))).toBeVisible()
-
-  return { inviteCode, roomUrl }
-}
-
-async function joinCurrentRoom(page: Page, nickname: string) {
-  const joinButton = page.locator(byAriaLabel(ARIA_LABELS.nickname.submitButton))
-
-  await expect(page.locator(byAriaLabel(ARIA_LABELS.nickname.dialog))).toBeVisible()
-  await page.locator(byAriaLabel(ARIA_LABELS.nickname.input)).fill(nickname)
-  await joinButton.click()
-
-  await expect(page.locator(byAriaLabel(ARIA_LABELS.nickname.dialog))).toBeHidden()
-  await expect(page.getByText(nickname, { exact: true })).toBeVisible()
-}
 
 function createTwoMonthRoomRange() {
   const now = new Date()
@@ -435,16 +373,4 @@ function getNextWeekdayDate(targetWeekday: number) {
 
   candidate.setDate(candidate.getDate() + daysUntilTarget)
   return candidate
-}
-
-async function closeContext(context: BrowserContext | null) {
-  if (!context) {
-    return
-  }
-
-  try {
-    await context.close()
-  } catch {
-    // 브라우저 종료 이후 정리 단계에서 던지는 close 에러는 무시한다.
-  }
 }
