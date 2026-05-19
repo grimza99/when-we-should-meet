@@ -1,9 +1,11 @@
 import { expect, test, type Browser, type Page } from '@playwright/test'
 import { ARIA_LABELS } from '../../src/lib/ariaLabels'
-
-function byAriaLabel(label: string) {
-  return `[aria-label="${label}"]`
-}
+import {
+  byAriaLabel,
+  closeContext,
+  createMobileContext,
+  createRoomAndJoin,
+} from './helpers/roomFlow'
 
 type KakaoShareCall = {
   buttons?: Array<{
@@ -27,7 +29,7 @@ type KakaoInitState = {
 }
 
 test.describe('카카오 공유 플로우', () => {
-  test('calls the Kakao SDK when room and ranking sharing are requested', async ({ browser }) => {
+  test('방 공유와 랭킹 공유를 요청하면 카카오 SDK를 호출한다', async ({ browser }) => {
     const context = await createKakaoContext(browser)
     const page = await context.newPage()
 
@@ -103,12 +105,7 @@ test.describe('카카오 공유 플로우', () => {
 })
 
 async function createKakaoContext(browser: Browser) {
-  const context = await browser.newContext({
-    viewport: {
-      width: 390,
-      height: 844,
-    },
-  })
+  const context = await createMobileContext(browser)
 
   await context.addInitScript(() => {
     const shareCalls: KakaoShareCall[] = []
@@ -154,21 +151,6 @@ async function createKakaoContext(browser: Browser) {
   return context
 }
 
-async function createRoomAndJoin(page: Page, nickname: string) {
-  await page.goto('/')
-  await page.locator(byAriaLabel(ARIA_LABELS.landing.createRoomButton)).click()
-  await page.locator(byAriaLabel(ARIA_LABELS.createRoom.submitButton)).click()
-
-  await expect(page).toHaveURL(/\/room\/[^/]+$/)
-  await expect(page.locator(byAriaLabel(ARIA_LABELS.nickname.dialog))).toBeVisible()
-
-  await page.locator(byAriaLabel(ARIA_LABELS.nickname.input)).fill(nickname)
-  await page.locator(byAriaLabel(ARIA_LABELS.nickname.submitButton)).click()
-
-  await expect(page.locator(byAriaLabel(ARIA_LABELS.nickname.dialog))).toBeHidden()
-  await expect(page.getByText(nickname, { exact: true })).toBeVisible()
-}
-
 async function getKakaoShareCalls(page: Page) {
   return page.evaluate(() => {
     return (window as Window & { __kakaoShareCalls?: KakaoShareCall[] }).__kakaoShareCalls ?? []
@@ -184,12 +166,4 @@ async function getKakaoInitState(page: Page) {
       }
     )
   })
-}
-
-async function closeContext(context: Awaited<ReturnType<Browser['newContext']>>) {
-  try {
-    await context.close()
-  } catch {
-    // Ignore trace-artifact teardown failures so the test reports the real assertion error.
-  }
 }
