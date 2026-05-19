@@ -182,7 +182,7 @@
 
 ## 변경별 테스트 플랜 사용 기준
 
-아래 경우 `docs/test-plan-template.md`를 사용한다.
+아래 경우 `skills/qa/test-plan-template.md`를 사용한다.
 
 - 유저 플로우가 바뀔 때
 - 레거시 플로우를 제거하거나 일정 기간 유지할 때

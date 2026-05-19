@@ -27,8 +27,8 @@ This document defines the working rules for the `when-should-we-meet` project.
 - Mention validation used for the change.
 - Note whether the work is independent of other open PRs.
 - Use `docs/manual-qa-checklist.md` for demo or ready-for-review sweeps.
-- Use `docs/test-master-plan.md` for long-lived test strategy rules.
-- Use `docs/test-plan-template.md` when a feature changes user flow, legacy handling, or test scope.
+- Use `skills/qa/test-master-plan.md` for long-lived test strategy rules.
+- Use `skills/qa/test-plan-template.md` when a feature changes user flow, legacy handling, or test scope.
 - Use `skills/qa/qa-agent-briefing.md` as the default QA handoff/onboarding briefing when a QA-focused agent needs immediate project context.
 
 ## Current review checklist
