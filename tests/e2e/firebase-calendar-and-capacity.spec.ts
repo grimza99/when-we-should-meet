@@ -2,6 +2,7 @@ import { expect, test, type Browser, type BrowserContext, type Page } from '@pla
 import {
   ARIA_LABELS,
   getCalendarDayAriaLabel,
+  getParticipantRemoveAriaLabel,
   getWeekdayRuleAriaLabel,
 } from '../../src/lib/ariaLabels'
 import { WEEKDAY_LABELS } from '../../src/lib/constants'
@@ -244,6 +245,66 @@ test.describe('Firebase emulator calendar and capacity flows', () => {
       await expect(rankingItems.nth(0)).toContainText(formatReadableDate(roomRange.mondayDate))
       await expect(rankingItems.nth(0)).toContainText('1명 가능')
     } finally {
+      await closeContext(hostContext)
+    }
+  })
+
+  test('hides host controls from guests and removes calendar dots after participant removal or self-leave', async ({
+    browser,
+  }) => {
+    const hostContext = await createMobileContext(browser)
+    const guestContext = await createMobileContext(browser)
+    const leavingGuestContext = await createMobileContext(browser)
+    const hostPage = await hostContext.newPage()
+    const guestPage = await guestContext.newPage()
+    const leavingGuestPage = await leavingGuestContext.newPage()
+
+    try {
+      const roomRange = createUpcomingWorkweekRange()
+      const { roomUrl } = await createRoomAndJoinAsHost(hostPage, '방장', {
+        range: roomRange,
+      })
+
+      const mondayButton = hostPage.locator(
+        byAriaLabel(getCalendarDayAriaLabel(roomRange.mondayDate)),
+      )
+
+      await mondayButton.click()
+
+      await guestPage.goto(roomUrl)
+      await joinCurrentRoom(guestPage, '제거될게스트')
+      await guestPage.locator(byAriaLabel(getCalendarDayAriaLabel(roomRange.mondayDate))).click()
+
+      await leavingGuestPage.goto(roomUrl)
+      await joinCurrentRoom(leavingGuestPage, '나갈게스트')
+      await leavingGuestPage
+        .locator(byAriaLabel(getCalendarDayAriaLabel(roomRange.mondayDate)))
+        .click()
+
+      await expect(mondayButton.locator('.dot')).toHaveCount(3)
+      await expect(
+        guestPage.locator(byAriaLabel(ARIA_LABELS.room.deleteRoomButton)),
+      ).toHaveCount(0)
+      await expect(
+        guestPage.locator('button[aria-label$="참가자 삭제 버튼"]'),
+      ).toHaveCount(0)
+      await expect(
+        guestPage.locator(byAriaLabel(ARIA_LABELS.room.leaveRoomButton)),
+      ).toBeVisible()
+
+      await hostPage.locator(byAriaLabel(getParticipantRemoveAriaLabel('제거될게스트'))).click()
+      await expect(hostPage.getByText('2 / 6명 참여 중')).toBeVisible()
+      await expect(mondayButton.locator('.dot')).toHaveCount(2)
+
+      leavingGuestPage.once('dialog', (dialog) => dialog.accept())
+      await leavingGuestPage.locator(byAriaLabel(ARIA_LABELS.room.leaveRoomButton)).click()
+
+      await expect(leavingGuestPage).toHaveURL('/')
+      await expect(hostPage.getByText('1 / 6명 참여 중')).toBeVisible()
+      await expect(mondayButton.locator('.dot')).toHaveCount(1)
+    } finally {
+      await closeContext(leavingGuestContext)
+      await closeContext(guestContext)
       await closeContext(hostContext)
     }
   })
