@@ -63,6 +63,29 @@ jobs:
       - name: Run local E2E tests
         run: npm run test:e2e:local
 
+  kakao-e2e:
+    name: kakao-e2e
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Setup Node
+        uses: actions/setup-node@v5
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Install Playwright browsers
+        run: npx playwright install --with-deps chromium
+
+      - name: Run Kakao E2E tests
+        run: npm run test:e2e:kakao
+
   firebase-e2e:
     name: firebase-e2e
     runs-on: ubuntu-latest
