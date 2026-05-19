@@ -1,15 +1,17 @@
-import { expect, test, type Browser, type BrowserContext, type Page } from '@playwright/test'
+import { expect, test, type Browser } from '@playwright/test'
 import { ARIA_LABELS } from '../../src/lib/ariaLabels'
+import {
+  byAriaLabel,
+  closeContext,
+  createMobileContext,
+  createRoomAndJoin,
+} from './helpers/roomFlow'
 
-function byAriaLabel(label: string) {
-  return `[aria-label="${label}"]`
-}
-
-test.describe('Firebase emulator listener resilience', () => {
-  test('keeps the locally saved selection when the next realtime snapshot fails', async ({
+test.describe('Firebase 에뮬레이터 리스너 복원력', () => {
+  test('다음 실시간 스냅샷이 실패해도 방금 저장한 선택 상태를 유지한다', async ({
     browser,
   }) => {
-    const context = await createMobileContext(browser)
+    const context = await createFirebaseHookContext(browser)
     const page = await context.newPage()
 
     try {
@@ -50,13 +52,8 @@ test.describe('Firebase emulator listener resilience', () => {
   })
 })
 
-async function createMobileContext(browser: Browser) {
-  const context = await browser.newContext({
-    viewport: {
-      width: 390,
-      height: 844,
-    },
-  })
+async function createFirebaseHookContext(browser: Browser) {
+  const context = await createMobileContext(browser)
 
   await context.addInitScript(() => {
     ;(
@@ -67,31 +64,4 @@ async function createMobileContext(browser: Browser) {
   })
 
   return context
-}
-
-async function createRoomAndJoin(page: Page, nickname: string) {
-  await page.goto('/')
-  await page.locator(byAriaLabel(ARIA_LABELS.landing.createRoomButton)).click()
-  await page.locator(byAriaLabel(ARIA_LABELS.createRoom.submitButton)).click()
-
-  await expect(page).toHaveURL(/\/room\/[^/]+$/)
-  await expect(page.locator(byAriaLabel(ARIA_LABELS.nickname.dialog))).toBeVisible()
-
-  await page.locator(byAriaLabel(ARIA_LABELS.nickname.input)).fill(nickname)
-  await page.locator(byAriaLabel(ARIA_LABELS.nickname.submitButton)).click()
-
-  await expect(page.locator(byAriaLabel(ARIA_LABELS.nickname.dialog))).toBeHidden()
-  await expect(page.getByText(nickname, { exact: true })).toBeVisible()
-}
-
-async function closeContext(context: BrowserContext | null) {
-  if (!context) {
-    return
-  }
-
-  try {
-    await context.close()
-  } catch {
-    // 브라우저 종료 이후 정리 단계에서 던지는 close 에러는 무시한다.
-  }
 }
