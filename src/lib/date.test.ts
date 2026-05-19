@@ -64,7 +64,7 @@ function createDateLogicRoom(): Room {
   })
 }
 
-describe('resolveDateRange', () => {
+describe('날짜 범위 계산', () => {
   beforeEach(() => {
     vi.useFakeTimers()
     vi.setSystemTime(new Date(2026, 4, 1, 12))
@@ -74,21 +74,21 @@ describe('resolveDateRange', () => {
     vi.useRealTimers()
   })
 
-  it('returns the provided custom range unchanged', () => {
+  it('직접 지정 범위를 그대로 반환한다', () => {
     expect(resolveDateRange('custom', '2026-05-10', '2026-05-20')).toEqual({
       startDate: '2026-05-10',
       endDate: '2026-05-20',
     })
   })
 
-  it('resolves this month from the mocked current date', () => {
+  it('고정한 현재 날짜 기준으로 이번 달 범위를 계산한다', () => {
     expect(resolveDateRange('this_month', '', '')).toEqual({
       startDate: '2026-05-01',
       endDate: '2026-05-31',
     })
   })
 
-  it('resolves this year from the mocked current date', () => {
+  it('고정한 현재 날짜 기준으로 올해 범위를 계산한다', () => {
     expect(resolveDateRange('this_year', '', '')).toEqual({
       startDate: '2026-05-01',
       endDate: '2026-12-31',
@@ -96,29 +96,29 @@ describe('resolveDateRange', () => {
   })
 })
 
-describe('isDateAvailable', () => {
+describe('날짜 가능 여부 계산', () => {
   const room = createDateLogicRoom()
   const participantA = room.participants[0]
   const participantB = room.participants[1]
 
-  it('applies available weekday rules', () => {
+  it('가능 모드에서는 요일 규칙을 그대로 적용한다', () => {
     expect(isDateAvailable(participantA, '2026-05-11')).toBe(true)
     expect(isDateAvailable(participantA, '2026-05-12')).toBe(false)
   })
 
-  it('applies unavailable weekday rules as exclusions', () => {
+  it('불가능 모드에서는 요일 규칙을 제외 조건으로 적용한다', () => {
     expect(isDateAvailable(participantB, '2026-05-17')).toBe(false)
     expect(isDateAvailable(participantB, '2026-05-14')).toBe(true)
   })
 
-  it('lets explicit overrides win over weekday rules', () => {
+  it('개별 날짜 오버라이드는 요일 규칙보다 우선한다', () => {
     expect(isDateAvailable(participantA, '2026-05-17')).toBe(true)
     expect(isDateAvailable(participantB, '2026-05-18')).toBe(false)
   })
 })
 
-describe('buildCalendarDays', () => {
-  it('builds a padded visible month grid with counts, colors, and selection state', () => {
+describe('달력 셀 구성', () => {
+  it('개수, 색상, 선택 상태를 포함한 6주 달력 그리드를 만든다', () => {
     const room = createDateLogicRoom()
     const days = buildCalendarDays(room, 'p1', '2026-05-01')
 
@@ -141,8 +141,8 @@ describe('buildCalendarDays', () => {
   })
 })
 
-describe('buildRankings', () => {
-  it('returns the top three ranked dates with deterministic tie ordering', () => {
+describe('랭킹 계산', () => {
+  it('동점일 때도 순서가 고정된 상위 3개 날짜를 반환한다', () => {
     expect(buildRankings(createDateLogicRoom())).toEqual([
       {
         date: '2026-05-11',
@@ -166,8 +166,8 @@ describe('buildRankings', () => {
   })
 })
 
-describe('convertParticipantSelectionMode', () => {
-  it('preserves unavailable dates when switching an available participant to unavailable mode', () => {
+describe('참가자 선택 모드 전환', () => {
+  it('가능 모드에서 불가능 모드로 바꿔도 불가능한 날짜 집합을 유지한다', () => {
     const room = createDateLogicRoom()
 
     expect(
@@ -186,7 +186,7 @@ describe('convertParticipantSelectionMode', () => {
     })
   })
 
-  it('preserves available dates when switching an unavailable participant to available mode', () => {
+  it('불가능 모드에서 가능 모드로 바꿔도 가능한 날짜 집합을 유지한다', () => {
     const room = createDateLogicRoom()
 
     expect(
@@ -207,8 +207,8 @@ describe('convertParticipantSelectionMode', () => {
   })
 })
 
-describe('month helpers', () => {
-  it('clamps the visible month to the room range', () => {
+describe('월 이동 보조 함수', () => {
+  it('보여줄 월을 방의 날짜 범위 안으로 고정한다', () => {
     const room = createRoom({
       startDate: '2026-05-10',
       endDate: '2026-07-20',
@@ -219,13 +219,13 @@ describe('month helpers', () => {
     expect(clampVisibleMonth(room, '2026-08-01')).toBe('2026-07-01')
   })
 
-  it('moves dates by whole months and normalizes to the first day', () => {
+  it('월 단위로 이동하고 매번 해당 월의 첫째 날로 정규화한다', () => {
     expect(addMonths('2026-01-15', 1)).toBe('2026-02-01')
     expect(addMonths('2026-12-20', 1)).toBe('2027-01-01')
     expect(addMonths('2026-05-10', -1)).toBe('2026-04-01')
   })
 
-  it('formats month labels in Korean year-month format', () => {
+  it('월 헤더를 한국어 연월 형식으로 포맷한다', () => {
     expect(formatMonthLabel('2026-05-13')).toBe('2026년 5월')
     expect(formatMonthLabel('2027-01-01')).toBe('2027년 1월')
   })
