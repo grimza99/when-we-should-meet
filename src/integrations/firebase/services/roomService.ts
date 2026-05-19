@@ -57,6 +57,12 @@ type ParticipantRow = FirestoreParticipantDocument & {
   id: string
 }
 
+type FirebaseE2ETestHooks = {
+  emitSnapshotError?: (() => void) | null
+  failAllSnapshots?: boolean
+  failNextSnapshot?: boolean
+}
+
 export type RoomChangeSubscription = Unsubscribe
 
 export async function createRoom(
@@ -417,20 +423,32 @@ export function subscribeToRoomChanges(params: {
   onChange: () => void
   onStatusChange?: (status: string) => void
 }) {
+  registerSnapshotErrorEmitter(() => params.onStatusChange?.('SNAPSHOT_ERROR'))
+
+  const handleSnapshotEvent = () => {
+    if (consumeSnapshotFailureHook()) {
+      params.onStatusChange?.('SNAPSHOT_ERROR')
+      return
+    }
+
+    params.onChange()
+  }
+
   const unsubscribers = [
     onSnapshot(
       roomRef(params.roomId),
-      () => params.onChange(),
+      handleSnapshotEvent,
       () => params.onStatusChange?.('SNAPSHOT_ERROR'),
     ),
     onSnapshot(
       collection(db, 'rooms', params.roomId, 'participants'),
-      () => params.onChange(),
+      handleSnapshotEvent,
       () => params.onStatusChange?.('SNAPSHOT_ERROR'),
     ),
   ]
 
   return () => {
+    registerSnapshotErrorEmitter(null)
     unsubscribers.forEach((unsubscribe) => unsubscribe())
   }
 }
@@ -483,6 +501,47 @@ function inviteCodeRef(inviteCode: string) {
 
 function participantRef(roomId: string, participantId: string) {
   return doc(db, 'rooms', roomId, 'participants', participantId)
+}
+
+function registerSnapshotErrorEmitter(emitSnapshotError: (() => void) | null) {
+  if (typeof window === 'undefined') {
+    return
+  }
+
+  const hooks = (
+    window as Window & {
+      __WSWM_FIREBASE_TEST_HOOKS__?: FirebaseE2ETestHooks
+    }
+  ).__WSWM_FIREBASE_TEST_HOOKS__
+
+  if (!hooks) {
+    return
+  }
+
+  hooks.emitSnapshotError = emitSnapshotError
+}
+
+function consumeSnapshotFailureHook() {
+  if (typeof window === 'undefined') {
+    return false
+  }
+
+  const hooks = (
+    window as Window & {
+      __WSWM_FIREBASE_TEST_HOOKS__?: FirebaseE2ETestHooks
+    }
+  ).__WSWM_FIREBASE_TEST_HOOKS__
+
+  if (!hooks?.failNextSnapshot) {
+    if (hooks?.failAllSnapshots) {
+      return true
+    }
+
+    return false
+  }
+
+  hooks.failNextSnapshot = false
+  return true
 }
 
 function mapRoomSnapshot(id: string, data: FirestoreRoomDocument): RoomRow {
