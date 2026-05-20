@@ -85,11 +85,11 @@ npm run lint
 npm run build
 ```
 
-Use [docs/manual-qa-checklist.md](docs/manual-qa-checklist.md) before demo builds or ready-for-review PRs.
+Use [skills/qa/manual-smoke-checklist.md](skills/qa/manual-smoke-checklist.md) before demo builds or ready-for-review PRs.
 
 ## Engineering Workflow
 
-Working rules are documented in [docs/engineering-workflow.md](docs/engineering-workflow.md).
+Working rules are documented in [skills/common/engineering-workflow.md](skills/common/engineering-workflow.md).
 
 Default branch flow:
 
@@ -97,4 +97,3 @@ Default branch flow:
 - Use `codex/` branch names.
 - Open draft PRs to `dev`.
 - Record PR review comments on GitHub.
-- Keep merge-blocked follow-up work in [docs/blocked-work.md](docs/blocked-work.md).

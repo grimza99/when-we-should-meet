@@ -114,7 +114,7 @@
 
 <strong>참고 문서</strong>
 
-- `docs/manual-qa-checklist.md`
+- `skills/qa/manual-smoke-checklist.md`
 
 <br/>
 
