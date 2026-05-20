@@ -97,4 +97,3 @@ Default branch flow:
 - Use `codex/` branch names.
 - Open draft PRs to `dev`.
 - Record PR review comments on GitHub.
-- Keep merge-blocked follow-up work in [docs/blocked-work.md](docs/blocked-work.md).
