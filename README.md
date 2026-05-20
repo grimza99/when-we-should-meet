@@ -85,7 +85,7 @@ npm run lint
 npm run build
 ```
 
-Use [docs/manual-qa-checklist.md](docs/manual-qa-checklist.md) before demo builds or ready-for-review PRs.
+Use [skills/qa/manual-smoke-checklist.md](skills/qa/manual-smoke-checklist.md) before demo builds or ready-for-review PRs.
 
 ## Engineering Workflow
 

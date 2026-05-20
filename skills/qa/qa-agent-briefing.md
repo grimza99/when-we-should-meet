@@ -3,6 +3,11 @@
 이 문서는 `when-should-we-meet` 프로젝트에서 QA 역할을 맡는 하위
 에이전트가 가장 먼저 읽어야 하는 빠른 브리핑이다. 코드 리뷰, 테스트 추가,
 테스트 플랜 작성 전에 이 문서를 기준으로 판단한다.
+<strong>버전 : </strong> v1
+
+<strong>생성 날짜 : </strong> 2026-05-19
+
+<strong>최신 업데이트 날짜 : </strong> 2026-05-19
 
 ## 1. 프로젝트 기본 정보
 
@@ -54,6 +59,7 @@ PR 리뷰 시 아래 순서로 우선 본다.
 ### Unit Tests
 
 사용 대상:
+
 - 순수 유틸
 - route parsing
 - invite code 정규화
@@ -61,11 +67,13 @@ PR 리뷰 시 아래 순서로 우선 본다.
 - selection mode 변환
 
 명령어:
+
 - `npm run test:unit`
 
 ### Local E2E
 
 사용 대상:
+
 - 랜딩 UI
 - 방 생성 UX
 - 초대코드 validation
@@ -73,27 +81,33 @@ PR 리뷰 시 아래 순서로 우선 본다.
 - clipboard 및 `navigator.share` 동작
 
 주의:
+
 - 이 층위로 Firebase persistence나 realtime 커버리지를 주장하면 안 된다.
 
 명령어:
+
 - `npm run test:e2e:local`
 
 ### Kakao Contract E2E
 
 사용 대상:
+
 - 앱이 카카오 공유 분기로 들어가는지
 - `window.Kakao.init(...)` 과
   `window.Kakao.Share.sendDefault(...)` 가 올바른 payload로 호출되는지
 
 주의:
+
 - 실제 카카오 UI/app handoff를 CI 소유 범위로 보지 않는다.
 
 명령어:
+
 - `npm run test:e2e:kakao`
 
 ### Firebase Emulator E2E
 
 사용 대상:
+
 - 방 persistence
 - 참가자 lifecycle
 - realtime sync
@@ -102,29 +116,35 @@ PR 리뷰 시 아래 순서로 우선 본다.
 - listener resilience
 
 명령어:
+
 - `npm run test:e2e:firebase`
 
 ### Manual Smoke
 
 사용 대상:
+
 - 실제 카카오 공유 UI 또는 앱 전환
 - 실제 디바이스 sanity check
 - 배포 도메인 기준 공유 링크
 - 릴리즈 직전의 시각적 신뢰 확인
 
 의미:
+
 - 여기서 `smoke`는 전체 회귀 테스트가 아니라, “서비스가 최소한 살아
   있는가”를 짧게 확인하는 테스트를 뜻한다.
 
 대비 개념:
+
 - 실무적으로는 `regression` 테스트가 더 넓고 깊은 반대편 개념에 가깝다.
 
 ## 6. 현재 셀렉터 정책
 
 프로젝트 결정:
+
 - 주요 E2E 인터랙션 요소는 중앙화된 `aria-label` 값으로 식별한다.
 
 의미:
+
 - 버튼, 입력, 모달, 헤더처럼 E2E 핵심 경로에 포함되는 요소는 안정적인
   `aria-label` 계약을 우선한다.
 - `data-testid` 자체는 금지하지 않지만, 현재 프로젝트는 주요 인터랙션
@@ -132,6 +152,7 @@ PR 리뷰 시 아래 순서로 우선 본다.
 - CSS selector나 DOM 구조 의존 selector는 마지막 수단이다.
 
 알려진 부채:
+
 - 일부 오래된 스펙에는 full URL 또는 하드코딩된 URL assertion이 남아 있다.
 - 이 부분은 커버리지 작업이 끝난 뒤 별도 refactor pass로 정리하기로
   합의했다.
@@ -147,11 +168,13 @@ PR 리뷰 시 아래 순서로 우선 본다.
 - 백엔드 연동 E2E는 real Firebase보다 Firestore Emulator를 우선한다.
 
 이유:
+
 - 상태가 결정적이다.
 - 테스트 데이터가 안전하게 격리된다.
 - 멀티 클라이언트 / 삭제 / 복원 시나리오를 CI에서 다루기 좋다.
 
 추가 규칙:
+
 - 로컬 emulator 실행에는 JDK 21이 필요하다.
 - Firebase E2E의 진입점은 `scripts/run-firebase-e2e.sh` 이다.
 
@@ -162,13 +185,16 @@ PR 리뷰 시 아래 순서로 우선 본다.
 실제 카카오 공유 화면 자체를 CI에서 자동화하지 않는다.
 
 자동화 소유 범위:
+
 - 앱이 Kakao SDK adapter를 올바르게 호출하는지 검증
 - room share / ranking share payload shape 검증
 
 수동 소유 범위:
+
 - 실제 카카오 UI 또는 앱 전환 확인
 
 이유:
+
 - 외부 SDK UI 전환은 환경 의존성이 강하고 flaky해서 CI 소유 범위로 두기
   어렵다.
 
@@ -181,6 +207,7 @@ PR 리뷰 시 아래 순서로 우선 본다.
 - 외부 의존성과 불필요하게 결합되지 않는다
 
 테스트가 flaky할 때 우선 선택할 방법:
+
 - 더 강한 waiting condition
 - 더 명확한 동기화 기준
 - emulator 기반 assertion 보강
@@ -194,24 +221,28 @@ PR 리뷰 시 아래 순서로 우선 본다.
 ### 마스터 플랜
 
 목적:
+
 - 장기 테스트 전략
 - 테스트 층위 소유 범위
 - 환경 전략
 - PR quality gate 기준
 
 유지 위치:
+
 - Notion의 마스터 문서
 - repo 안의 장기 문서
 
 ### 변경별 테스트 플랜
 
 아래 경우 작성한다.
+
 - 유저 플로우가 바뀔 때
 - legacy 플로우를 제거하거나 일정 기간 유지할 때
 - 자동화 범위가 바뀔 때
 - 리스크가 큰 외부 연동 경로가 바뀔 때
 
 반드시 포함할 항목:
+
 - 이전 플로우
 - 신규 플로우
 - legacy 처리
@@ -221,6 +252,7 @@ PR 리뷰 시 아래 순서로 우선 본다.
 - 배포 후 모니터링 포인트
 
 중요 규칙:
+
 - 기능 작업자는 같은 PR에서 테스트와 변경별 테스트 플랜을 함께 갱신해야
   한다.
 
@@ -229,12 +261,14 @@ PR 리뷰 시 아래 순서로 우선 본다.
 PR 본문에는 긴 테스트 플랜 전체가 아니라 짧은 테스트 요약만 적는다.
 
 PR 본문에 적을 것:
+
 - 무엇이 바뀌었는지
 - 왜 바뀌었는지
 - 어떤 검증을 했는지
 - 남은 갭이나 manual-only 체크가 무엇인지
 
 Notion 또는 repo 문서에 적을 것:
+
 - 전체 플로우 변경 이유
 - legacy 처리
 - 상세 QA 계획
@@ -259,7 +293,7 @@ Notion 또는 repo 문서에 적을 것:
 ## 14. Repo 참고 문서
 
 - `docs/engineering-workflow.md`
-- `docs/manual-qa-checklist.md`
+- `skills/qa/manual-smoke-checklist.md`
 
 현재 브랜치에 별도 마스터 플랜이나 템플릿 문서가 있으면 그것도 함께 본다.
 없다면 이 브리핑 문서를 즉시 적용 가능한 fallback source of truth로 사용한다.
