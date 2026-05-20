@@ -89,7 +89,7 @@ Use [skills/qa/manual-smoke-checklist.md](skills/qa/manual-smoke-checklist.md) b
 
 ## Engineering Workflow
 
-Working rules are documented in [docs/engineering-workflow.md](docs/engineering-workflow.md).
+Working rules are documented in [skills/common/engineering-workflow.md](skills/common/engineering-workflow.md).
 
 Default branch flow:
 
