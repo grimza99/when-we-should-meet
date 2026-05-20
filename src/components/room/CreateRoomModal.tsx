@@ -1,4 +1,5 @@
 import { useMemo, useState } from "react";
+import { ARIA_LABELS } from "../../lib/ariaLabels";
 import { getTodayDateString, resolveDateRange } from "../../lib/date";
 import { Button } from "../ui/Button";
 import { Modal } from "../ui/Modal";
@@ -89,9 +90,14 @@ export function CreateRoomModal({
   };
 
   return (
-    <Modal onClose={onClose} title="일정 만들기">
+    <Modal
+      ariaLabel={ARIA_LABELS.createRoom.dialog}
+      onClose={onClose}
+      title="일정 만들기"
+    >
       <div className="modal-body">
         <TextInput
+          ariaLabel={ARIA_LABELS.createRoom.participantCountInput}
           label="참여 인원"
           max={10}
           min={2}
@@ -105,9 +111,21 @@ export function CreateRoomModal({
           <SegmentedButtonGroup
             onChange={(rangeType) => setDateRangeType(rangeType)}
             options={[
-              { label: "이번 달", value: "this_month" },
-              { label: "이번 년", value: "this_year" },
-              { label: "직접 지정", value: "custom" },
+              {
+                ariaLabel: ARIA_LABELS.createRoom.thisMonthRangeButton,
+                label: "이번 달",
+                value: "this_month",
+              },
+              {
+                ariaLabel: ARIA_LABELS.createRoom.thisYearRangeButton,
+                label: "이번 년",
+                value: "this_year",
+              },
+              {
+                ariaLabel: ARIA_LABELS.createRoom.customRangeButton,
+                label: "직접 지정",
+                value: "custom",
+              },
             ]}
             selectedValue={dateRangeType}
           />
@@ -116,12 +134,14 @@ export function CreateRoomModal({
         {dateRangeType === "custom" ? (
           <div className="date-grid">
             <TextInput
+              ariaLabel={ARIA_LABELS.createRoom.startDateInput}
               label="시작일"
               onChange={setStartDate}
               type="date"
               value={startDate}
             />
             <TextInput
+              ariaLabel={ARIA_LABELS.createRoom.endDateInput}
               label="종료일"
               onChange={setEndDate}
               type="date"
@@ -147,7 +167,12 @@ export function CreateRoomModal({
           <p className="modal-validation">{submitMessage}</p>
         ) : null}
 
-        <Button block disabled={!canSubmit} onClick={() => void submit()}>
+        <Button
+          ariaLabel={ARIA_LABELS.createRoom.submitButton}
+          block
+          disabled={!canSubmit}
+          onClick={() => void submit()}
+        >
           {isSubmitting ? "방 생성 중..." : "방 생성하기"}
         </Button>
       </div>

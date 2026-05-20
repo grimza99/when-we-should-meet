@@ -1,6 +1,7 @@
 import { useId } from "react";
 
 type TextInputProps = {
+  ariaLabel?: string;
   autoCapitalize?: "none" | "sentences" | "words" | "characters";
   autoCorrect?: "off" | "on";
   id?: string;
@@ -18,6 +19,7 @@ type TextInputProps = {
 };
 
 export function TextInput({
+  ariaLabel,
   autoCapitalize,
   autoCorrect,
   id,
@@ -44,6 +46,7 @@ export function TextInput({
         </label>
       ) : null}
       <input
+        aria-label={ariaLabel}
         autoCapitalize={autoCapitalize}
         autoCorrect={autoCorrect}
         id={inputId}

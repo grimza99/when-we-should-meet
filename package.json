@@ -7,7 +7,17 @@
     "dev": "vite",
     "build": "tsc -b && vite build",
     "lint": "eslint .",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "test": "npm run test:unit && npm run test:e2e",
+    "test:e2e": "playwright test",
+    "test:e2e:all": "npm run test:e2e:local && npm run test:e2e:kakao && npm run test:e2e:firebase",
+    "test:e2e:firebase": "./scripts/run-firebase-e2e.sh",
+    "test:e2e:firebase:headed": "./scripts/run-firebase-e2e.sh --headed",
+    "test:e2e:headed": "playwright test --headed",
+    "test:e2e:kakao": "playwright test --config playwright.kakao.config.ts",
+    "test:e2e:local": "playwright test",
+    "test:unit": "vitest run",
+    "test:watch": "vitest"
   },
   "dependencies": {
     "firebase": "^12.12.1",
@@ -16,6 +26,7 @@
   },
   "devDependencies": {
     "@eslint/js": "^9.39.4",
+    "@playwright/test": "^1.60.0",
     "@types/node": "^24.12.2",
     "@types/react": "^19.2.14",
     "@types/react-dom": "^19.2.3",
@@ -23,9 +34,11 @@
     "eslint": "^9.39.4",
     "eslint-plugin-react-hooks": "^7.0.1",
     "eslint-plugin-react-refresh": "^0.5.2",
+    "firebase-tools": "^15.18.0",
     "globals": "^17.4.0",
     "typescript": "~6.0.2",
     "typescript-eslint": "^8.58.0",
-    "vite": "^8.0.4"
+    "vite": "^8.0.4",
+    "vitest": "^4.1.5"
   }
 }

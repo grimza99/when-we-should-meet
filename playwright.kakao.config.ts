@@ -1,0 +1,37 @@
+import { defineConfig } from '@playwright/test'
+
+const kakaoMockEnv = [
+  'VITE_FIREBASE_API_KEY=',
+  'VITE_FIREBASE_AUTH_DOMAIN=',
+  'VITE_FIREBASE_PROJECT_ID=',
+  'VITE_FIREBASE_STORAGE_BUCKET=',
+  'VITE_FIREBASE_MESSAGING_SENDER_ID=',
+  'VITE_FIREBASE_APP_ID=',
+  'VITE_FIREBASE_MEASUREMENT_ID=',
+  'VITE_KAKAO_JAVASCRIPT_KEY=test-kakao-key',
+].join(' ')
+
+export default defineConfig({
+  testDir: './tests/e2e',
+  testMatch: '**/kakao-*.spec.ts',
+  fullyParallel: true,
+  forbidOnly: Boolean(process.env.CI),
+  reporter: 'list',
+  retries: process.env.CI ? 2 : 0,
+  use: {
+    baseURL: 'http://127.0.0.1:4175',
+    headless: true,
+    screenshot: 'only-on-failure',
+    trace: 'retain-on-failure',
+    viewport: {
+      width: 390,
+      height: 844,
+    },
+  },
+  webServer: {
+    command: `${kakaoMockEnv} npm run dev -- --host 127.0.0.1 --port 4175`,
+    port: 4175,
+    reuseExistingServer: !process.env.CI,
+    timeout: 120_000,
+  },
+})

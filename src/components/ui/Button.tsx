@@ -3,6 +3,7 @@ import type { ReactNode } from "react";
 type ButtonVariant = "primary" | "secondary" | "chip";
 
 type ButtonProps = {
+  ariaLabel?: string;
   ariaControls?: string;
   ariaExpanded?: boolean;
   children: ReactNode;
@@ -15,6 +16,7 @@ type ButtonProps = {
 };
 
 export function Button({
+  ariaLabel,
   ariaControls,
   ariaExpanded,
   block = false,
@@ -38,6 +40,7 @@ export function Button({
 
   return (
     <button
+      aria-label={ariaLabel}
       aria-controls={ariaControls}
       aria-expanded={ariaExpanded}
       className={className}
