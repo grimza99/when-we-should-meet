@@ -35,7 +35,7 @@ import {
   subscribeToRoomChanges,
   unsubscribeFromRoomChanges,
   updateParticipantAvailability,
-} from "../integrations/firebase/services/roomService";
+} from "../integrations/firebase/services/room-service";
 import type {
   AppStorage,
   CreateRoomPayload,
