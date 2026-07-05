@@ -31,10 +31,8 @@ import {
   joinRoom as joinFirebaseRoom,
   isRoomAccessRestricted,
   leaveRoom as leaveFirebaseRoom,
-  setParticipantDateOverride,
   subscribeToRoomChanges,
   unsubscribeFromRoomChanges,
-  updateParticipantAvailability,
 } from "../integrations/firebase/services/room-service";
 import type {
   AppStorage,
@@ -54,6 +52,8 @@ import {
   resetParticipantSelections as resetFirebaseParticipantSelections,
   removeParticipant as removeFirebaseParticipant,
   updateParticipantNickname,
+  updateParticipantAvailability,
+  setParticipantDateOverride,
 } from "../integrations/firebase/services/participant-service";
 
 const STORAGE_KEY = "when-should-we-meet-storage";

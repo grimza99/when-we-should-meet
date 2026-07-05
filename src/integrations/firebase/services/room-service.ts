@@ -5,7 +5,6 @@ import {
   increment,
   onSnapshot,
   runTransaction,
-  updateDoc,
   writeBatch,
 } from "firebase/firestore";
 import { COLOR_PALETTE } from "../../../lib/constants";
@@ -16,13 +15,14 @@ import type {
   FirestoreInviteCodeDocument,
   FirestoreParticipantDocument,
   FirestoreRoomDocument,
-  Participant,
   RoomChangeSubscription,
   RoomSnapshot,
 } from "../../../types";
 import { mapParticipantSnapshot, mapRoomSnapshot } from "../mapper";
 import { inviteCodeRef, participantRef, roomRef } from "../docs";
 import { assertParticipantOwnership } from "./participant-service";
+
+/**----------------------------------------------- 방 만들기 -------------------------------------------------- */
 
 export async function createRoom(
   payload: CreateRoomPayload & { hostClientKey: string }
@@ -58,6 +58,8 @@ export async function createRoom(
   };
 }
 
+/**----------------------------------------------- 방 참가 코드 조회 -------------------------------------------------- */
+
 export async function getRoomByInviteCode(inviteCode: string) {
   const inviteCodeSnapshot = await getDoc(inviteCodeRef(inviteCode));
 
@@ -77,6 +79,8 @@ export async function getRoomByInviteCode(inviteCode: string) {
     roomSnapshot.data() as FirestoreRoomDocument
   );
 }
+
+/**----------------------------------------------- 방 참가 -------------------------------------------------- */
 
 export async function joinRoom(params: {
   clientKey: string;
@@ -138,6 +142,8 @@ export async function joinRoom(params: {
   });
 }
 
+/**----------------------------------------------- 방 스냅샷 조회 -------------------------------------------------- */
+
 export async function getRoomSnapshot(roomId: string) {
   const [roomSnapshot, participantSnapshots] = await Promise.all([
     getDoc(roomRef(roomId)),
@@ -162,37 +168,7 @@ export async function getRoomSnapshot(roomId: string) {
   } satisfies RoomSnapshot;
 }
 
-export async function updateParticipantAvailability(params: {
-  clientKey: string;
-  overrides: Participant["overrides"];
-  participantId: string;
-  roomId: string;
-  selectionMode: Participant["selectionMode"];
-  weekdayRules: number[];
-}) {
-  assertParticipantOwnership(params);
-
-  await updateDoc(participantRef(params.roomId, params.participantId), {
-    overrides: params.overrides,
-    selectionMode: params.selectionMode,
-    weekdayRules: params.weekdayRules,
-    updatedAt: new Date().toISOString(),
-  });
-}
-
-export async function setParticipantDateOverride(params: {
-  clientKey: string;
-  participantId: string;
-  roomId: string;
-  overrides: Participant["overrides"];
-}) {
-  assertParticipantOwnership(params);
-
-  await updateDoc(participantRef(params.roomId, params.participantId), {
-    overrides: params.overrides,
-    updatedAt: new Date().toISOString(),
-  });
-}
+/**----------------------------------------------- 방 떠나기 -------------------------------------------------- */
 
 export async function leaveRoom(params: {
   clientKey: string;
@@ -236,6 +212,8 @@ export async function leaveRoom(params: {
   });
 }
 
+/**----------------------------------------------- 방에서 제외된 참가자인지 확인 -------------------------------------------------- */
+
 export async function isRoomAccessRestricted(params: {
   clientKey: string;
   roomId: string;
@@ -249,6 +227,8 @@ export async function isRoomAccessRestricted(params: {
   const room = roomSnapshot.data() as FirestoreRoomDocument;
   return room.blockedClientKeys?.includes(params.clientKey) ?? false;
 }
+
+/**----------------------------------------------- 방 삭제 -------------------------------------------------- */
 
 export async function deleteRoom(params: {
   hostClientKey: string;
@@ -279,6 +259,8 @@ export async function deleteRoom(params: {
 
   await batch.commit();
 }
+
+/**----------------------------------------------- 방 변경 구독 -------------------------------------------------- */
 
 export function subscribeToRoomChanges(params: {
   roomId: string;
@@ -312,6 +294,8 @@ export function subscribeToRoomChanges(params: {
     unsubscribers.forEach((unsubscribe) => unsubscribe());
   };
 }
+
+/**----------------------------------------------- 방 구독 해지 -------------------------------------------------- */
 
 export async function unsubscribeFromRoomChanges(
   subscription: RoomChangeSubscription
@@ -359,6 +343,8 @@ function consumeSnapshotFailureHook() {
   hooks.failNextSnapshot = false;
   return true;
 }
+
+/**----------------------------------------------- 유니크 참가 코드 만들기 -------------------------------------------------- */
 
 async function createUniqueInviteCode() {
   for (let attempt = 0; attempt < 5; attempt += 1) {

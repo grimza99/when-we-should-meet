@@ -8,6 +8,7 @@ import { participantRef, roomRef } from "../docs";
 import type {
   FirestoreParticipantDocument,
   FirestoreRoomDocument,
+  Participant,
 } from "../../../types";
 import { mapParticipantSnapshot } from "../mapper";
 import { db } from "../client";
@@ -134,4 +135,40 @@ export function assertParticipantOwnership(params: {
   if (params.clientKey !== params.participantId) {
     throw new Error("PARTICIPANT_OWNERSHIP_MISMATCH");
   }
+}
+
+/**----------------------------------------------- 날짜 모드 변경 -------------------------------------------------- */
+
+export async function updateParticipantAvailability(params: {
+  clientKey: string;
+  overrides: Participant["overrides"];
+  participantId: string;
+  roomId: string;
+  selectionMode: Participant["selectionMode"];
+  weekdayRules: number[];
+}) {
+  assertParticipantOwnership(params);
+
+  await updateDoc(participantRef(params.roomId, params.participantId), {
+    overrides: params.overrides,
+    selectionMode: params.selectionMode,
+    weekdayRules: params.weekdayRules,
+    updatedAt: new Date().toISOString(),
+  });
+}
+
+/**----------------------------------------------- 선택 날짜(override) 적용 -------------------------------------------------- */
+
+export async function setParticipantDateOverride(params: {
+  clientKey: string;
+  participantId: string;
+  roomId: string;
+  overrides: Participant["overrides"];
+}) {
+  assertParticipantOwnership(params);
+
+  await updateDoc(participantRef(params.roomId, params.participantId), {
+    overrides: params.overrides,
+    updatedAt: new Date().toISOString(),
+  });
 }
