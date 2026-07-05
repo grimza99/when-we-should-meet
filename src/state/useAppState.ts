@@ -31,9 +31,6 @@ import {
   joinRoom as joinFirebaseRoom,
   isRoomAccessRestricted,
   leaveRoom as leaveFirebaseRoom,
-  mapParticipantRow,
-  mapRoomRowToDraftRoom,
-  mapRoomSnapshotToDraftRoom,
   removeParticipant as removeFirebaseParticipant,
   resetParticipantSelections as resetFirebaseParticipantSelections,
   restoreParticipant,
@@ -51,6 +48,11 @@ import type {
   Room,
   RoomChangeSubscription,
 } from "../types";
+import {
+  mapParticipantRow,
+  mapRoomRowToDraftRoom,
+  mapRoomSnapshotToDraftRoom,
+} from "../integrations/firebase/mapper";
 
 const STORAGE_KEY = "when-should-we-meet-storage";
 
