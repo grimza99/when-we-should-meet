@@ -10,3 +10,9 @@ export type AppStorage = {
   rooms: Record<string, Room>;
   memberships: Record<string, string>;
 };
+
+export type FirebaseE2ETestHooks = {
+  emitSnapshotError?: (() => void) | null;
+  failAllSnapshots?: boolean;
+  failNextSnapshot?: boolean;
+};
