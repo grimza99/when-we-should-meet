@@ -31,14 +31,10 @@ import {
   joinRoom as joinFirebaseRoom,
   isRoomAccessRestricted,
   leaveRoom as leaveFirebaseRoom,
-  removeParticipant as removeFirebaseParticipant,
-  resetParticipantSelections as resetFirebaseParticipantSelections,
-  restoreParticipant,
   setParticipantDateOverride,
   subscribeToRoomChanges,
   unsubscribeFromRoomChanges,
   updateParticipantAvailability,
-  updateParticipantNickname,
 } from "../integrations/firebase/services/roomService";
 import type {
   AppStorage,
@@ -53,6 +49,12 @@ import {
   mapRoomRowToDraftRoom,
   mapRoomSnapshotToDraftRoom,
 } from "../integrations/firebase/mapper";
+import {
+  restoreParticipant,
+  resetParticipantSelections as resetFirebaseParticipantSelections,
+  removeParticipant as removeFirebaseParticipant,
+  updateParticipantNickname,
+} from "../integrations/firebase/services/participant-service";
 
 const STORAGE_KEY = "when-should-we-meet-storage";
 

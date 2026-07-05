@@ -22,6 +22,7 @@ import type {
 } from "../../../types";
 import { mapParticipantSnapshot, mapRoomSnapshot } from "../mapper";
 import { inviteCodeRef, participantRef, roomRef } from "../docs";
+import { assertParticipantOwnership } from "./participant-service";
 
 export async function createRoom(
   payload: CreateRoomPayload & { hostClientKey: string }
@@ -137,34 +138,6 @@ export async function joinRoom(params: {
   });
 }
 
-export async function restoreParticipant(params: {
-  clientKey: string;
-  roomId: string;
-}) {
-  const roomSnapshot = await getDoc(roomRef(params.roomId));
-
-  if (roomSnapshot.exists()) {
-    const room = roomSnapshot.data() as FirestoreRoomDocument;
-
-    if (room.blockedClientKeys?.includes(params.clientKey)) {
-      throw new Error("ROOM_ACCESS_RESTRICTED");
-    }
-  }
-
-  const participantSnapshot = await getDoc(
-    participantRef(params.roomId, params.clientKey)
-  );
-
-  if (!participantSnapshot.exists()) {
-    return null;
-  }
-
-  return mapParticipantSnapshot(
-    participantSnapshot.id,
-    participantSnapshot.data() as FirestoreParticipantDocument
-  );
-}
-
 export async function getRoomSnapshot(roomId: string) {
   const [roomSnapshot, participantSnapshots] = await Promise.all([
     getDoc(roomRef(roomId)),
@@ -207,20 +180,6 @@ export async function updateParticipantAvailability(params: {
   });
 }
 
-export async function resetParticipantSelections(params: {
-  clientKey: string;
-  participantId: string;
-  roomId: string;
-}) {
-  assertParticipantOwnership(params);
-
-  await updateDoc(participantRef(params.roomId, params.participantId), {
-    overrides: {},
-    updatedAt: new Date().toISOString(),
-    weekdayRules: [],
-  });
-}
-
 export async function setParticipantDateOverride(params: {
   clientKey: string;
   participantId: string;
@@ -232,71 +191,6 @@ export async function setParticipantDateOverride(params: {
   await updateDoc(participantRef(params.roomId, params.participantId), {
     overrides: params.overrides,
     updatedAt: new Date().toISOString(),
-  });
-}
-
-export async function updateParticipantNickname(params: {
-  clientKey: string;
-  nickname: string;
-  participantId: string;
-  roomId: string;
-}) {
-  assertParticipantOwnership(params);
-
-  await updateDoc(participantRef(params.roomId, params.participantId), {
-    nickname: params.nickname,
-    updatedAt: new Date().toISOString(),
-  });
-}
-
-export async function removeParticipant(params: {
-  hostClientKey: string;
-  participantId: string;
-  roomId: string;
-}) {
-  if (params.participantId === params.hostClientKey) {
-    throw new Error("HOST_PARTICIPANT_CANNOT_BE_REMOVED");
-  }
-
-  const now = new Date().toISOString();
-
-  await runTransaction(db, async (transaction) => {
-    const roomDocumentRef = roomRef(params.roomId);
-    const participantDocumentRef = participantRef(
-      params.roomId,
-      params.participantId
-    );
-    const [roomSnapshot, participantSnapshot] = await Promise.all([
-      transaction.get(roomDocumentRef),
-      transaction.get(participantDocumentRef),
-    ]);
-
-    if (!roomSnapshot.exists()) {
-      throw new Error("ROOM_NOT_FOUND");
-    }
-
-    const room = roomSnapshot.data() as FirestoreRoomDocument;
-
-    if (room.hostClientKey !== params.hostClientKey) {
-      throw new Error("HOST_PERMISSION_REQUIRED");
-    }
-
-    if (!participantSnapshot.exists()) {
-      return;
-    }
-
-    const participant =
-      participantSnapshot.data() as FirestoreParticipantDocument;
-    const blockedClientKeys = Array.from(
-      new Set([...(room.blockedClientKeys ?? []), participant.clientKey])
-    );
-
-    transaction.delete(participantDocumentRef);
-    transaction.update(roomDocumentRef, {
-      blockedClientKeys,
-      participantCount: increment(-1),
-      updatedAt: now,
-    });
   });
 }
 
@@ -468,7 +362,11 @@ function consumeSnapshotFailureHook() {
 
 async function createUniqueInviteCode() {
   for (let attempt = 0; attempt < 5; attempt += 1) {
-    const inviteCode = createInviteCode();
+    const inviteCode = crypto
+      .randomUUID()
+      .replace(/-/g, "")
+      .slice(0, 6)
+      .toUpperCase();
     const existingInviteCode = await getDoc(inviteCodeRef(inviteCode));
 
     if (!existingInviteCode.exists()) {
@@ -479,21 +377,8 @@ async function createUniqueInviteCode() {
   throw new Error("INVITE_CODE_COLLISION");
 }
 
-function createInviteCode() {
-  return crypto.randomUUID().replace(/-/g, "").slice(0, 6).toUpperCase();
-}
-
 function addOneMonth(isoDate: string) {
   const expiresAt = new Date(isoDate);
   expiresAt.setMonth(expiresAt.getMonth() + 1);
   return expiresAt.toISOString();
-}
-
-function assertParticipantOwnership(params: {
-  clientKey: string;
-  participantId: string;
-}) {
-  if (params.clientKey !== params.participantId) {
-    throw new Error("PARTICIPANT_OWNERSHIP_MISMATCH");
-  }
 }
