@@ -8,62 +8,22 @@ import {
   runTransaction,
   updateDoc,
   writeBatch,
-  type Unsubscribe,
 } from "firebase/firestore";
 import { COLOR_PALETTE } from "../../../lib/constants";
 import { db } from "../client";
-import type { CreateRoomPayload, Participant, Room } from "../../../types";
-
-type FirestoreRoomDocument = {
-  inviteCode: string;
-  blockedClientKeys?: string[];
-  maxParticipants: number;
-  participantCount: number;
-  dateRangeType: Room["dateRangeType"];
-  startDate: string;
-  endDate: string;
-  createdAt: string;
-  expiresAt: string;
-  hostClientKey: string;
-  updatedAt: string;
-};
-
-type FirestoreParticipantDocument = {
-  clientKey: string;
-  nickname: string;
-  colorIndex: number;
-  selectionMode: Participant["selectionMode"];
-  weekdayRules: number[];
-  overrides: Participant["overrides"];
-  joinedAt: string;
-  updatedAt: string;
-};
-
-type FirestoreInviteCodeDocument = {
-  roomId: string;
-  createdAt: string;
-};
-
-type RoomSnapshot = {
-  room: RoomRow;
-  participants: ParticipantRow[];
-};
-
-type RoomRow = FirestoreRoomDocument & {
-  id: string;
-};
-
-type ParticipantRow = FirestoreParticipantDocument & {
-  id: string;
-};
-
-type FirebaseE2ETestHooks = {
-  emitSnapshotError?: (() => void) | null;
-  failAllSnapshots?: boolean;
-  failNextSnapshot?: boolean;
-};
-
-export type RoomChangeSubscription = Unsubscribe;
+import type {
+  CreateRoomPayload,
+  FirebaseE2ETestHooks,
+  FirestoreInviteCodeDocument,
+  FirestoreParticipantDocument,
+  FirestoreRoomDocument,
+  Participant,
+  ParticipantRow,
+  Room,
+  RoomChangeSubscription,
+  RoomRow,
+  RoomSnapshot,
+} from "../../../types";
 
 export async function createRoom(
   payload: CreateRoomPayload & { hostClientKey: string }
