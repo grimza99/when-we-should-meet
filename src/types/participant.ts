@@ -1,4 +1,4 @@
-import type { DateMode } from "../types";
+import type { DateMode } from "./date";
 
 export type Participant = {
   id: string;

@@ -1,9 +1,6 @@
-import type {
-  CalendarDay,
-  DateRangeType,
-  Participant,
-  RankingItem,
-} from "../types";
+import type { CalendarDay, RankingItem } from "../types";
+import type { DateRangeType } from "./date";
+import type { Participant } from "./participant";
 
 export type Room = {
   id: string;
