@@ -8,16 +8,6 @@ export type RouteState =
   | { name: "room"; roomId: string }
   | { name: "room_access_restricted"; roomId: string };
 
-export type Participant = {
-  id: string;
-  nickname: string;
-  colorIndex: number;
-  selectionMode: DateMode;
-  weekdayRules: number[];
-  overrides: Record<string, DateMode>;
-  updatedAt?: string;
-};
-
 export type AppStorage = {
   rooms: Record<string, Room>;
   memberships: Record<string, string>;
