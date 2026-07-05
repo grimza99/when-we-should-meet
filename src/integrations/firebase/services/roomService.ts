@@ -18,12 +18,10 @@ import type {
   FirestoreParticipantDocument,
   FirestoreRoomDocument,
   Participant,
-  ParticipantRow,
-  Room,
   RoomChangeSubscription,
-  RoomRow,
   RoomSnapshot,
 } from "../../../types";
+import { mapParticipantSnapshot, mapRoomSnapshot } from "../mapper";
 
 export async function createRoom(
   payload: CreateRoomPayload & { hostClientKey: string }
@@ -427,40 +425,6 @@ export async function unsubscribeFromRoomChanges(
   subscription();
 }
 
-export function mapRoomRowToDraftRoom(row: RoomRow) {
-  return {
-    id: row.id,
-    inviteCode: row.inviteCode,
-    maxParticipants: row.maxParticipants,
-    dateRangeType: row.dateRangeType,
-    startDate: row.startDate,
-    endDate: row.endDate,
-    createdAt: row.createdAt,
-    expiresAt: row.expiresAt,
-    hostClientKey: row.hostClientKey,
-    participants: [],
-  };
-}
-
-export function mapRoomSnapshotToDraftRoom(snapshot: RoomSnapshot): Room {
-  return {
-    ...mapRoomRowToDraftRoom(snapshot.room),
-    participants: snapshot.participants.map(mapParticipantRow),
-  };
-}
-
-export function mapParticipantRow(row: ParticipantRow) {
-  return {
-    id: row.id,
-    nickname: row.nickname,
-    colorIndex: row.colorIndex,
-    selectionMode: row.selectionMode,
-    weekdayRules: row.weekdayRules,
-    overrides: row.overrides,
-    updatedAt: row.updatedAt,
-  };
-}
-
 function roomRef(roomId: string) {
   return doc(db, "rooms", roomId);
 }
@@ -512,23 +476,6 @@ function consumeSnapshotFailureHook() {
 
   hooks.failNextSnapshot = false;
   return true;
-}
-
-function mapRoomSnapshot(id: string, data: FirestoreRoomDocument): RoomRow {
-  return {
-    id,
-    ...data,
-  };
-}
-
-function mapParticipantSnapshot(
-  id: string,
-  data: FirestoreParticipantDocument
-): ParticipantRow {
-  return {
-    id,
-    ...data,
-  };
 }
 
 async function createUniqueInviteCode() {
