@@ -21,6 +21,7 @@ import type {
 import { mapParticipantSnapshot, mapRoomSnapshot } from "../mapper";
 import { inviteCodeRef, participantRef, roomRef } from "../docs";
 import { assertParticipantOwnership } from "./participant-service";
+import { addOneMonth, createUniqueInviteCode } from "../../../util";
 
 /**----------------------------------------------- 방 만들기 -------------------------------------------------- */
 
@@ -342,29 +343,4 @@ function consumeSnapshotFailureHook() {
 
   hooks.failNextSnapshot = false;
   return true;
-}
-
-/**----------------------------------------------- 유니크 참가 코드 만들기 -------------------------------------------------- */
-
-async function createUniqueInviteCode() {
-  for (let attempt = 0; attempt < 5; attempt += 1) {
-    const inviteCode = crypto
-      .randomUUID()
-      .replace(/-/g, "")
-      .slice(0, 6)
-      .toUpperCase();
-    const existingInviteCode = await getDoc(inviteCodeRef(inviteCode));
-
-    if (!existingInviteCode.exists()) {
-      return inviteCode;
-    }
-  }
-
-  throw new Error("INVITE_CODE_COLLISION");
-}
-
-function addOneMonth(isoDate: string) {
-  const expiresAt = new Date(isoDate);
-  expiresAt.setMonth(expiresAt.getMonth() + 1);
-  return expiresAt.toISOString();
 }
