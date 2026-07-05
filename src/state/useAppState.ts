@@ -12,6 +12,7 @@ import {
   COLOR_PALETTE,
   DEFAULT_STORAGE,
   MODE_LABELS,
+  STORAGE_KEY,
   WEEKDAY_LABELS,
 } from "../lib/constants";
 import { useRouteState } from "../lib/router";
@@ -55,8 +56,6 @@ import {
   updateParticipantAvailability,
   setParticipantDateOverride,
 } from "../integrations/firebase/services/participant-service";
-
-const STORAGE_KEY = "when-should-we-meet-storage";
 
 export function useAppState() {
   const { navigate, route } = useRouteState();
