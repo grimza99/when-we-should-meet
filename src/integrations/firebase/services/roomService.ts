@@ -1,6 +1,5 @@
 import {
   collection,
-  doc,
   getDoc,
   getDocs,
   increment,
@@ -22,6 +21,7 @@ import type {
   RoomSnapshot,
 } from "../../../types";
 import { mapParticipantSnapshot, mapRoomSnapshot } from "../mapper";
+import { inviteCodeRef, participantRef, roomRef } from "../docs";
 
 export async function createRoom(
   payload: CreateRoomPayload & { hostClientKey: string }
@@ -423,18 +423,6 @@ export async function unsubscribeFromRoomChanges(
   subscription: RoomChangeSubscription
 ) {
   subscription();
-}
-
-function roomRef(roomId: string) {
-  return doc(db, "rooms", roomId);
-}
-
-function inviteCodeRef(inviteCode: string) {
-  return doc(db, "inviteCodes", inviteCode);
-}
-
-function participantRef(roomId: string, participantId: string) {
-  return doc(db, "rooms", roomId, "participants", participantId);
 }
 
 function registerSnapshotErrorEmitter(emitSnapshotError: (() => void) | null) {
