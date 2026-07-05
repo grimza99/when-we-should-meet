@@ -8,69 +8,29 @@ import {
   runTransaction,
   updateDoc,
   writeBatch,
-  type Unsubscribe,
-} from 'firebase/firestore'
-import { COLOR_PALETTE } from '../../../lib/constants'
-import type { CreateRoomPayload, Participant, Room } from '../../../types'
-import { db } from '../client'
-
-type FirestoreRoomDocument = {
-  inviteCode: string
-  blockedClientKeys?: string[]
-  maxParticipants: number
-  participantCount: number
-  dateRangeType: Room['dateRangeType']
-  startDate: string
-  endDate: string
-  createdAt: string
-  expiresAt: string
-  hostClientKey: string
-  updatedAt: string
-}
-
-type FirestoreParticipantDocument = {
-  clientKey: string
-  nickname: string
-  colorIndex: number
-  selectionMode: Participant['selectionMode']
-  weekdayRules: number[]
-  overrides: Participant['overrides']
-  joinedAt: string
-  updatedAt: string
-}
-
-type FirestoreInviteCodeDocument = {
-  roomId: string
-  createdAt: string
-}
-
-type RoomSnapshot = {
-  room: RoomRow
-  participants: ParticipantRow[]
-}
-
-type RoomRow = FirestoreRoomDocument & {
-  id: string
-}
-
-type ParticipantRow = FirestoreParticipantDocument & {
-  id: string
-}
-
-type FirebaseE2ETestHooks = {
-  emitSnapshotError?: (() => void) | null
-  failAllSnapshots?: boolean
-  failNextSnapshot?: boolean
-}
-
-export type RoomChangeSubscription = Unsubscribe
+} from "firebase/firestore";
+import { COLOR_PALETTE } from "../../../lib/constants";
+import { db } from "../client";
+import type {
+  CreateRoomPayload,
+  FirebaseE2ETestHooks,
+  FirestoreInviteCodeDocument,
+  FirestoreParticipantDocument,
+  FirestoreRoomDocument,
+  Participant,
+  ParticipantRow,
+  Room,
+  RoomChangeSubscription,
+  RoomRow,
+  RoomSnapshot,
+} from "../../../types";
 
 export async function createRoom(
-  payload: CreateRoomPayload & { hostClientKey: string },
+  payload: CreateRoomPayload & { hostClientKey: string }
 ) {
-  const now = new Date().toISOString()
-  const roomId = crypto.randomUUID()
-  const inviteCode = await createUniqueInviteCode()
+  const now = new Date().toISOString();
+  const roomId = crypto.randomUUID();
+  const inviteCode = await createUniqueInviteCode();
   const room: FirestoreRoomDocument = {
     inviteCode,
     maxParticipants: payload.maxParticipants,
@@ -82,379 +42,389 @@ export async function createRoom(
     expiresAt: addOneMonth(now),
     hostClientKey: payload.hostClientKey,
     updatedAt: now,
-  }
+  };
   const inviteCodeRecord: FirestoreInviteCodeDocument = {
     roomId,
     createdAt: now,
-  }
-  const batch = writeBatch(db)
+  };
+  const batch = writeBatch(db);
 
-  batch.set(roomRef(roomId), room)
-  batch.set(inviteCodeRef(inviteCode), inviteCodeRecord)
-  await batch.commit()
+  batch.set(roomRef(roomId), room);
+  batch.set(inviteCodeRef(inviteCode), inviteCodeRecord);
+  await batch.commit();
 
   return {
     id: roomId,
     ...room,
-  }
+  };
 }
 
 export async function getRoomByInviteCode(inviteCode: string) {
-  const inviteCodeSnapshot = await getDoc(inviteCodeRef(inviteCode))
+  const inviteCodeSnapshot = await getDoc(inviteCodeRef(inviteCode));
 
   if (!inviteCodeSnapshot.exists()) {
-    return null
+    return null;
   }
 
-  const { roomId } = inviteCodeSnapshot.data() as FirestoreInviteCodeDocument
-  const roomSnapshot = await getDoc(roomRef(roomId))
+  const { roomId } = inviteCodeSnapshot.data() as FirestoreInviteCodeDocument;
+  const roomSnapshot = await getDoc(roomRef(roomId));
 
   if (!roomSnapshot.exists()) {
-    return null
+    return null;
   }
 
-  return mapRoomSnapshot(roomSnapshot.id, roomSnapshot.data() as FirestoreRoomDocument)
+  return mapRoomSnapshot(
+    roomSnapshot.id,
+    roomSnapshot.data() as FirestoreRoomDocument
+  );
 }
 
 export async function joinRoom(params: {
-  clientKey: string
-  nickname: string
-  roomId: string
+  clientKey: string;
+  nickname: string;
+  roomId: string;
 }) {
-  const now = new Date().toISOString()
+  const now = new Date().toISOString();
 
   return runTransaction(db, async (transaction) => {
-    const roomDocumentRef = roomRef(params.roomId)
-    const participantDocumentRef = participantRef(params.roomId, params.clientKey)
+    const roomDocumentRef = roomRef(params.roomId);
+    const participantDocumentRef = participantRef(
+      params.roomId,
+      params.clientKey
+    );
     const [roomSnapshot, existingParticipantSnapshot] = await Promise.all([
       transaction.get(roomDocumentRef),
       transaction.get(participantDocumentRef),
-    ])
+    ]);
 
     if (!roomSnapshot.exists()) {
-      throw new Error('ROOM_NOT_FOUND')
+      throw new Error("ROOM_NOT_FOUND");
     }
 
     if (existingParticipantSnapshot.exists()) {
       return mapParticipantSnapshot(
         existingParticipantSnapshot.id,
-        existingParticipantSnapshot.data() as FirestoreParticipantDocument,
-      )
+        existingParticipantSnapshot.data() as FirestoreParticipantDocument
+      );
     }
 
-    const room = roomSnapshot.data() as FirestoreRoomDocument
+    const room = roomSnapshot.data() as FirestoreRoomDocument;
 
     if (room.blockedClientKeys?.includes(params.clientKey)) {
-      throw new Error('ROOM_ACCESS_RESTRICTED')
+      throw new Error("ROOM_ACCESS_RESTRICTED");
     }
 
     if (room.participantCount >= room.maxParticipants) {
-      throw new Error('ROOM_CAPACITY_REACHED')
+      throw new Error("ROOM_CAPACITY_REACHED");
     }
 
     const participant: FirestoreParticipantDocument = {
       clientKey: params.clientKey,
       nickname: params.nickname,
       colorIndex: room.participantCount % COLOR_PALETTE.length,
-      selectionMode: 'available',
+      selectionMode: "available",
       weekdayRules: [],
       overrides: {},
       joinedAt: now,
       updatedAt: now,
-    }
+    };
 
-    transaction.set(participantDocumentRef, participant)
+    transaction.set(participantDocumentRef, participant);
     transaction.update(roomDocumentRef, {
       participantCount: increment(1),
       updatedAt: now,
-    })
+    });
 
-    return mapParticipantSnapshot(params.clientKey, participant)
-  })
+    return mapParticipantSnapshot(params.clientKey, participant);
+  });
 }
 
 export async function restoreParticipant(params: {
-  clientKey: string
-  roomId: string
+  clientKey: string;
+  roomId: string;
 }) {
-  const roomSnapshot = await getDoc(roomRef(params.roomId))
+  const roomSnapshot = await getDoc(roomRef(params.roomId));
 
   if (roomSnapshot.exists()) {
-    const room = roomSnapshot.data() as FirestoreRoomDocument
+    const room = roomSnapshot.data() as FirestoreRoomDocument;
 
     if (room.blockedClientKeys?.includes(params.clientKey)) {
-      throw new Error('ROOM_ACCESS_RESTRICTED')
+      throw new Error("ROOM_ACCESS_RESTRICTED");
     }
   }
 
   const participantSnapshot = await getDoc(
-    participantRef(params.roomId, params.clientKey),
-  )
+    participantRef(params.roomId, params.clientKey)
+  );
 
   if (!participantSnapshot.exists()) {
-    return null
+    return null;
   }
 
   return mapParticipantSnapshot(
     participantSnapshot.id,
-    participantSnapshot.data() as FirestoreParticipantDocument,
-  )
+    participantSnapshot.data() as FirestoreParticipantDocument
+  );
 }
 
 export async function getRoomSnapshot(roomId: string) {
   const [roomSnapshot, participantSnapshots] = await Promise.all([
     getDoc(roomRef(roomId)),
-    getDocs(collection(db, 'rooms', roomId, 'participants')),
-  ])
+    getDocs(collection(db, "rooms", roomId, "participants")),
+  ]);
 
   if (!roomSnapshot.exists()) {
-    return null
+    return null;
   }
 
   return {
-    room: mapRoomSnapshot(roomSnapshot.id, roomSnapshot.data() as FirestoreRoomDocument),
+    room: mapRoomSnapshot(
+      roomSnapshot.id,
+      roomSnapshot.data() as FirestoreRoomDocument
+    ),
     participants: participantSnapshots.docs.map((snapshot) =>
       mapParticipantSnapshot(
         snapshot.id,
-        snapshot.data() as FirestoreParticipantDocument,
-      ),
+        snapshot.data() as FirestoreParticipantDocument
+      )
     ),
-  } satisfies RoomSnapshot
+  } satisfies RoomSnapshot;
 }
 
 export async function updateParticipantAvailability(params: {
-  clientKey: string
-  overrides: Participant['overrides']
-  participantId: string
-  roomId: string
-  selectionMode: Participant['selectionMode']
-  weekdayRules: number[]
+  clientKey: string;
+  overrides: Participant["overrides"];
+  participantId: string;
+  roomId: string;
+  selectionMode: Participant["selectionMode"];
+  weekdayRules: number[];
 }) {
-  assertParticipantOwnership(params)
+  assertParticipantOwnership(params);
 
   await updateDoc(participantRef(params.roomId, params.participantId), {
     overrides: params.overrides,
     selectionMode: params.selectionMode,
     weekdayRules: params.weekdayRules,
     updatedAt: new Date().toISOString(),
-  })
+  });
 }
 
 export async function resetParticipantSelections(params: {
-  clientKey: string
-  participantId: string
-  roomId: string
+  clientKey: string;
+  participantId: string;
+  roomId: string;
 }) {
-  assertParticipantOwnership(params)
+  assertParticipantOwnership(params);
 
   await updateDoc(participantRef(params.roomId, params.participantId), {
     overrides: {},
     updatedAt: new Date().toISOString(),
     weekdayRules: [],
-  })
+  });
 }
 
 export async function setParticipantDateOverride(params: {
-  clientKey: string
-  participantId: string
-  roomId: string
-  overrides: Participant['overrides']
+  clientKey: string;
+  participantId: string;
+  roomId: string;
+  overrides: Participant["overrides"];
 }) {
-  assertParticipantOwnership(params)
+  assertParticipantOwnership(params);
 
   await updateDoc(participantRef(params.roomId, params.participantId), {
     overrides: params.overrides,
     updatedAt: new Date().toISOString(),
-  })
+  });
 }
 
 export async function updateParticipantNickname(params: {
-  clientKey: string
-  nickname: string
-  participantId: string
-  roomId: string
+  clientKey: string;
+  nickname: string;
+  participantId: string;
+  roomId: string;
 }) {
-  assertParticipantOwnership(params)
+  assertParticipantOwnership(params);
 
   await updateDoc(participantRef(params.roomId, params.participantId), {
     nickname: params.nickname,
     updatedAt: new Date().toISOString(),
-  })
+  });
 }
 
 export async function removeParticipant(params: {
-  hostClientKey: string
-  participantId: string
-  roomId: string
+  hostClientKey: string;
+  participantId: string;
+  roomId: string;
 }) {
   if (params.participantId === params.hostClientKey) {
-    throw new Error('HOST_PARTICIPANT_CANNOT_BE_REMOVED')
+    throw new Error("HOST_PARTICIPANT_CANNOT_BE_REMOVED");
   }
 
-  const now = new Date().toISOString()
+  const now = new Date().toISOString();
 
   await runTransaction(db, async (transaction) => {
-    const roomDocumentRef = roomRef(params.roomId)
+    const roomDocumentRef = roomRef(params.roomId);
     const participantDocumentRef = participantRef(
       params.roomId,
-      params.participantId,
-    )
+      params.participantId
+    );
     const [roomSnapshot, participantSnapshot] = await Promise.all([
       transaction.get(roomDocumentRef),
       transaction.get(participantDocumentRef),
-    ])
+    ]);
 
     if (!roomSnapshot.exists()) {
-      throw new Error('ROOM_NOT_FOUND')
+      throw new Error("ROOM_NOT_FOUND");
     }
 
-    const room = roomSnapshot.data() as FirestoreRoomDocument
+    const room = roomSnapshot.data() as FirestoreRoomDocument;
 
     if (room.hostClientKey !== params.hostClientKey) {
-      throw new Error('HOST_PERMISSION_REQUIRED')
+      throw new Error("HOST_PERMISSION_REQUIRED");
     }
 
     if (!participantSnapshot.exists()) {
-      return
+      return;
     }
 
-    const participant = participantSnapshot.data() as FirestoreParticipantDocument
+    const participant =
+      participantSnapshot.data() as FirestoreParticipantDocument;
     const blockedClientKeys = Array.from(
-      new Set([...(room.blockedClientKeys ?? []), participant.clientKey]),
-    )
+      new Set([...(room.blockedClientKeys ?? []), participant.clientKey])
+    );
 
-    transaction.delete(participantDocumentRef)
+    transaction.delete(participantDocumentRef);
     transaction.update(roomDocumentRef, {
       blockedClientKeys,
       participantCount: increment(-1),
       updatedAt: now,
-    })
-  })
+    });
+  });
 }
 
 export async function leaveRoom(params: {
-  clientKey: string
-  participantId: string
-  roomId: string
+  clientKey: string;
+  participantId: string;
+  roomId: string;
 }) {
-  assertParticipantOwnership(params)
+  assertParticipantOwnership(params);
 
-  const now = new Date().toISOString()
+  const now = new Date().toISOString();
 
   await runTransaction(db, async (transaction) => {
-    const roomDocumentRef = roomRef(params.roomId)
+    const roomDocumentRef = roomRef(params.roomId);
     const participantDocumentRef = participantRef(
       params.roomId,
-      params.participantId,
-    )
+      params.participantId
+    );
     const [roomSnapshot, participantSnapshot] = await Promise.all([
       transaction.get(roomDocumentRef),
       transaction.get(participantDocumentRef),
-    ])
+    ]);
 
     if (!roomSnapshot.exists()) {
-      throw new Error('ROOM_NOT_FOUND')
+      throw new Error("ROOM_NOT_FOUND");
     }
 
-    const room = roomSnapshot.data() as FirestoreRoomDocument
+    const room = roomSnapshot.data() as FirestoreRoomDocument;
 
     if (room.hostClientKey === params.participantId) {
-      throw new Error('HOST_PARTICIPANT_CANNOT_LEAVE')
+      throw new Error("HOST_PARTICIPANT_CANNOT_LEAVE");
     }
 
     if (!participantSnapshot.exists()) {
-      return
+      return;
     }
 
-    transaction.delete(participantDocumentRef)
+    transaction.delete(participantDocumentRef);
     transaction.update(roomDocumentRef, {
       participantCount: increment(-1),
       updatedAt: now,
-    })
-  })
+    });
+  });
 }
 
 export async function isRoomAccessRestricted(params: {
-  clientKey: string
-  roomId: string
+  clientKey: string;
+  roomId: string;
 }) {
-  const roomSnapshot = await getDoc(roomRef(params.roomId))
+  const roomSnapshot = await getDoc(roomRef(params.roomId));
 
   if (!roomSnapshot.exists()) {
-    return false
+    return false;
   }
 
-  const room = roomSnapshot.data() as FirestoreRoomDocument
-  return room.blockedClientKeys?.includes(params.clientKey) ?? false
+  const room = roomSnapshot.data() as FirestoreRoomDocument;
+  return room.blockedClientKeys?.includes(params.clientKey) ?? false;
 }
 
 export async function deleteRoom(params: {
-  hostClientKey: string
-  roomId: string
+  hostClientKey: string;
+  roomId: string;
 }) {
-  const roomSnapshot = await getDoc(roomRef(params.roomId))
+  const roomSnapshot = await getDoc(roomRef(params.roomId));
 
   if (!roomSnapshot.exists()) {
-    return
+    return;
   }
 
-  const room = roomSnapshot.data() as FirestoreRoomDocument
+  const room = roomSnapshot.data() as FirestoreRoomDocument;
 
   if (room.hostClientKey !== params.hostClientKey) {
-    throw new Error('HOST_PERMISSION_REQUIRED')
+    throw new Error("HOST_PERMISSION_REQUIRED");
   }
 
   const participantSnapshots = await getDocs(
-    collection(db, 'rooms', params.roomId, 'participants'),
-  )
-  const batch = writeBatch(db)
+    collection(db, "rooms", params.roomId, "participants")
+  );
+  const batch = writeBatch(db);
 
   participantSnapshots.docs.forEach((participantSnapshot) => {
-    batch.delete(participantSnapshot.ref)
-  })
-  batch.delete(inviteCodeRef(room.inviteCode))
-  batch.delete(roomRef(params.roomId))
+    batch.delete(participantSnapshot.ref);
+  });
+  batch.delete(inviteCodeRef(room.inviteCode));
+  batch.delete(roomRef(params.roomId));
 
-  await batch.commit()
+  await batch.commit();
 }
 
 export function subscribeToRoomChanges(params: {
-  roomId: string
-  onChange: () => void
-  onStatusChange?: (status: string) => void
+  roomId: string;
+  onChange: () => void;
+  onStatusChange?: (status: string) => void;
 }) {
-  registerSnapshotErrorEmitter(() => params.onStatusChange?.('SNAPSHOT_ERROR'))
+  registerSnapshotErrorEmitter(() => params.onStatusChange?.("SNAPSHOT_ERROR"));
 
   const handleSnapshotEvent = () => {
     if (consumeSnapshotFailureHook()) {
-      params.onStatusChange?.('SNAPSHOT_ERROR')
-      return
+      params.onStatusChange?.("SNAPSHOT_ERROR");
+      return;
     }
 
-    params.onChange()
-  }
+    params.onChange();
+  };
 
   const unsubscribers = [
-    onSnapshot(
-      roomRef(params.roomId),
-      handleSnapshotEvent,
-      () => params.onStatusChange?.('SNAPSHOT_ERROR'),
+    onSnapshot(roomRef(params.roomId), handleSnapshotEvent, () =>
+      params.onStatusChange?.("SNAPSHOT_ERROR")
     ),
     onSnapshot(
-      collection(db, 'rooms', params.roomId, 'participants'),
+      collection(db, "rooms", params.roomId, "participants"),
       handleSnapshotEvent,
-      () => params.onStatusChange?.('SNAPSHOT_ERROR'),
+      () => params.onStatusChange?.("SNAPSHOT_ERROR")
     ),
-  ]
+  ];
 
   return () => {
-    registerSnapshotErrorEmitter(null)
-    unsubscribers.forEach((unsubscribe) => unsubscribe())
-  }
+    registerSnapshotErrorEmitter(null);
+    unsubscribers.forEach((unsubscribe) => unsubscribe());
+  };
 }
 
-export async function unsubscribeFromRoomChanges(subscription: RoomChangeSubscription) {
-  subscription()
+export async function unsubscribeFromRoomChanges(
+  subscription: RoomChangeSubscription
+) {
+  subscription();
 }
 
 export function mapRoomRowToDraftRoom(row: RoomRow) {
@@ -469,14 +439,14 @@ export function mapRoomRowToDraftRoom(row: RoomRow) {
     expiresAt: row.expiresAt,
     hostClientKey: row.hostClientKey,
     participants: [],
-  }
+  };
 }
 
 export function mapRoomSnapshotToDraftRoom(snapshot: RoomSnapshot): Room {
   return {
     ...mapRoomRowToDraftRoom(snapshot.room),
     participants: snapshot.participants.map(mapParticipantRow),
-  }
+  };
 }
 
 export function mapParticipantRow(row: ParticipantRow) {
@@ -488,107 +458,107 @@ export function mapParticipantRow(row: ParticipantRow) {
     weekdayRules: row.weekdayRules,
     overrides: row.overrides,
     updatedAt: row.updatedAt,
-  }
+  };
 }
 
 function roomRef(roomId: string) {
-  return doc(db, 'rooms', roomId)
+  return doc(db, "rooms", roomId);
 }
 
 function inviteCodeRef(inviteCode: string) {
-  return doc(db, 'inviteCodes', inviteCode)
+  return doc(db, "inviteCodes", inviteCode);
 }
 
 function participantRef(roomId: string, participantId: string) {
-  return doc(db, 'rooms', roomId, 'participants', participantId)
+  return doc(db, "rooms", roomId, "participants", participantId);
 }
 
 function registerSnapshotErrorEmitter(emitSnapshotError: (() => void) | null) {
-  if (typeof window === 'undefined') {
-    return
+  if (typeof window === "undefined") {
+    return;
   }
 
   const hooks = (
     window as Window & {
-      __WSWM_FIREBASE_TEST_HOOKS__?: FirebaseE2ETestHooks
+      __WSWM_FIREBASE_TEST_HOOKS__?: FirebaseE2ETestHooks;
     }
-  ).__WSWM_FIREBASE_TEST_HOOKS__
+  ).__WSWM_FIREBASE_TEST_HOOKS__;
 
   if (!hooks) {
-    return
+    return;
   }
 
-  hooks.emitSnapshotError = emitSnapshotError
+  hooks.emitSnapshotError = emitSnapshotError;
 }
 
 function consumeSnapshotFailureHook() {
-  if (typeof window === 'undefined') {
-    return false
+  if (typeof window === "undefined") {
+    return false;
   }
 
   const hooks = (
     window as Window & {
-      __WSWM_FIREBASE_TEST_HOOKS__?: FirebaseE2ETestHooks
+      __WSWM_FIREBASE_TEST_HOOKS__?: FirebaseE2ETestHooks;
     }
-  ).__WSWM_FIREBASE_TEST_HOOKS__
+  ).__WSWM_FIREBASE_TEST_HOOKS__;
 
   if (!hooks?.failNextSnapshot) {
     if (hooks?.failAllSnapshots) {
-      return true
+      return true;
     }
 
-    return false
+    return false;
   }
 
-  hooks.failNextSnapshot = false
-  return true
+  hooks.failNextSnapshot = false;
+  return true;
 }
 
 function mapRoomSnapshot(id: string, data: FirestoreRoomDocument): RoomRow {
   return {
     id,
     ...data,
-  }
+  };
 }
 
 function mapParticipantSnapshot(
   id: string,
-  data: FirestoreParticipantDocument,
+  data: FirestoreParticipantDocument
 ): ParticipantRow {
   return {
     id,
     ...data,
-  }
+  };
 }
 
 async function createUniqueInviteCode() {
   for (let attempt = 0; attempt < 5; attempt += 1) {
-    const inviteCode = createInviteCode()
-    const existingInviteCode = await getDoc(inviteCodeRef(inviteCode))
+    const inviteCode = createInviteCode();
+    const existingInviteCode = await getDoc(inviteCodeRef(inviteCode));
 
     if (!existingInviteCode.exists()) {
-      return inviteCode
+      return inviteCode;
     }
   }
 
-  throw new Error('INVITE_CODE_COLLISION')
+  throw new Error("INVITE_CODE_COLLISION");
 }
 
 function createInviteCode() {
-  return crypto.randomUUID().replace(/-/g, '').slice(0, 6).toUpperCase()
+  return crypto.randomUUID().replace(/-/g, "").slice(0, 6).toUpperCase();
 }
 
 function addOneMonth(isoDate: string) {
-  const expiresAt = new Date(isoDate)
-  expiresAt.setMonth(expiresAt.getMonth() + 1)
-  return expiresAt.toISOString()
+  const expiresAt = new Date(isoDate);
+  expiresAt.setMonth(expiresAt.getMonth() + 1);
+  return expiresAt.toISOString();
 }
 
 function assertParticipantOwnership(params: {
-  clientKey: string
-  participantId: string
+  clientKey: string;
+  participantId: string;
 }) {
   if (params.clientKey !== params.participantId) {
-    throw new Error('PARTICIPANT_OWNERSHIP_MISMATCH')
+    throw new Error("PARTICIPANT_OWNERSHIP_MISMATCH");
   }
 }

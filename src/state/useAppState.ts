@@ -42,7 +42,6 @@ import {
   unsubscribeFromRoomChanges,
   updateParticipantAvailability,
   updateParticipantNickname,
-  type RoomChangeSubscription,
 } from "../integrations/firebase/services/roomService";
 import type {
   AppStorage,
@@ -50,6 +49,7 @@ import type {
   DateMode,
   Participant,
   Room,
+  RoomChangeSubscription,
 } from "../types";
 
 const STORAGE_KEY = "when-should-we-meet-storage";
