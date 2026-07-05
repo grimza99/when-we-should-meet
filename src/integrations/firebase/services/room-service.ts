@@ -1,12 +1,10 @@
 import {
   collection,
-  doc,
   getDoc,
   getDocs,
   increment,
   onSnapshot,
   runTransaction,
-  updateDoc,
   writeBatch,
 } from "firebase/firestore";
 import { COLOR_PALETTE } from "../../../lib/constants";
@@ -17,11 +15,15 @@ import type {
   FirestoreInviteCodeDocument,
   FirestoreParticipantDocument,
   FirestoreRoomDocument,
-  Participant,
   RoomChangeSubscription,
   RoomSnapshot,
 } from "../../../types";
 import { mapParticipantSnapshot, mapRoomSnapshot } from "../mapper";
+import { inviteCodeRef, participantRef, roomRef } from "../docs";
+import { assertParticipantOwnership } from "./participant-service";
+import { addOneMonth, createUniqueInviteCode } from "../../../util";
+
+/**----------------------------------------------- 방 만들기 -------------------------------------------------- */
 
 export async function createRoom(
   payload: CreateRoomPayload & { hostClientKey: string }
@@ -57,6 +59,8 @@ export async function createRoom(
   };
 }
 
+/**----------------------------------------------- 방 참가 코드 조회 -------------------------------------------------- */
+
 export async function getRoomByInviteCode(inviteCode: string) {
   const inviteCodeSnapshot = await getDoc(inviteCodeRef(inviteCode));
 
@@ -76,6 +80,8 @@ export async function getRoomByInviteCode(inviteCode: string) {
     roomSnapshot.data() as FirestoreRoomDocument
   );
 }
+
+/**----------------------------------------------- 방 참가 -------------------------------------------------- */
 
 export async function joinRoom(params: {
   clientKey: string;
@@ -137,33 +143,7 @@ export async function joinRoom(params: {
   });
 }
 
-export async function restoreParticipant(params: {
-  clientKey: string;
-  roomId: string;
-}) {
-  const roomSnapshot = await getDoc(roomRef(params.roomId));
-
-  if (roomSnapshot.exists()) {
-    const room = roomSnapshot.data() as FirestoreRoomDocument;
-
-    if (room.blockedClientKeys?.includes(params.clientKey)) {
-      throw new Error("ROOM_ACCESS_RESTRICTED");
-    }
-  }
-
-  const participantSnapshot = await getDoc(
-    participantRef(params.roomId, params.clientKey)
-  );
-
-  if (!participantSnapshot.exists()) {
-    return null;
-  }
-
-  return mapParticipantSnapshot(
-    participantSnapshot.id,
-    participantSnapshot.data() as FirestoreParticipantDocument
-  );
-}
+/**----------------------------------------------- 방 스냅샷 조회 -------------------------------------------------- */
 
 export async function getRoomSnapshot(roomId: string) {
   const [roomSnapshot, participantSnapshots] = await Promise.all([
@@ -189,116 +169,7 @@ export async function getRoomSnapshot(roomId: string) {
   } satisfies RoomSnapshot;
 }
 
-export async function updateParticipantAvailability(params: {
-  clientKey: string;
-  overrides: Participant["overrides"];
-  participantId: string;
-  roomId: string;
-  selectionMode: Participant["selectionMode"];
-  weekdayRules: number[];
-}) {
-  assertParticipantOwnership(params);
-
-  await updateDoc(participantRef(params.roomId, params.participantId), {
-    overrides: params.overrides,
-    selectionMode: params.selectionMode,
-    weekdayRules: params.weekdayRules,
-    updatedAt: new Date().toISOString(),
-  });
-}
-
-export async function resetParticipantSelections(params: {
-  clientKey: string;
-  participantId: string;
-  roomId: string;
-}) {
-  assertParticipantOwnership(params);
-
-  await updateDoc(participantRef(params.roomId, params.participantId), {
-    overrides: {},
-    updatedAt: new Date().toISOString(),
-    weekdayRules: [],
-  });
-}
-
-export async function setParticipantDateOverride(params: {
-  clientKey: string;
-  participantId: string;
-  roomId: string;
-  overrides: Participant["overrides"];
-}) {
-  assertParticipantOwnership(params);
-
-  await updateDoc(participantRef(params.roomId, params.participantId), {
-    overrides: params.overrides,
-    updatedAt: new Date().toISOString(),
-  });
-}
-
-export async function updateParticipantNickname(params: {
-  clientKey: string;
-  nickname: string;
-  participantId: string;
-  roomId: string;
-}) {
-  assertParticipantOwnership(params);
-
-  await updateDoc(participantRef(params.roomId, params.participantId), {
-    nickname: params.nickname,
-    updatedAt: new Date().toISOString(),
-  });
-}
-
-export async function removeParticipant(params: {
-  hostClientKey: string;
-  participantId: string;
-  roomId: string;
-}) {
-  if (params.participantId === params.hostClientKey) {
-    throw new Error("HOST_PARTICIPANT_CANNOT_BE_REMOVED");
-  }
-
-  const now = new Date().toISOString();
-
-  await runTransaction(db, async (transaction) => {
-    const roomDocumentRef = roomRef(params.roomId);
-    const participantDocumentRef = participantRef(
-      params.roomId,
-      params.participantId
-    );
-    const [roomSnapshot, participantSnapshot] = await Promise.all([
-      transaction.get(roomDocumentRef),
-      transaction.get(participantDocumentRef),
-    ]);
-
-    if (!roomSnapshot.exists()) {
-      throw new Error("ROOM_NOT_FOUND");
-    }
-
-    const room = roomSnapshot.data() as FirestoreRoomDocument;
-
-    if (room.hostClientKey !== params.hostClientKey) {
-      throw new Error("HOST_PERMISSION_REQUIRED");
-    }
-
-    if (!participantSnapshot.exists()) {
-      return;
-    }
-
-    const participant =
-      participantSnapshot.data() as FirestoreParticipantDocument;
-    const blockedClientKeys = Array.from(
-      new Set([...(room.blockedClientKeys ?? []), participant.clientKey])
-    );
-
-    transaction.delete(participantDocumentRef);
-    transaction.update(roomDocumentRef, {
-      blockedClientKeys,
-      participantCount: increment(-1),
-      updatedAt: now,
-    });
-  });
-}
+/**----------------------------------------------- 방 떠나기 -------------------------------------------------- */
 
 export async function leaveRoom(params: {
   clientKey: string;
@@ -342,6 +213,8 @@ export async function leaveRoom(params: {
   });
 }
 
+/**----------------------------------------------- 방에서 제외된 참가자인지 확인 -------------------------------------------------- */
+
 export async function isRoomAccessRestricted(params: {
   clientKey: string;
   roomId: string;
@@ -355,6 +228,8 @@ export async function isRoomAccessRestricted(params: {
   const room = roomSnapshot.data() as FirestoreRoomDocument;
   return room.blockedClientKeys?.includes(params.clientKey) ?? false;
 }
+
+/**----------------------------------------------- 방 삭제 -------------------------------------------------- */
 
 export async function deleteRoom(params: {
   hostClientKey: string;
@@ -385,6 +260,8 @@ export async function deleteRoom(params: {
 
   await batch.commit();
 }
+
+/**----------------------------------------------- 방 변경 구독 -------------------------------------------------- */
 
 export function subscribeToRoomChanges(params: {
   roomId: string;
@@ -419,22 +296,12 @@ export function subscribeToRoomChanges(params: {
   };
 }
 
+/**----------------------------------------------- 방 구독 해지 -------------------------------------------------- */
+
 export async function unsubscribeFromRoomChanges(
   subscription: RoomChangeSubscription
 ) {
   subscription();
-}
-
-function roomRef(roomId: string) {
-  return doc(db, "rooms", roomId);
-}
-
-function inviteCodeRef(inviteCode: string) {
-  return doc(db, "inviteCodes", inviteCode);
-}
-
-function participantRef(roomId: string, participantId: string) {
-  return doc(db, "rooms", roomId, "participants", participantId);
 }
 
 function registerSnapshotErrorEmitter(emitSnapshotError: (() => void) | null) {
@@ -476,36 +343,4 @@ function consumeSnapshotFailureHook() {
 
   hooks.failNextSnapshot = false;
   return true;
-}
-
-async function createUniqueInviteCode() {
-  for (let attempt = 0; attempt < 5; attempt += 1) {
-    const inviteCode = createInviteCode();
-    const existingInviteCode = await getDoc(inviteCodeRef(inviteCode));
-
-    if (!existingInviteCode.exists()) {
-      return inviteCode;
-    }
-  }
-
-  throw new Error("INVITE_CODE_COLLISION");
-}
-
-function createInviteCode() {
-  return crypto.randomUUID().replace(/-/g, "").slice(0, 6).toUpperCase();
-}
-
-function addOneMonth(isoDate: string) {
-  const expiresAt = new Date(isoDate);
-  expiresAt.setMonth(expiresAt.getMonth() + 1);
-  return expiresAt.toISOString();
-}
-
-function assertParticipantOwnership(params: {
-  clientKey: string;
-  participantId: string;
-}) {
-  if (params.clientKey !== params.participantId) {
-    throw new Error("PARTICIPANT_OWNERSHIP_MISMATCH");
-  }
 }
