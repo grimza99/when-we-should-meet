@@ -32,7 +32,7 @@ export function CreateRoomModal({
   const [startDate, setStartDate] = useState(today);
   const [endDate, setEndDate] = useState(today);
   const { navigate } = useRouteState();
-  const [_, setStorage] = useLocalStorageState<AppStorage>(
+  const [, setStorage] = useLocalStorageState<AppStorage>(
     STORAGE_KEY,
     DEFAULT_STORAGE
   );
