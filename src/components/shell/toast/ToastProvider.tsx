@@ -9,8 +9,8 @@ import {
   type ReactNode,
 } from "react";
 import { createPortal } from "react-dom";
-import { Toast } from "../ui/Toast";
-import { ToastContext, type ToastPayload } from "./toast/toast-context";
+import { Toast } from "../../ui/Toast";
+import { ToastContext, type ToastPayload } from "./toast-context";
 
 type ToastItem = ToastPayload & {
   id: string;
