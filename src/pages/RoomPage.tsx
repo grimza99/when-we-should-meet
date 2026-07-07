@@ -10,25 +10,18 @@ import { NicknameModal } from "../components/roomPage/NicknameModal";
 import { RoomDashboard } from "../components/room/RoomDashboard";
 import { Button } from "../components/ui/Button";
 import { HomeBrandButton } from "../components/ui/HomeBrandButton";
-import { SegmentedButtonGroup } from "../components/ui/SegmentedButtonGroup";
 import { TextInput } from "../components/ui/TextInput";
-import { ARIA_LABELS, getWeekdayRuleAriaLabel } from "../lib/ariaLabels";
-import type { DateMode, Participant, Room, RoomSummary } from "../types";
-
-type ModeOption = { label: string; value: DateMode };
-type WeekdayOption = { label: string; value: number; selected: boolean };
+import { ARIA_LABELS } from "../lib/ariaLabels";
+import type { Participant, Room, RoomSummary } from "../types";
+import { ControlSection } from "../components/roomPage/ControlSection";
 
 type RoomPageProps = {
   currentParticipant?: Participant;
   isCurrentUserHost?: boolean;
   isHydratingRoom?: boolean;
-  modeOptions: ModeOption[];
   room?: Room;
   roomSummary?: RoomSummary;
-  selectedMode: DateMode;
-  weekdayOptions: WeekdayOption[];
   onBackToLanding: () => void;
-  onChangeMode: (mode: DateMode) => void;
   onChangeNickname: (nickname: string) => Promise<boolean>;
   onCopyInviteCode: () => void;
   onDeleteRoom: () => Promise<boolean>;
@@ -39,16 +32,13 @@ type RoomPageProps = {
   onResetSelection: () => Promise<void> | void;
   onSelectDate: (isoDate: string) => void;
   onShareRoom: () => void;
-  onToggleWeekday: (weekday: number) => void;
 };
 
 export function RoomPage({
   currentParticipant,
   isCurrentUserHost = false,
   isHydratingRoom = false,
-  modeOptions,
   onBackToLanding,
-  onChangeMode,
   onChangeNickname,
   onCopyInviteCode,
   onDeleteRoom,
@@ -59,11 +49,8 @@ export function RoomPage({
   onResetSelection,
   onSelectDate,
   onShareRoom,
-  onToggleWeekday,
   room,
   roomSummary,
-  selectedMode,
-  weekdayOptions,
 }: RoomPageProps) {
   const headerRef = useRef<HTMLElement | null>(null);
   const [nicknameInput, setNicknameInput] = useState(
@@ -344,41 +331,7 @@ export function RoomPage({
           </div>
         </section>
       )}
-
-      <section className="controls-card">
-        <div className="control-group">
-          <p className="section-label">선택 필터</p>
-          <SegmentedButtonGroup
-            onChange={onChangeMode}
-            options={modeOptions.map((option) => ({
-              ...option,
-              ariaLabel:
-                option.value === "available"
-                  ? ARIA_LABELS.room.availableModeButton
-                  : ARIA_LABELS.room.unavailableModeButton,
-            }))}
-            selectedValue={selectedMode}
-          />
-        </div>
-
-        <div className="control-group weekday-control-group">
-          <div className="weekday-row">
-            {weekdayOptions.map((option) => (
-              <button
-                aria-label={getWeekdayRuleAriaLabel(option.label)}
-                aria-pressed={option.selected}
-                key={option.value}
-                className={`day-chip${option.selected ? " is-active" : ""}`}
-                onClick={() => onToggleWeekday(option.value)}
-                type="button"
-              >
-                {option.label}
-              </button>
-            ))}
-          </div>
-        </div>
-      </section>
-
+      <ControlSection />
       <section
         aria-label={ARIA_LABELS.room.calendarCard}
         className="calendar-card"
