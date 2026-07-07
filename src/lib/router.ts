@@ -1,6 +1,8 @@
 import { useCallback, useEffect, useState } from 'react'
 import type { RouteState } from '../types'
 
+const ROUTE_SYNC_EVENT = 'when-should-we-meet:route-sync'
+
 export function parseRoute(pathname: string): RouteState {
   if (pathname === '/page/report') {
     return { name: 'report' }
@@ -27,9 +29,15 @@ export function useRouteState() {
 
   useEffect(() => {
     const handlePopState = () => setRoute(parseRoute(window.location.pathname))
-    window.addEventListener('popstate', handlePopState)
+    const handleRouteSync = () => setRoute(parseRoute(window.location.pathname))
 
-    return () => window.removeEventListener('popstate', handlePopState)
+    window.addEventListener('popstate', handlePopState)
+    window.addEventListener(ROUTE_SYNC_EVENT, handleRouteSync)
+
+    return () => {
+      window.removeEventListener('popstate', handlePopState)
+      window.removeEventListener(ROUTE_SYNC_EVENT, handleRouteSync)
+    }
   }, [])
 
   const navigate = useCallback(
@@ -55,6 +63,7 @@ export function useRouteState() {
       } else {
         window.history.pushState({}, '', nextPath)
       }
+      window.dispatchEvent(new Event(ROUTE_SYNC_EVENT))
       setRoute(nextRoute)
     },
     [],

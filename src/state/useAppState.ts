@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useLocalStorageState } from "../hooks/useLocalStorageState";
+import { useToast } from "../components/shell/toast/toast-context";
 import {
   addMonths,
   buildCalendarDays,
@@ -9,7 +10,6 @@ import {
   formatMonthLabel,
 } from "../lib/date";
 import {
-  COLOR_PALETTE,
   DEFAULT_STORAGE,
   MODE_LABELS,
   STORAGE_KEY,
@@ -25,9 +25,7 @@ import {
 } from "../integrations/kakao/client";
 import { trackShareEvent } from "../integrations/firebase/analytics";
 import {
-  createRoom as createFirebaseRoom,
   deleteRoom as deleteFirebaseRoom,
-  getRoomByInviteCode,
   getRoomSnapshot,
   joinRoom as joinFirebaseRoom,
   isRoomAccessRestricted,
@@ -37,15 +35,12 @@ import {
 } from "../integrations/firebase/services/room-service";
 import type {
   AppStorage,
-  CreateRoomPayload,
   DateMode,
   Participant,
-  Room,
   RoomChangeSubscription,
 } from "../types";
 import {
   mapParticipantRow,
-  mapRoomRowToDraftRoom,
   mapRoomSnapshotToDraftRoom,
 } from "../integrations/firebase/mapper";
 import {
@@ -56,14 +51,20 @@ import {
   updateParticipantAvailability,
   setParticipantDateOverride,
 } from "../integrations/firebase/services/participant-service";
+import {
+  createParticipant,
+  updateMembership,
+  upsertParticipant,
+} from "../util/participant";
+import { mergeRoomSnapshot } from "../util/room";
 
 export function useAppState() {
   const { navigate, route } = useRouteState();
+  const { showToast: emitToast } = useToast();
   const [storage, setStorage] = useLocalStorageState<AppStorage>(
     STORAGE_KEY,
     DEFAULT_STORAGE
   );
-  const [joinInviteCode, setJoinInviteCode] = useState("");
   const [visibleMonth, setVisibleMonth] = useState("");
   const [isHydratingRoom, setIsHydratingRoom] = useState(false);
   const roomChangeSubscriptionRef = useRef<RoomChangeSubscription | null>(null);
@@ -106,9 +107,12 @@ export function useAppState() {
     };
   }, [currentParticipant?.id, currentRoom, effectiveVisibleMonth]);
 
-  function showToast(message: string) {
-    console.log(message);
-  }
+  const showToast = useCallback(
+    (message: string) => {
+      emitToast({ msg: message });
+    },
+    [emitToast]
+  );
 
   const goToRoomAccessRestricted = useCallback(
     (roomId: string) => {
@@ -116,10 +120,12 @@ export function useAppState() {
         ...previous,
         memberships: updateMembership(previous.memberships, roomId, undefined),
       }));
-      showToast("이 방은 다시 입장할 수 없도록 제한되었어요.");
+      emitToast({
+        msg: "이 방은 다시 입장할 수 없도록 제한되었어요.",
+      });
       navigate({ name: "room_access_restricted", roomId }, { replace: true });
     },
-    [navigate, setStorage]
+    [emitToast, navigate, setStorage]
   );
 
   useEffect(() => {
@@ -212,6 +218,7 @@ export function useAppState() {
     needsRoomSnapshot,
     routeRoomId,
     setStorage,
+    showToast,
   ]);
 
   useEffect(() => {
@@ -335,120 +342,13 @@ export function useAppState() {
 
       void unsubscribeFromRoomChanges(subscription);
     };
-  }, [currentParticipantId, goToRoomAccessRestricted, routeRoomId, setStorage]);
-
-  const createRoom = async (payload: CreateRoomPayload) => {
-    const hostClientKey = getOrCreateClientKey();
-
-    if (!isFirebaseConfigured) {
-      const room = createRoomRecord(payload, hostClientKey);
-
-      setStorage((previous) => ({
-        ...previous,
-        rooms: {
-          ...previous.rooms,
-          [room.id]: room,
-        },
-      }));
-
-      setVisibleMonth(room.startDate);
-      navigate({ name: "room", roomId: room.id });
-      return true;
-    }
-
-    try {
-      const roomRow = await createFirebaseRoom({
-        ...payload,
-        hostClientKey,
-      });
-      const room = mapRoomRowToDraftRoom(roomRow);
-
-      setStorage((previous) => ({
-        ...previous,
-        rooms: {
-          ...previous.rooms,
-          [room.id]: room,
-        },
-      }));
-
-      setVisibleMonth(room.startDate);
-      navigate({ name: "room", roomId: room.id });
-      return true;
-    } catch {
-      showToast("방 생성에 실패했어요. 잠시 후 다시 시도해 주세요.");
-      return false;
-    }
-  };
-
-  const joinRoomByInviteCode = async () => {
-    const inviteCode = joinInviteCode.trim().toUpperCase();
-    if (!inviteCode) {
-      showToast("초대 코드를 입력해 주세요.");
-      return false;
-    }
-
-    if (!isFirebaseConfigured) {
-      const room = Object.values(storage.rooms).find(
-        (candidate) => candidate.inviteCode === inviteCode
-      );
-
-      if (!room) {
-        showToast("일치하는 방을 찾지 못했어요. 코드를 다시 확인해 주세요.");
-        return false;
-      }
-
-      setVisibleMonth(room.startDate);
-      navigate({ name: "room", roomId: room.id });
-      return true;
-    }
-
-    try {
-      const roomRow = await getRoomByInviteCode(inviteCode);
-
-      if (!roomRow) {
-        showToast("일치하는 방을 찾지 못했어요. 코드를 다시 확인해 주세요.");
-        return false;
-      }
-
-      const roomSnapshot = await getRoomSnapshot(roomRow.id);
-      const room = roomSnapshot
-        ? mapRoomSnapshotToDraftRoom(roomSnapshot)
-        : mapRoomRowToDraftRoom(roomRow);
-
-      try {
-        await restoreParticipant({
-          clientKey: getOrCreateClientKey(),
-          roomId: room.id,
-        });
-      } catch (error) {
-        if (String(error).includes("ROOM_ACCESS_RESTRICTED")) {
-          goToRoomAccessRestricted(room.id);
-          return false;
-        }
-
-        throw error;
-      }
-
-      setStorage((previous) => ({
-        ...previous,
-        rooms: {
-          ...previous.rooms,
-          [room.id]: mergeRoomSnapshot(
-            previous.rooms[room.id],
-            room,
-            previous.memberships[room.id]
-          ),
-        },
-      }));
-
-      setVisibleMonth(room.startDate);
-      navigate({ name: "room", roomId: room.id });
-      return true;
-    } catch {
-      showToast("방 조회에 실패했어요. 네트워크 상태를 확인해 주세요.");
-      return false;
-    }
-  };
+  }, [
+    currentParticipantId,
+    goToRoomAccessRestricted,
+    routeRoomId,
+    setStorage,
+    showToast,
+  ]);
 
   const joinCurrentRoom = async (nickname: string) => {
     if (!currentRoom || currentParticipant) {
@@ -1059,7 +959,6 @@ export function useAppState() {
   return {
     changeSelectionMode,
     copyInviteCode,
-    createRoom,
     currentParticipant,
     currentRoom,
     currentRoomSummary,
@@ -1071,15 +970,12 @@ export function useAppState() {
     isCurrentUserHost,
     joinCurrentRoom,
     leaveCurrentRoom,
-    joinInviteCode,
-    joinRoomByInviteCode,
     modeOptions: (Object.keys(MODE_LABELS) as DateMode[]).map((value) => ({
       label: MODE_LABELS[value],
       value,
     })),
     moveVisibleMonth,
     selectedMode: currentParticipant?.selectionMode ?? "available",
-    setJoinInviteCode,
     shareRanking,
     shareRoom,
     changeNickname,
@@ -1092,140 +988,6 @@ export function useAppState() {
       value,
       selected: currentParticipant?.weekdayRules.includes(value) ?? false,
     })),
+    setVisibleMonth: (date: string) => setVisibleMonth(date),
   };
-}
-
-function createRoomRecord(
-  payload: CreateRoomPayload,
-  hostClientKey: string
-): Room {
-  const id = crypto.randomUUID();
-  const createdAt = new Date().toISOString();
-
-  return {
-    id,
-    inviteCode: id.slice(0, 6).toUpperCase(),
-    maxParticipants: payload.maxParticipants,
-    dateRangeType: payload.dateRangeType,
-    startDate: payload.startDate,
-    endDate: payload.endDate,
-    createdAt,
-    expiresAt: addOneMonth(createdAt),
-    hostClientKey,
-    participants: [],
-  };
-}
-
-function createParticipant(
-  room: Room,
-  participantId: string = crypto.randomUUID()
-): Participant {
-  const usedColorIndexes = new Set(
-    room.participants.map((participant) => participant.colorIndex)
-  );
-  const colorIndex =
-    COLOR_PALETTE.findIndex((_, index) => !usedColorIndexes.has(index)) === -1
-      ? 0
-      : COLOR_PALETTE.findIndex((_, index) => !usedColorIndexes.has(index));
-
-  return {
-    id: participantId,
-    nickname: "",
-    colorIndex,
-    selectionMode: "available",
-    weekdayRules: [],
-    overrides: {},
-    updatedAt: new Date().toISOString(),
-  };
-}
-
-function addOneMonth(isoDate: string) {
-  const expiresAt = new Date(isoDate);
-  expiresAt.setMonth(expiresAt.getMonth() + 1);
-  return expiresAt.toISOString();
-}
-
-function updateMembership(
-  memberships: AppStorage["memberships"],
-  roomId: string,
-  participantId: string | undefined
-) {
-  const nextMemberships = { ...memberships };
-
-  if (participantId) {
-    nextMemberships[roomId] = participantId;
-  } else {
-    delete nextMemberships[roomId];
-  }
-
-  return nextMemberships;
-}
-
-function upsertParticipant(
-  participants: Participant[],
-  nextParticipant: Participant
-) {
-  const existing = participants.some(
-    (participant) => participant.id === nextParticipant.id
-  );
-
-  if (!existing) {
-    return [...participants, nextParticipant];
-  }
-
-  return participants.map((participant) =>
-    participant.id === nextParticipant.id ? nextParticipant : participant
-  );
-}
-
-function mergeRoomSnapshot(
-  previousRoom: Room | undefined,
-  nextRoom: Room,
-  localParticipantId: string | undefined
-) {
-  if (!previousRoom || !localParticipantId) {
-    return nextRoom;
-  }
-
-  const localParticipant = previousRoom.participants.find(
-    (participant) => participant.id === localParticipantId
-  );
-
-  if (!localParticipant) {
-    return nextRoom;
-  }
-
-  const mergedParticipants = nextRoom.participants.map((participant) => {
-    if (participant.id !== localParticipant.id) {
-      return participant;
-    }
-
-    return isLocalParticipantNewer(localParticipant, participant)
-      ? localParticipant
-      : participant;
-  });
-
-  return {
-    ...nextRoom,
-    participants: mergedParticipants.some(
-      (participant) => participant.id === localParticipant.id
-    )
-      ? mergedParticipants
-      : upsertParticipant(mergedParticipants, localParticipant),
-  };
-}
-
-function isLocalParticipantNewer(
-  localParticipant: Participant,
-  remoteParticipant: Participant
-) {
-  if (!localParticipant.updatedAt) {
-    return false;
-  }
-
-  if (!remoteParticipant.updatedAt) {
-    return true;
-  }
-
-  return localParticipant.updatedAt > remoteParticipant.updatedAt;
 }
