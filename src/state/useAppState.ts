@@ -6,15 +6,9 @@ import {
   buildCalendarDays,
   buildRankings,
   clampVisibleMonth,
-  convertParticipantSelectionMode,
   formatMonthLabel,
 } from "../lib/date";
-import {
-  DEFAULT_STORAGE,
-  MODE_LABELS,
-  STORAGE_KEY,
-  WEEKDAY_LABELS,
-} from "../lib/constants";
+import { DEFAULT_STORAGE, STORAGE_KEY } from "../lib/constants";
 import { useRouteState } from "../lib/router";
 import { getOrCreateClientKey } from "../lib/session/clientIdentity";
 import { isFirebaseConfigured } from "../integrations/firebase/client";
@@ -27,40 +21,28 @@ import { trackShareEvent } from "../integrations/firebase/analytics";
 import {
   deleteRoom as deleteFirebaseRoom,
   getRoomSnapshot,
-  joinRoom as joinFirebaseRoom,
   isRoomAccessRestricted,
   leaveRoom as leaveFirebaseRoom,
   subscribeToRoomChanges,
   unsubscribeFromRoomChanges,
 } from "../integrations/firebase/services/room-service";
-import type {
-  AppStorage,
-  DateMode,
-  Participant,
-  RoomChangeSubscription,
-} from "../types";
-import {
-  mapParticipantRow,
-  mapRoomSnapshotToDraftRoom,
-} from "../integrations/firebase/mapper";
+import type { AppStorage, RoomChangeSubscription } from "../types";
+import { mapRoomSnapshotToDraftRoom } from "../integrations/firebase/mapper";
 import {
   restoreParticipant,
   resetParticipantSelections as resetFirebaseParticipantSelections,
   removeParticipant as removeFirebaseParticipant,
   updateParticipantNickname,
-  updateParticipantAvailability,
   setParticipantDateOverride,
 } from "../integrations/firebase/services/participant-service";
-import {
-  createParticipant,
-  updateMembership,
-  upsertParticipant,
-} from "../util/participant";
+import { updateMembership } from "../util/participant";
 import { mergeRoomSnapshot } from "../util/room";
+import { useCurrentParticipantUpdater } from "../hooks/useParticipant";
 
 export function useAppState() {
   const { navigate, route } = useRouteState();
   const { showToast: emitToast } = useToast();
+  const updateCurrentParticipant = useCurrentParticipantUpdater();
   const [storage, setStorage] = useLocalStorageState<AppStorage>(
     STORAGE_KEY,
     DEFAULT_STORAGE
@@ -76,6 +58,7 @@ export function useAppState() {
   const currentParticipant = currentRoom?.participants.find(
     (participant) => participant.id === currentParticipantId
   );
+
   const isCurrentUserHost =
     Boolean(currentParticipantId) &&
     currentParticipantId === currentRoom?.hostClientKey;
@@ -349,166 +332,6 @@ export function useAppState() {
     setStorage,
     showToast,
   ]);
-
-  const joinCurrentRoom = async (nickname: string) => {
-    if (!currentRoom || currentParticipant) {
-      return false;
-    }
-
-    if (currentRoom.participants.length >= currentRoom.maxParticipants) {
-      showToast("이 방은 정원이 모두 찼어요.");
-      return false;
-    }
-
-    if (!isFirebaseConfigured) {
-      const nextParticipant = createParticipant(
-        currentRoom,
-        getOrCreateClientKey()
-      );
-
-      nextParticipant.nickname = nickname;
-      showToast(`${nickname} 님으로 방에 참여했어요.`);
-
-      setStorage((previous) => ({
-        rooms: {
-          ...previous.rooms,
-          [currentRoom.id]: {
-            ...currentRoom,
-            participants: [...currentRoom.participants, nextParticipant],
-          },
-        },
-        memberships: {
-          ...previous.memberships,
-          [currentRoom.id]: nextParticipant.id,
-        },
-      }));
-      return true;
-    }
-
-    try {
-      const participantRow = await joinFirebaseRoom({
-        clientKey: getOrCreateClientKey(),
-        nickname,
-        roomId: currentRoom.id,
-      });
-
-      const nextParticipant = mapParticipantRow(participantRow);
-
-      showToast(`${nickname} 님으로 방에 참여했어요.`);
-      setStorage((previous) => ({
-        rooms: {
-          ...previous.rooms,
-          [currentRoom.id]: {
-            ...currentRoom,
-            participants: upsertParticipant(
-              currentRoom.participants,
-              nextParticipant
-            ),
-          },
-        },
-        memberships: {
-          ...previous.memberships,
-          [currentRoom.id]: nextParticipant.id,
-        },
-      }));
-      return true;
-    } catch (error) {
-      const errorMessage = String(error);
-      showToast(
-        errorMessage.includes("ROOM_CAPACITY_REACHED")
-          ? "이 방은 정원이 모두 찼어요."
-          : "방 참여에 실패했어요. 잠시 후 다시 시도해 주세요."
-      );
-      return false;
-    }
-  };
-
-  const changeSelectionMode = async (mode: DateMode) => {
-    if (!currentRoom || !currentParticipant) {
-      return;
-    }
-
-    const previousParticipant = currentParticipant;
-    const updatedAt = new Date().toISOString();
-    const nextSelection = convertParticipantSelectionMode(
-      currentRoom,
-      currentParticipant,
-      mode
-    );
-    const nextParticipant = {
-      ...currentParticipant,
-      overrides: nextSelection.overrides,
-      selectionMode: nextSelection.selectionMode,
-      updatedAt,
-      weekdayRules: nextSelection.weekdayRules,
-    };
-
-    updateCurrentParticipant(nextParticipant);
-    showToast(
-      mode === "available"
-        ? "가능한 날짜를 고르는 모드로 바뀌었어요."
-        : "불가능한 날짜를 고르는 모드로 바뀌었어요."
-    );
-
-    if (!isFirebaseConfigured) {
-      return;
-    }
-
-    try {
-      await updateParticipantAvailability({
-        clientKey: getOrCreateClientKey(),
-        overrides: nextParticipant.overrides,
-        participantId: nextParticipant.id,
-        roomId: currentRoom.id,
-        selectionMode: nextParticipant.selectionMode,
-        weekdayRules: nextParticipant.weekdayRules,
-      });
-    } catch {
-      updateCurrentParticipant(previousParticipant);
-      showToast("선택 방식을 저장하지 못했어요. 잠시 후 다시 시도해 주세요.");
-    }
-  };
-
-  const toggleWeekday = async (weekday: number) => {
-    if (!currentRoom || !currentParticipant) {
-      return;
-    }
-
-    const previousParticipant = currentParticipant;
-    const updatedAt = new Date().toISOString();
-    const weekdayRules = currentParticipant.weekdayRules.includes(weekday)
-      ? currentParticipant.weekdayRules.filter((value) => value !== weekday)
-      : [...currentParticipant.weekdayRules, weekday].sort(
-          (left, right) => left - right
-        );
-
-    const nextParticipant = {
-      ...currentParticipant,
-      weekdayRules,
-      updatedAt,
-    };
-
-    updateCurrentParticipant(nextParticipant);
-    showToast(`${WEEKDAY_LABELS[weekday]}요일 규칙을 업데이트했어요.`);
-
-    if (!isFirebaseConfigured) {
-      return;
-    }
-
-    try {
-      await updateParticipantAvailability({
-        clientKey: getOrCreateClientKey(),
-        overrides: nextParticipant.overrides,
-        participantId: nextParticipant.id,
-        roomId: currentRoom.id,
-        selectionMode: nextParticipant.selectionMode,
-        weekdayRules: nextParticipant.weekdayRules,
-      });
-    } catch {
-      updateCurrentParticipant(previousParticipant);
-      showToast("요일 규칙을 저장하지 못했어요. 잠시 후 다시 시도해 주세요.");
-    }
-  };
 
   const toggleDate = async (isoDate: string) => {
     if (!currentRoom || !currentParticipant) {
@@ -791,35 +614,6 @@ export function useAppState() {
     return true;
   };
 
-  const updateCurrentParticipant = (nextParticipant: Participant) => {
-    if (!currentRoom) {
-      return;
-    }
-
-    setStorage((previous) => {
-      const previousRoom = previous.rooms[currentRoom.id];
-
-      if (!previousRoom) {
-        return previous;
-      }
-
-      return {
-        ...previous,
-        rooms: {
-          ...previous.rooms,
-          [currentRoom.id]: {
-            ...previousRoom,
-            participants: previousRoom.participants.map((participant) =>
-              participant.id === nextParticipant.id
-                ? nextParticipant
-                : participant
-            ),
-          },
-        },
-      };
-    });
-  };
-
   const moveVisibleMonth = (offset: number) => {
     if (!currentRoom) {
       return;
@@ -957,7 +751,6 @@ export function useAppState() {
   };
 
   return {
-    changeSelectionMode,
     copyInviteCode,
     currentParticipant,
     currentRoom,
@@ -968,26 +761,14 @@ export function useAppState() {
     goToReport: () => navigate({ name: "report" }),
     isHydratingRoom,
     isCurrentUserHost,
-    joinCurrentRoom,
     leaveCurrentRoom,
-    modeOptions: (Object.keys(MODE_LABELS) as DateMode[]).map((value) => ({
-      label: MODE_LABELS[value],
-      value,
-    })),
     moveVisibleMonth,
-    selectedMode: currentParticipant?.selectionMode ?? "available",
     shareRanking,
     shareRoom,
     changeNickname,
     removeParticipant,
     resetCurrentSelection,
     toggleDate,
-    toggleWeekday,
-    weekdayOptions: WEEKDAY_LABELS.map((label, value) => ({
-      label,
-      value,
-      selected: currentParticipant?.weekdayRules.includes(value) ?? false,
-    })),
     setVisibleMonth: (date: string) => setVisibleMonth(date),
   };
 }

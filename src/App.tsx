@@ -28,17 +28,12 @@ function AppContent() {
         <RoomPage
           currentParticipant={appState.currentParticipant}
           isHydratingRoom={appState.isHydratingRoom}
-          modeOptions={appState.modeOptions}
           room={appState.currentRoom}
           roomSummary={appState.currentRoomSummary}
-          selectedMode={appState.selectedMode}
-          weekdayOptions={appState.weekdayOptions}
           onBackToLanding={appState.goToLanding}
-          onChangeMode={appState.changeSelectionMode}
           onChangeNickname={appState.changeNickname}
           onCopyInviteCode={appState.copyInviteCode}
           onDeleteRoom={appState.deleteCurrentRoom}
-          onJoinRoom={appState.joinCurrentRoom}
           onLeaveRoom={appState.leaveCurrentRoom}
           onMoveMonth={appState.moveVisibleMonth}
           onRemoveParticipant={appState.removeParticipant}
@@ -46,7 +41,6 @@ function AppContent() {
           onResetSelection={appState.resetCurrentSelection}
           onSelectDate={appState.toggleDate}
           onShareRoom={appState.shareRoom}
-          onToggleWeekday={appState.toggleWeekday}
           isCurrentUserHost={appState.isCurrentUserHost}
         />
       )}
