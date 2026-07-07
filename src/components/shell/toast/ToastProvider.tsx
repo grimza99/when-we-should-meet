@@ -1,9 +1,7 @@
 "use client";
 
 import {
-  createContext,
   useCallback,
-  useContext,
   useEffect,
   useMemo,
   useRef,
@@ -12,25 +10,11 @@ import {
 } from "react";
 import { createPortal } from "react-dom";
 import { Toast } from "../ui/Toast";
-
-export type TToastTone = "success";
-
-type ToastPayload = {
-  msg: string;
-  tone?: TToastTone;
-  durationMs?: number;
-};
+import { ToastContext, type ToastPayload } from "./toast/toast-context";
 
 type ToastItem = ToastPayload & {
   id: string;
 };
-
-type ToastContextValue = {
-  showToast: (payload: ToastPayload) => void;
-  dismissToast: (id: string) => void;
-};
-
-const ToastContext = createContext<ToastContextValue | null>(null);
 
 function createToastId() {
   return `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
@@ -38,17 +22,17 @@ function createToastId() {
 
 export function ToastProvider({ children }: { children: ReactNode }) {
   const [toasts, setToasts] = useState<ToastItem[]>([]);
-  const [isMounted, setIsMounted] = useState(false);
   const timeoutMapRef = useRef<Map<string, number>>(new Map());
+  const portalTarget = typeof document !== "undefined" ? document.body : null;
 
   useEffect(() => {
-    setIsMounted(true);
+    const timeoutMap = timeoutMapRef.current;
 
     return () => {
-      timeoutMapRef.current.forEach((timeoutId) => {
+      timeoutMap.forEach((timeoutId) => {
         window.clearTimeout(timeoutId);
       });
-      timeoutMapRef.current.clear();
+      timeoutMap.clear();
     };
   }, []);
 
@@ -87,26 +71,16 @@ export function ToastProvider({ children }: { children: ReactNode }) {
   return (
     <ToastContext.Provider value={value}>
       {children}
-      {isMounted
+      {portalTarget
         ? createPortal(
             <>
               {toasts.map((toast) => (
                 <Toast key={toast.id} message={toast.msg} tone={toast.tone} />
               ))}
             </>,
-            document.body
+            portalTarget
           )
         : null}
     </ToastContext.Provider>
   );
-}
-
-export function useToast() {
-  const context = useContext(ToastContext);
-
-  if (!context) {
-    throw new Error("useToast must be used within ToastProvider");
-  }
-
-  return context;
 }

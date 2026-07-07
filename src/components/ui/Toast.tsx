@@ -1,5 +1,5 @@
 import { ARIA_LABELS } from "../../lib/ariaLabels";
-import type { TToastTone } from "../shell/ToastProvider";
+import type { TToastTone } from "../shell/toast/toast-context";
 
 interface IToastProps {
   message: string;

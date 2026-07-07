@@ -7,7 +7,7 @@ import { RoomPage } from "./pages/RoomPage";
 import { trackPageView } from "./integrations/firebase/analytics";
 import { ReportPage } from "./pages/ReportPage";
 import { ReportEntryButton } from "./components/ui/ReportEntryButton";
-import { ToastProvider } from "./components/shell/ToastProvider";
+import { ToastProvider } from "./components/shell/toast/ToastProvider";
 
 function App() {
   const appState = useAppState();
