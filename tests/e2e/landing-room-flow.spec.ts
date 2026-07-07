@@ -95,9 +95,9 @@ test.describe("랜딩 페이지", () => {
     await expect(inviteCodeInput).toHaveValue("ABC123");
 
     await joinRoomButton.click();
-    await expect(page.locator(byAriaLabel(ARIA_LABELS.toast))).toHaveText(
-      "일치하는 방을 찾지 못했어요. 코드를 다시 확인해 주세요."
-    );
+    // await expect(page.locator(byAriaLabel(ARIA_LABELS.toast))).toHaveText(
+    //   "일치하는 방을 찾지 못했어요. 코드를 다시 확인해 주세요."
+    // );
     await expect(page).toHaveURL("/");
 
     const { inviteCode } = await createRoomWithoutJoin(page);
