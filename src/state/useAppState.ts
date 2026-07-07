@@ -27,7 +27,6 @@ import { trackShareEvent } from "../integrations/firebase/analytics";
 import {
   deleteRoom as deleteFirebaseRoom,
   getRoomSnapshot,
-  joinRoom as joinFirebaseRoom,
   isRoomAccessRestricted,
   leaveRoom as leaveFirebaseRoom,
   subscribeToRoomChanges,
@@ -39,10 +38,7 @@ import type {
   Participant,
   RoomChangeSubscription,
 } from "../types";
-import {
-  mapParticipantRow,
-  mapRoomSnapshotToDraftRoom,
-} from "../integrations/firebase/mapper";
+import { mapRoomSnapshotToDraftRoom } from "../integrations/firebase/mapper";
 import {
   restoreParticipant,
   resetParticipantSelections as resetFirebaseParticipantSelections,
@@ -51,11 +47,7 @@ import {
   updateParticipantAvailability,
   setParticipantDateOverride,
 } from "../integrations/firebase/services/participant-service";
-import {
-  createParticipant,
-  updateMembership,
-  upsertParticipant,
-} from "../util/participant";
+import { updateMembership } from "../util/participant";
 import { mergeRoomSnapshot } from "../util/room";
 
 export function useAppState() {
@@ -76,6 +68,7 @@ export function useAppState() {
   const currentParticipant = currentRoom?.participants.find(
     (participant) => participant.id === currentParticipantId
   );
+
   const isCurrentUserHost =
     Boolean(currentParticipantId) &&
     currentParticipantId === currentRoom?.hostClientKey;
@@ -349,79 +342,6 @@ export function useAppState() {
     setStorage,
     showToast,
   ]);
-
-  const joinCurrentRoom = async (nickname: string) => {
-    if (!currentRoom || currentParticipant) {
-      return false;
-    }
-
-    if (currentRoom.participants.length >= currentRoom.maxParticipants) {
-      showToast("이 방은 정원이 모두 찼어요.");
-      return false;
-    }
-
-    if (!isFirebaseConfigured) {
-      const nextParticipant = createParticipant(
-        currentRoom,
-        getOrCreateClientKey()
-      );
-
-      nextParticipant.nickname = nickname;
-      showToast(`${nickname} 님으로 방에 참여했어요.`);
-
-      setStorage((previous) => ({
-        rooms: {
-          ...previous.rooms,
-          [currentRoom.id]: {
-            ...currentRoom,
-            participants: [...currentRoom.participants, nextParticipant],
-          },
-        },
-        memberships: {
-          ...previous.memberships,
-          [currentRoom.id]: nextParticipant.id,
-        },
-      }));
-      return true;
-    }
-
-    try {
-      const participantRow = await joinFirebaseRoom({
-        clientKey: getOrCreateClientKey(),
-        nickname,
-        roomId: currentRoom.id,
-      });
-
-      const nextParticipant = mapParticipantRow(participantRow);
-
-      showToast(`${nickname} 님으로 방에 참여했어요.`);
-      setStorage((previous) => ({
-        rooms: {
-          ...previous.rooms,
-          [currentRoom.id]: {
-            ...currentRoom,
-            participants: upsertParticipant(
-              currentRoom.participants,
-              nextParticipant
-            ),
-          },
-        },
-        memberships: {
-          ...previous.memberships,
-          [currentRoom.id]: nextParticipant.id,
-        },
-      }));
-      return true;
-    } catch (error) {
-      const errorMessage = String(error);
-      showToast(
-        errorMessage.includes("ROOM_CAPACITY_REACHED")
-          ? "이 방은 정원이 모두 찼어요."
-          : "방 참여에 실패했어요. 잠시 후 다시 시도해 주세요."
-      );
-      return false;
-    }
-  };
 
   const changeSelectionMode = async (mode: DateMode) => {
     if (!currentRoom || !currentParticipant) {
@@ -968,7 +888,6 @@ export function useAppState() {
     goToReport: () => navigate({ name: "report" }),
     isHydratingRoom,
     isCurrentUserHost,
-    joinCurrentRoom,
     leaveCurrentRoom,
     modeOptions: (Object.keys(MODE_LABELS) as DateMode[]).map((value) => ({
       label: MODE_LABELS[value],

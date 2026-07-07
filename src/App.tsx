@@ -38,7 +38,6 @@ function AppContent() {
           onChangeNickname={appState.changeNickname}
           onCopyInviteCode={appState.copyInviteCode}
           onDeleteRoom={appState.deleteCurrentRoom}
-          onJoinRoom={appState.joinCurrentRoom}
           onLeaveRoom={appState.leaveCurrentRoom}
           onMoveMonth={appState.moveVisibleMonth}
           onRemoveParticipant={appState.removeParticipant}

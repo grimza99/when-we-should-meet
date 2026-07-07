@@ -1,6 +1,12 @@
-import { useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
+import {
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type CSSProperties,
+} from "react";
 import { CalendarGrid } from "../components/calendar/CalendarGrid";
-import { NicknameModal } from "../components/room/NicknameModal";
+import { NicknameModal } from "../components/roomPage/NicknameModal";
 import { RoomDashboard } from "../components/room/RoomDashboard";
 import { Button } from "../components/ui/Button";
 import { HomeBrandButton } from "../components/ui/HomeBrandButton";
@@ -26,7 +32,6 @@ type RoomPageProps = {
   onChangeNickname: (nickname: string) => Promise<boolean>;
   onCopyInviteCode: () => void;
   onDeleteRoom: () => Promise<boolean>;
-  onJoinRoom: (nickname: string) => Promise<boolean>;
   onLeaveRoom: () => Promise<boolean>;
   onMoveMonth: (offset: number) => void;
   onRemoveParticipant: (participantId: string) => Promise<boolean>;
@@ -47,7 +52,6 @@ export function RoomPage({
   onChangeNickname,
   onCopyInviteCode,
   onDeleteRoom,
-  onJoinRoom,
   onLeaveRoom,
   onMoveMonth,
   onRemoveParticipant,
@@ -438,10 +442,7 @@ export function RoomPage({
       )}
 
       {shouldShowNicknameModal && (
-        <NicknameModal
-          onClose={() => setIsNicknameModalOpen(false)}
-          onJoinRoom={onJoinRoom}
-        />
+        <NicknameModal onClose={() => setIsNicknameModalOpen(false)} />
       )}
     </main>
   );
@@ -456,10 +457,16 @@ function formatRoomRange(startDate: string, endDate: string) {
   }
 
   if (start.getFullYear() === end.getFullYear()) {
-    return `${start.getMonth() + 1}월 ${start.getDate()}일 - ${end.getMonth() + 1}월 ${end.getDate()}일`;
+    return `${start.getMonth() + 1}월 ${start.getDate()}일 - ${
+      end.getMonth() + 1
+    }월 ${end.getDate()}일`;
   }
 
-  return `${start.getFullYear()}년 ${start.getMonth() + 1}월 ${start.getDate()}일 - ${end.getFullYear()}년 ${end.getMonth() + 1}월 ${end.getDate()}일`;
+  return `${start.getFullYear()}년 ${
+    start.getMonth() + 1
+  }월 ${start.getDate()}일 - ${end.getFullYear()}년 ${
+    end.getMonth() + 1
+  }월 ${end.getDate()}일`;
 }
 
 function parseDateOnly(isoDate: string) {
