@@ -54,19 +54,28 @@ export function NicknameModal({ onClose }: NicknameModalProps) {
       nextParticipant.nickname = nickname;
       showToast({ msg: `${nickname} 님으로 방에 참여했어요.` });
 
-      setStorage((previous) => ({
-        rooms: {
-          ...previous.rooms,
-          [currentRoom.id]: {
-            ...currentRoom,
-            participants: [...currentRoom.participants, nextParticipant],
+      setStorage((previous) => {
+        const previousRoom = previous.rooms[currentRoom.id];
+
+        if (!previousRoom) {
+          return previous;
+        }
+
+        return {
+          ...previous,
+          rooms: {
+            ...previous.rooms,
+            [currentRoom.id]: {
+              ...previousRoom,
+              participants: [...previousRoom.participants, nextParticipant],
+            },
           },
-        },
-        memberships: {
-          ...previous.memberships,
-          [currentRoom.id]: nextParticipant.id,
-        },
-      }));
+          memberships: {
+            ...previous.memberships,
+            [currentRoom.id]: nextParticipant.id,
+          },
+        };
+      });
       return true;
     }
 
@@ -80,22 +89,31 @@ export function NicknameModal({ onClose }: NicknameModalProps) {
       const nextParticipant = mapParticipantRow(participantRow);
 
       showToast({ msg: `${nickname} 님으로 방에 참여했어요.` });
-      setStorage((previous) => ({
-        rooms: {
-          ...previous.rooms,
-          [currentRoom.id]: {
-            ...currentRoom,
-            participants: upsertParticipant(
-              currentRoom.participants,
-              nextParticipant
-            ),
+      setStorage((previous) => {
+        const previousRoom = previous.rooms[currentRoom.id];
+
+        if (!previousRoom) {
+          return previous;
+        }
+
+        return {
+          ...previous,
+          rooms: {
+            ...previous.rooms,
+            [currentRoom.id]: {
+              ...previousRoom,
+              participants: upsertParticipant(
+                previousRoom.participants,
+                nextParticipant
+              ),
+            },
           },
-        },
-        memberships: {
-          ...previous.memberships,
-          [currentRoom.id]: nextParticipant.id,
-        },
-      }));
+          memberships: {
+            ...previous.memberships,
+            [currentRoom.id]: nextParticipant.id,
+          },
+        };
+      });
       return true;
     } catch (error) {
       const errorMessage = String(error);
