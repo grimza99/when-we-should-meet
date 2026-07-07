@@ -34,9 +34,6 @@ function AppContent() {
           room={appState.currentRoom}
           roomSummary={appState.currentRoomSummary}
           onBackToLanding={appState.goToLanding}
-          onChangeNickname={appState.changeNickname}
-          onDeleteRoom={appState.deleteCurrentRoom}
-          onLeaveRoom={appState.leaveCurrentRoom}
           onMoveMonth={appState.moveVisibleMonth}
           onRemoveParticipant={appState.removeParticipant}
           onShareRanking={appState.shareRanking}

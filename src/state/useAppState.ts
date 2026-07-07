@@ -18,10 +18,8 @@ import {
 } from "../integrations/kakao/client";
 import { trackShareEvent } from "../integrations/firebase/analytics";
 import {
-  deleteRoom as deleteFirebaseRoom,
   getRoomSnapshot,
   isRoomAccessRestricted,
-  leaveRoom as leaveFirebaseRoom,
   subscribeToRoomChanges,
   unsubscribeFromRoomChanges,
 } from "../integrations/firebase/services/room-service";
@@ -31,7 +29,6 @@ import {
   restoreParticipant,
   resetParticipantSelections as resetFirebaseParticipantSelections,
   removeParticipant as removeFirebaseParticipant,
-  updateParticipantNickname,
   setParticipantDateOverride,
 } from "../integrations/firebase/services/participant-service";
 import { updateMembership } from "../util/participant";
@@ -423,48 +420,6 @@ export function useAppState() {
     }
   };
 
-  const changeNickname = async (nickname: string) => {
-    if (!currentRoom || !currentParticipant) {
-      return false;
-    }
-
-    const trimmedNickname = nickname.trim();
-
-    if (!trimmedNickname) {
-      showToast("닉네임을 입력해 주세요.");
-      return false;
-    }
-
-    const previousParticipant = currentParticipant;
-    const updatedAt = new Date().toISOString();
-    const nextParticipant = {
-      ...currentParticipant,
-      nickname: trimmedNickname,
-      updatedAt,
-    };
-
-    updateCurrentParticipant(nextParticipant);
-    showToast("닉네임을 변경했어요.");
-
-    if (!isFirebaseConfigured) {
-      return true;
-    }
-
-    try {
-      await updateParticipantNickname({
-        clientKey: getOrCreateClientKey(),
-        nickname: trimmedNickname,
-        participantId: nextParticipant.id,
-        roomId: currentRoom.id,
-      });
-      return true;
-    } catch {
-      updateCurrentParticipant(previousParticipant);
-      showToast("닉네임을 저장하지 못했어요. 잠시 후 다시 시도해 주세요.");
-      return false;
-    }
-  };
-
   const removeParticipant = async (participantId: string) => {
     if (!currentRoom || !isCurrentUserHost) {
       showToast("방장만 참가자를 관리할 수 있어요.");
@@ -515,102 +470,6 @@ export function useAppState() {
       showToast("참가자를 내보내지 못했어요. 잠시 후 다시 시도해 주세요.");
       return false;
     }
-  };
-
-  const leaveCurrentRoom = async () => {
-    if (!currentRoom || !currentParticipant) {
-      return false;
-    }
-
-    if (isCurrentUserHost) {
-      showToast("방장은 방을 나갈 수 없어요. 방 삭제 기능을 사용해 주세요.");
-      return false;
-    }
-
-    const roomId = currentRoom.id;
-    const participantId = currentParticipant.id;
-
-    if (isFirebaseConfigured) {
-      try {
-        await leaveFirebaseRoom({
-          clientKey: getOrCreateClientKey(),
-          participantId,
-          roomId,
-        });
-      } catch {
-        showToast("방을 나가지 못했어요. 잠시 후 다시 시도해 주세요.");
-        return false;
-      }
-    }
-
-    setStorage((previous) => {
-      const nextRoom = previous.rooms[roomId]
-        ? {
-            ...previous.rooms[roomId],
-            participants: previous.rooms[roomId].participants.filter(
-              (participant) => participant.id !== participantId
-            ),
-          }
-        : undefined;
-      const memberships = updateMembership(
-        previous.memberships,
-        roomId,
-        undefined
-      );
-
-      return {
-        ...previous,
-        memberships,
-        rooms: nextRoom
-          ? {
-              ...previous.rooms,
-              [roomId]: nextRoom,
-            }
-          : previous.rooms,
-      };
-    });
-    showToast("방에서 나갔어요.");
-    navigate({ name: "landing" });
-
-    return true;
-  };
-
-  const deleteCurrentRoom = async () => {
-    if (!currentRoom || !isCurrentUserHost) {
-      showToast("방장만 방을 삭제할 수 있어요.");
-      return false;
-    }
-
-    const roomId = currentRoom.id;
-    if (isFirebaseConfigured) {
-      try {
-        await deleteFirebaseRoom({
-          hostClientKey: getOrCreateClientKey(),
-          roomId,
-        });
-      } catch {
-        showToast("방을 삭제하지 못했어요. 잠시 후 다시 시도해 주세요.");
-        return false;
-      }
-    }
-
-    setStorage((previous) => {
-      const rooms = { ...previous.rooms };
-      const memberships = { ...previous.memberships };
-
-      delete rooms[roomId];
-      delete memberships[roomId];
-
-      return {
-        ...previous,
-        memberships,
-        rooms,
-      };
-    });
-    showToast("방을 삭제했어요.");
-    navigate({ name: "landing" });
-
-    return true;
   };
 
   const moveVisibleMonth = (offset: number) => {
@@ -691,15 +550,12 @@ export function useAppState() {
     currentRoom,
     currentRoomSummary,
     currentRoute: route,
-    deleteCurrentRoom,
     goToLanding: () => navigate({ name: "landing" }),
     goToReport: () => navigate({ name: "report" }),
     isHydratingRoom,
     isCurrentUserHost,
-    leaveCurrentRoom,
     moveVisibleMonth,
     shareRanking,
-    changeNickname,
     removeParticipant,
     resetCurrentSelection,
     toggleDate,
