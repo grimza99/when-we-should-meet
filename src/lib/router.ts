@@ -1,73 +1,76 @@
-import { useCallback, useEffect, useState } from 'react'
-import type { RouteState } from '../types'
+import { useCallback, useEffect, useState } from "react";
+import type { RouteState } from "../types";
 
-const ROUTE_SYNC_EVENT = 'when-should-we-meet:route-sync'
+const ROUTE_SYNC_EVENT = "when-should-we-meet:route-sync";
 
 export function parseRoute(pathname: string): RouteState {
-  if (pathname === '/page/report') {
-    return { name: 'report' }
+  if (pathname === "/page/report") {
+    return { name: "report" };
   }
 
-  const matchedRestrictedRoom = pathname.match(/^\/room\/([^/]+)\/restricted$/)
+  const matchedRestrictedRoom = pathname.match(/^\/room\/([^/]+)\/restricted$/);
   if (matchedRestrictedRoom) {
-    return { name: 'room_access_restricted', roomId: matchedRestrictedRoom[1] }
+    return { name: "room_access_restricted", roomId: matchedRestrictedRoom[1] };
   }
 
-  const matchedRoom = pathname.match(/^\/room\/([^/]+)$/)
+  const matchedRoom = pathname.match(/^\/room\/([^/]+)$/);
 
   if (matchedRoom) {
-    return { name: 'room', roomId: matchedRoom[1] }
+    return { name: "room", roomId: matchedRoom[1] };
   }
 
-  return { name: 'landing' }
+  return { name: "landing" };
 }
 
 export function useRouteState() {
   const [route, setRoute] = useState<RouteState>(() =>
-    parseRoute(window.location.pathname),
-  )
+    parseRoute(window.location.pathname)
+  );
 
   useEffect(() => {
-    const handlePopState = () => setRoute(parseRoute(window.location.pathname))
-    const handleRouteSync = () => setRoute(parseRoute(window.location.pathname))
+    const handlePopState = () => setRoute(parseRoute(window.location.pathname));
+    const handleRouteSync = () =>
+      setRoute(parseRoute(window.location.pathname));
 
-    window.addEventListener('popstate', handlePopState)
-    window.addEventListener(ROUTE_SYNC_EVENT, handleRouteSync)
+    window.addEventListener("popstate", handlePopState);
+    window.addEventListener(ROUTE_SYNC_EVENT, handleRouteSync);
 
     return () => {
-      window.removeEventListener('popstate', handlePopState)
-      window.removeEventListener(ROUTE_SYNC_EVENT, handleRouteSync)
-    }
-  }, [])
+      window.removeEventListener("popstate", handlePopState);
+      window.removeEventListener(ROUTE_SYNC_EVENT, handleRouteSync);
+    };
+  }, []);
 
   const navigate = useCallback(
     (nextRoute: RouteState, options?: { replace?: boolean }) => {
       const nextPath = (() => {
-        if (nextRoute.name === 'landing') {
-          return '/'
+        if (nextRoute.name === "landing") {
+          return "/";
         }
 
-        if (nextRoute.name === 'report') {
-          return '/page/report'
+        if (nextRoute.name === "report") {
+          return "/page/report";
         }
 
-        if (nextRoute.name === 'room_access_restricted') {
-          return `/room/${nextRoute.roomId}/restricted`
+        if (nextRoute.name === "room_access_restricted") {
+          return `/room/${nextRoute.roomId}/restricted`;
         }
-
-        return `/room/${nextRoute.roomId}`
-      })()
+        if (nextRoute.name === "not-found-room") {
+          return `/not-found-room`;
+        }
+        return `/room/${nextRoute.roomId}`;
+      })();
 
       if (options?.replace) {
-        window.history.replaceState({}, '', nextPath)
+        window.history.replaceState({}, "", nextPath);
       } else {
-        window.history.pushState({}, '', nextPath)
+        window.history.pushState({}, "", nextPath);
       }
-      window.dispatchEvent(new Event(ROUTE_SYNC_EVENT))
-      setRoute(nextRoute)
+      window.dispatchEvent(new Event(ROUTE_SYNC_EVENT));
+      setRoute(nextRoute);
     },
-    [],
-  )
+    []
+  );
 
-  return { route, navigate }
+  return { route, navigate };
 }

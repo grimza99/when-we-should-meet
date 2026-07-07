@@ -15,7 +15,6 @@ import { isFirebaseConfigured } from "../integrations/firebase/client";
 import {
   isKakaoConfigured,
   shareRankingWithKakao,
-  shareRoomWithKakao,
 } from "../integrations/kakao/client";
 import { trackShareEvent } from "../integrations/firebase/analytics";
 import {
@@ -627,69 +626,6 @@ export function useAppState() {
     );
   };
 
-  const copyInviteCode = async () => {
-    if (!currentRoom) {
-      return;
-    }
-
-    try {
-      await navigator.clipboard.writeText(currentRoom.inviteCode);
-      showToast("초대 코드가 복사되었어요.");
-    } catch {
-      showToast("복사에 실패했어요. 브라우저 권한을 확인해 주세요.");
-    }
-  };
-
-  const shareRoom = async () => {
-    if (!currentRoom) {
-      return;
-    }
-
-    const roomUrl = new URL(
-      `/room/${currentRoom.id}`,
-      window.location.origin
-    ).toString();
-    const shareData = {
-      title: "when should we meet?",
-      text: `초대 코드 ${currentRoom.inviteCode}로 방에 참여해 주세요.`,
-      url: roomUrl,
-    };
-
-    try {
-      if (isKakaoConfigured) {
-        void trackShareEvent({
-          eventName: "share_room_click",
-          method: "kakao",
-        });
-        await shareRoomWithKakao({
-          inviteCode: currentRoom.inviteCode,
-          roomId: currentRoom.id,
-        });
-        showToast("카카오톡 공유 창을 열었어요.");
-        return;
-      }
-
-      if (navigator.share) {
-        void trackShareEvent({
-          eventName: "share_room_click",
-          method: "web_share",
-        });
-        await navigator.share(shareData);
-        showToast("공유 시트를 열었어요.");
-        return;
-      }
-
-      void trackShareEvent({
-        eventName: "share_room_click",
-        method: "clipboard",
-      });
-      await navigator.clipboard.writeText(shareData.url);
-      showToast("공유 링크를 복사했어요.");
-    } catch {
-      showToast("공유를 완료하지 못했어요.");
-    }
-  };
-
   const shareRanking = async () => {
     if (!currentRoom || !currentRoomSummary) {
       return;
@@ -751,7 +687,6 @@ export function useAppState() {
   };
 
   return {
-    copyInviteCode,
     currentParticipant,
     currentRoom,
     currentRoomSummary,
@@ -764,7 +699,6 @@ export function useAppState() {
     leaveCurrentRoom,
     moveVisibleMonth,
     shareRanking,
-    shareRoom,
     changeNickname,
     removeParticipant,
     resetCurrentSelection,

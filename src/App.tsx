@@ -8,6 +8,7 @@ import { trackPageView } from "./integrations/firebase/analytics";
 import { ReportPage } from "./pages/ReportPage";
 import { ReportEntryButton } from "./components/ui/ReportEntryButton";
 import { ToastProvider } from "./components/shell/toast/ToastProvider";
+import NotFoundRoomPage from "./pages/NotFoundRoomPage";
 
 function AppContent() {
   const appState = useAppState();
@@ -24,6 +25,8 @@ function AppContent() {
         <ReportPage onBackToLanding={appState.goToLanding} />
       ) : appState.currentRoute.name === "room_access_restricted" ? (
         <RoomAccessRestrictedPage onBackToLanding={appState.goToLanding} />
+      ) : appState.currentRoute.name === "not-found-room" ? (
+        <NotFoundRoomPage />
       ) : (
         <RoomPage
           currentParticipant={appState.currentParticipant}
@@ -32,7 +35,6 @@ function AppContent() {
           roomSummary={appState.currentRoomSummary}
           onBackToLanding={appState.goToLanding}
           onChangeNickname={appState.changeNickname}
-          onCopyInviteCode={appState.copyInviteCode}
           onDeleteRoom={appState.deleteCurrentRoom}
           onLeaveRoom={appState.leaveCurrentRoom}
           onMoveMonth={appState.moveVisibleMonth}
@@ -40,7 +42,6 @@ function AppContent() {
           onShareRanking={appState.shareRanking}
           onResetSelection={appState.resetCurrentSelection}
           onSelectDate={appState.toggleDate}
-          onShareRoom={appState.shareRoom}
           isCurrentUserHost={appState.isCurrentUserHost}
         />
       )}

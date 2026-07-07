@@ -12,8 +12,12 @@ import { Button } from "../components/ui/Button";
 import { HomeBrandButton } from "../components/ui/HomeBrandButton";
 import { TextInput } from "../components/ui/TextInput";
 import { ARIA_LABELS } from "../lib/ariaLabels";
-import type { Participant, Room, RoomSummary } from "../types";
+import type { AppStorage, Participant, Room, RoomSummary } from "../types";
 import { ControlSection } from "../components/roomPage/ControlSection";
+import InviteSection from "../components/roomPage/InviteSection";
+import { useRouteState } from "../lib/router";
+import { useLocalStorageState } from "../hooks/useLocalStorageState";
+import { DEFAULT_STORAGE, STORAGE_KEY } from "../lib/constants";
 
 type RoomPageProps = {
   currentParticipant?: Participant;
@@ -23,7 +27,6 @@ type RoomPageProps = {
   roomSummary?: RoomSummary;
   onBackToLanding: () => void;
   onChangeNickname: (nickname: string) => Promise<boolean>;
-  onCopyInviteCode: () => void;
   onDeleteRoom: () => Promise<boolean>;
   onLeaveRoom: () => Promise<boolean>;
   onMoveMonth: (offset: number) => void;
@@ -31,7 +34,6 @@ type RoomPageProps = {
   onShareRanking: () => Promise<void> | void;
   onResetSelection: () => Promise<void> | void;
   onSelectDate: (isoDate: string) => void;
-  onShareRoom: () => void;
 };
 
 export function RoomPage({
@@ -40,7 +42,6 @@ export function RoomPage({
   isHydratingRoom = false,
   onBackToLanding,
   onChangeNickname,
-  onCopyInviteCode,
   onDeleteRoom,
   onLeaveRoom,
   onMoveMonth,
@@ -48,11 +49,15 @@ export function RoomPage({
   onShareRanking,
   onResetSelection,
   onSelectDate,
-  onShareRoom,
   room,
   roomSummary,
 }: RoomPageProps) {
   const headerRef = useRef<HTMLElement | null>(null);
+  const { navigate, route } = useRouteState();
+  const [storage] = useLocalStorageState<AppStorage>(
+    STORAGE_KEY,
+    DEFAULT_STORAGE
+  );
   const [nicknameInput, setNicknameInput] = useState(
     currentParticipant?.nickname ?? ""
   );
@@ -65,6 +70,8 @@ export function RoomPage({
     string | null
   >(null);
 
+  const currentRoom =
+    route.name === "room" ? storage.rooms[route.roomId] : undefined;
   useEffect(() => {
     setNicknameInput(currentParticipant?.nickname ?? "");
   }, [currentParticipant?.nickname]);
@@ -126,27 +133,8 @@ export function RoomPage({
   }
 
   if (!room || !roomSummary) {
-    return (
-      <main aria-label={ARIA_LABELS.room.page} className="page room-page">
-        <HomeBrandButton
-          ariaLabel={ARIA_LABELS.room.homeButton}
-          onClick={onBackToLanding}
-        />
-        <section className="hero-card">
-          <h1>존재하지 않는 방입니다</h1>
-          <p className="hero-copy">
-            초대 코드를 다시 확인하거나 새 방을 만들어 주세요.
-          </p>
-        </section>
-        <Button
-          ariaLabel={ARIA_LABELS.room.homeButton}
-          block
-          onClick={onBackToLanding}
-        >
-          랜딩으로 돌아가기
-        </Button>
-      </main>
-    );
+    navigate({ name: "not-found-room" });
+    return null;
   }
 
   const isRoomFull = room.participants.length >= room.maxParticipants;
@@ -247,22 +235,7 @@ export function RoomPage({
               {room.inviteCode}
             </h1>
           </div>
-          <div className="header-actions">
-            <Button
-              ariaLabel={ARIA_LABELS.room.copyInviteCodeButton}
-              onClick={onCopyInviteCode}
-              variant="chip"
-            >
-              입장 코드 복사
-            </Button>
-            <Button
-              ariaLabel={ARIA_LABELS.room.shareRoomButton}
-              onClick={onShareRoom}
-              variant="chip"
-            >
-              공유
-            </Button>
-          </div>
+          <InviteSection inviteCode={room.inviteCode} roomId={room.id} />
         </div>
       </header>
       <RoomDashboard
