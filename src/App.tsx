@@ -21,12 +21,7 @@ function App() {
       <div className="mobile-frame">
         <ToastProvider>
           {appState.currentRoute.name === "landing" ? (
-            <LandingPage
-              joinInviteCode={appState.joinInviteCode}
-              onCreateRoom={appState.createRoom}
-              onJoinInviteCodeChange={appState.setJoinInviteCode}
-              onJoinRoom={appState.joinRoomByInviteCode}
-            />
+            <LandingPage setVisibleMonth={appState.setVisibleMonth} />
           ) : appState.currentRoute.name === "report" ? (
             <ReportPage onBackToLanding={appState.goToLanding} />
           ) : appState.currentRoute.name === "room_access_restricted" ? (
