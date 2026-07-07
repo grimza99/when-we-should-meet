@@ -64,11 +64,9 @@ export function useAppState() {
     DEFAULT_STORAGE
   );
   const [joinInviteCode, setJoinInviteCode] = useState("");
-  const [toastMessage, setToastMessage] = useState("");
   const [visibleMonth, setVisibleMonth] = useState("");
   const [isHydratingRoom, setIsHydratingRoom] = useState(false);
   const roomChangeSubscriptionRef = useRef<RoomChangeSubscription | null>(null);
-  const toastTimerRef = useRef<number | null>(null);
 
   const currentRoom =
     route.name === "room" ? storage.rooms[route.roomId] : undefined;
@@ -109,16 +107,7 @@ export function useAppState() {
   }, [currentParticipant?.id, currentRoom, effectiveVisibleMonth]);
 
   function showToast(message: string) {
-    setToastMessage(message);
-
-    if (toastTimerRef.current) {
-      window.clearTimeout(toastTimerRef.current);
-    }
-
-    toastTimerRef.current = window.setTimeout(() => {
-      setToastMessage("");
-      toastTimerRef.current = null;
-    }, 3000);
+    console.log(message);
   }
 
   const goToRoomAccessRestricted = useCallback(
@@ -132,14 +121,6 @@ export function useAppState() {
     },
     [navigate, setStorage]
   );
-
-  useEffect(() => {
-    return () => {
-      if (toastTimerRef.current) {
-        window.clearTimeout(toastTimerRef.current);
-      }
-    };
-  }, []);
 
   useEffect(() => {
     if (!isFirebaseConfigured || !routeRoomId) {
@@ -1105,7 +1086,6 @@ export function useAppState() {
     removeParticipant,
     resetCurrentSelection,
     toggleDate,
-    toastMessage,
     toggleWeekday,
     weekdayOptions: WEEKDAY_LABELS.map((label, value) => ({
       label,
