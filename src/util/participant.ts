@@ -1,9 +1,5 @@
-import { useCallback } from "react";
 import type { AppStorage, Participant, Room } from "../types";
-import { useLocalStorageState } from "../hooks/useLocalStorageState";
-import { COLOR_PALETTE, DEFAULT_STORAGE, STORAGE_KEY } from "../lib/constants";
-import { useToast } from "../components/shell/toast/toast-context";
-import { useRouteState } from "../lib/router";
+import { COLOR_PALETTE } from "../lib/constants";
 
 /**
  * ----------------------------------------------------------------------------------------------------
@@ -91,27 +87,3 @@ export function updateMembership(
 
   return nextMemberships;
 }
-
-/**
- * ----------------------------------------------------------------------------------------------------
- * @description 접근 제한 방에서 membership을 정리,제한 안내 페이지로 이동
- */
-export const goToRoomAccessRestricted = (roomId: string) => {
-  const [_, setStorage] = useLocalStorageState<AppStorage>(
-    STORAGE_KEY,
-    DEFAULT_STORAGE
-  );
-  const { showToast } = useToast();
-  const { navigate } = useRouteState();
-
-  return useCallback(() => {
-    setStorage((previous) => ({
-      ...previous,
-      memberships: updateMembership(previous.memberships, roomId, undefined),
-    }));
-    showToast({
-      msg: "이 방은 다시 입장할 수 없도록 제한되었어요.",
-    });
-    navigate({ name: "room_access_restricted", roomId }, { replace: true });
-  }, [navigate, setStorage]);
-};

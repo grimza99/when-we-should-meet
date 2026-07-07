@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useCallback, useState } from "react";
 import { CreateRoomModal } from "../components/room/CreateRoomModal";
 import { Button } from "../components/ui/Button";
 import { TextInput } from "../components/ui/TextInput";
@@ -20,8 +20,8 @@ import {
 } from "../integrations/firebase/mapper";
 import { restoreParticipant } from "../integrations/firebase/services/participant-service";
 import { getOrCreateClientKey } from "../lib/session/clientIdentity";
-import { goToRoomAccessRestricted } from "../util/participant";
 import { mergeRoomSnapshot } from "../util/room";
+import { updateMembership } from "../util/participant";
 import { FeaturesSection } from "../components/landingPage/FeaturesSection";
 import { HeroSection } from "../components/landingPage/HeroSection";
 
@@ -39,6 +39,19 @@ export function LandingPage({ setVisibleMonth }: ILandingPageProps) {
   const [isJoiningRoom, setIsJoiningRoom] = useState(false);
 
   const { showToast } = useToast();
+  const goToRoomAccessRestricted = useCallback(
+    (roomId: string) => {
+      setStorage((previous) => ({
+        ...previous,
+        memberships: updateMembership(previous.memberships, roomId, undefined),
+      }));
+      showToast({
+        msg: "이 방은 다시 입장할 수 없도록 제한되었어요.",
+      });
+      navigate({ name: "room_access_restricted", roomId }, { replace: true });
+    },
+    [navigate, setStorage, showToast]
+  );
 
   const joinRoomByInviteCode = async () => {
     const inviteCode = joinInviteCode.trim().toUpperCase();

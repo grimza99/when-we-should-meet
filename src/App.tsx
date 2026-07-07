@@ -9,7 +9,7 @@ import { ReportPage } from "./pages/ReportPage";
 import { ReportEntryButton } from "./components/ui/ReportEntryButton";
 import { ToastProvider } from "./components/shell/toast/ToastProvider";
 
-function App() {
+function AppContent() {
   const appState = useAppState();
 
   useEffect(() => {
@@ -17,44 +17,52 @@ function App() {
   }, [appState.currentRoute]);
 
   return (
+    <>
+      {appState.currentRoute.name === "landing" ? (
+        <LandingPage setVisibleMonth={appState.setVisibleMonth} />
+      ) : appState.currentRoute.name === "report" ? (
+        <ReportPage onBackToLanding={appState.goToLanding} />
+      ) : appState.currentRoute.name === "room_access_restricted" ? (
+        <RoomAccessRestrictedPage onBackToLanding={appState.goToLanding} />
+      ) : (
+        <RoomPage
+          currentParticipant={appState.currentParticipant}
+          isHydratingRoom={appState.isHydratingRoom}
+          modeOptions={appState.modeOptions}
+          room={appState.currentRoom}
+          roomSummary={appState.currentRoomSummary}
+          selectedMode={appState.selectedMode}
+          weekdayOptions={appState.weekdayOptions}
+          onBackToLanding={appState.goToLanding}
+          onChangeMode={appState.changeSelectionMode}
+          onChangeNickname={appState.changeNickname}
+          onCopyInviteCode={appState.copyInviteCode}
+          onDeleteRoom={appState.deleteCurrentRoom}
+          onJoinRoom={appState.joinCurrentRoom}
+          onLeaveRoom={appState.leaveCurrentRoom}
+          onMoveMonth={appState.moveVisibleMonth}
+          onRemoveParticipant={appState.removeParticipant}
+          onShareRanking={appState.shareRanking}
+          onResetSelection={appState.resetCurrentSelection}
+          onSelectDate={appState.toggleDate}
+          onShareRoom={appState.shareRoom}
+          onToggleWeekday={appState.toggleWeekday}
+          isCurrentUserHost={appState.isCurrentUserHost}
+        />
+      )}
+      {appState.currentRoute.name !== "report" && (
+        <ReportEntryButton onClick={appState.goToReport} />
+      )}
+    </>
+  );
+}
+
+function App() {
+  return (
     <div className="shell">
       <div className="mobile-frame">
         <ToastProvider>
-          {appState.currentRoute.name === "landing" ? (
-            <LandingPage setVisibleMonth={appState.setVisibleMonth} />
-          ) : appState.currentRoute.name === "report" ? (
-            <ReportPage onBackToLanding={appState.goToLanding} />
-          ) : appState.currentRoute.name === "room_access_restricted" ? (
-            <RoomAccessRestrictedPage onBackToLanding={appState.goToLanding} />
-          ) : (
-            <RoomPage
-              currentParticipant={appState.currentParticipant}
-              isHydratingRoom={appState.isHydratingRoom}
-              modeOptions={appState.modeOptions}
-              room={appState.currentRoom}
-              roomSummary={appState.currentRoomSummary}
-              selectedMode={appState.selectedMode}
-              weekdayOptions={appState.weekdayOptions}
-              onBackToLanding={appState.goToLanding}
-              onChangeMode={appState.changeSelectionMode}
-              onChangeNickname={appState.changeNickname}
-              onCopyInviteCode={appState.copyInviteCode}
-              onDeleteRoom={appState.deleteCurrentRoom}
-              onJoinRoom={appState.joinCurrentRoom}
-              onLeaveRoom={appState.leaveCurrentRoom}
-              onMoveMonth={appState.moveVisibleMonth}
-              onRemoveParticipant={appState.removeParticipant}
-              onShareRanking={appState.shareRanking}
-              onResetSelection={appState.resetCurrentSelection}
-              onSelectDate={appState.toggleDate}
-              onShareRoom={appState.shareRoom}
-              onToggleWeekday={appState.toggleWeekday}
-              isCurrentUserHost={appState.isCurrentUserHost}
-            />
-          )}
-          {appState.currentRoute.name !== "report" && (
-            <ReportEntryButton onClick={appState.goToReport} />
-          )}
+          <AppContent />
         </ToastProvider>
       </div>
     </div>

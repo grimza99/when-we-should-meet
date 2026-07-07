@@ -1,5 +1,6 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useLocalStorageState } from "../hooks/useLocalStorageState";
+import { useToast } from "../components/shell/toast/toast-context";
 import {
   addMonths,
   buildCalendarDays,
@@ -52,7 +53,6 @@ import {
 } from "../integrations/firebase/services/participant-service";
 import {
   createParticipant,
-  goToRoomAccessRestricted,
   updateMembership,
   upsertParticipant,
 } from "../util/participant";
@@ -60,6 +60,7 @@ import { mergeRoomSnapshot } from "../util/room";
 
 export function useAppState() {
   const { navigate, route } = useRouteState();
+  const { showToast: emitToast } = useToast();
   const [storage, setStorage] = useLocalStorageState<AppStorage>(
     STORAGE_KEY,
     DEFAULT_STORAGE
@@ -106,9 +107,26 @@ export function useAppState() {
     };
   }, [currentParticipant?.id, currentRoom, effectiveVisibleMonth]);
 
-  function showToast(message: string) {
-    console.log(message);
-  }
+  const showToast = useCallback(
+    (message: string) => {
+      emitToast({ msg: message });
+    },
+    [emitToast]
+  );
+
+  const goToRoomAccessRestricted = useCallback(
+    (roomId: string) => {
+      setStorage((previous) => ({
+        ...previous,
+        memberships: updateMembership(previous.memberships, roomId, undefined),
+      }));
+      emitToast({
+        msg: "이 방은 다시 입장할 수 없도록 제한되었어요.",
+      });
+      navigate({ name: "room_access_restricted", roomId }, { replace: true });
+    },
+    [emitToast, navigate, setStorage]
+  );
 
   useEffect(() => {
     if (!isFirebaseConfigured || !routeRoomId) {
@@ -200,6 +218,7 @@ export function useAppState() {
     needsRoomSnapshot,
     routeRoomId,
     setStorage,
+    showToast,
   ]);
 
   useEffect(() => {
@@ -323,7 +342,13 @@ export function useAppState() {
 
       void unsubscribeFromRoomChanges(subscription);
     };
-  }, [currentParticipantId, goToRoomAccessRestricted, routeRoomId, setStorage]);
+  }, [
+    currentParticipantId,
+    goToRoomAccessRestricted,
+    routeRoomId,
+    setStorage,
+    showToast,
+  ]);
 
   const joinCurrentRoom = async (nickname: string) => {
     if (!currentRoom || currentParticipant) {
