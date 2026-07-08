@@ -121,16 +121,17 @@ export function useAppState() {
     let isCancelled = false;
     setIsHydratingRoom(true);
 
-    const hydrateRoom = async () => {
-      try {
-        const roomSnapshot = await getRoomSnapshot(routeRoomId);
+        const hydrateRoom = async () => {
+          try {
+            const roomSnapshot = await getRoomSnapshot(routeRoomId);
 
-        if (!roomSnapshot) {
-          if (!isCancelled) {
-            showToast("존재하지 않는 방이거나 이미 접근할 수 없는 방입니다.");
-          }
-          return;
-        }
+            if (!roomSnapshot) {
+              if (!isCancelled) {
+                showToast("존재하지 않는 방이거나 이미 접근할 수 없는 방입니다.");
+                navigate({ name: "not-found-room" }, { replace: true });
+              }
+              return;
+            }
 
         const room = mapRoomSnapshotToDraftRoom(roomSnapshot);
         let restoredParticipant = null;
@@ -194,6 +195,7 @@ export function useAppState() {
     goToRoomAccessRestricted,
     hasCurrentParticipant,
     hasCurrentRoom,
+    navigate,
     needsRoomSnapshot,
     routeRoomId,
     setStorage,
@@ -238,6 +240,7 @@ export function useAppState() {
                 };
               });
               showToast("방이 삭제되었거나 더 이상 접근할 수 없어요.");
+              navigate({ name: "not-found-room" }, { replace: true });
               return;
             }
 
@@ -266,14 +269,6 @@ export function useAppState() {
 
             setStorage((previous) => ({
               ...previous,
-              memberships:
-                previous.memberships[room.id] &&
-                !room.participants.some(
-                  (participant) =>
-                    participant.id === previous.memberships[room.id]
-                )
-                  ? updateMembership(previous.memberships, room.id, undefined)
-                  : previous.memberships,
               rooms: {
                 ...previous.rooms,
                 [room.id]: mergeRoomSnapshot(
@@ -324,6 +319,7 @@ export function useAppState() {
   }, [
     currentParticipantId,
     goToRoomAccessRestricted,
+    navigate,
     routeRoomId,
     setStorage,
     showToast,

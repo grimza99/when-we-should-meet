@@ -11,11 +11,13 @@ import { RoomDashboard } from "../components/room/RoomDashboard";
 import { Button } from "../components/ui/Button";
 import { HomeBrandButton } from "../components/ui/HomeBrandButton";
 import { ARIA_LABELS } from "../lib/ariaLabels";
-import type { Participant, Room, RoomSummary } from "../types";
+import type { AppStorage, Participant, Room, RoomSummary } from "../types";
 import { ControlSection } from "../components/roomPage/ControlSection";
 import InviteSection from "../components/roomPage/InviteSection";
 import { useRouteState } from "../lib/router";
 import ControlGroupSection from "../components/roomPage/ControlGroupSection";
+import { useLocalStorageState } from "../hooks/useLocalStorageState";
+import { DEFAULT_STORAGE, STORAGE_KEY } from "../lib/constants";
 
 type RoomPageProps = {
   currentParticipant?: Participant;
@@ -45,17 +47,36 @@ export function RoomPage({
   roomSummary,
 }: RoomPageProps) {
   const headerRef = useRef<HTMLElement | null>(null);
-  const { navigate } = useRouteState();
+  const { route } = useRouteState();
+  const [storage] = useLocalStorageState<AppStorage>(
+    STORAGE_KEY,
+    DEFAULT_STORAGE
+  );
 
   const [isNicknameModalOpen, setIsNicknameModalOpen] = useState(true);
   const [dashboardStickyTop, setDashboardStickyTop] = useState(80);
   const [removingParticipantId, setRemovingParticipantId] = useState<
     string | null
   >(null);
+  const localRoom =
+    route.name === "room" ? storage.rooms[route.roomId] : undefined;
+  const localParticipantId =
+    route.name === "room" ? storage.memberships[route.roomId] : undefined;
+  const effectiveRoom = localRoom ?? room;
+  const effectiveCurrentParticipant =
+    localRoom?.participants.find(
+      (participant) => participant.id === localParticipantId
+    ) ?? currentParticipant;
 
   useEffect(() => {
     setIsNicknameModalOpen(true);
-  }, [room?.id]);
+  }, [effectiveRoom?.id]);
+
+  useEffect(() => {
+    if (effectiveCurrentParticipant) {
+      setIsNicknameModalOpen(false);
+    }
+  }, [effectiveCurrentParticipant]);
 
   useEffect(() => {
     const headerElement = headerRef.current;
@@ -109,18 +130,21 @@ export function RoomPage({
     );
   }
 
-  if (!room || !roomSummary) {
-    navigate({ name: "not-found-room" });
+  if (!effectiveRoom || !roomSummary) {
     return null;
   }
 
-  const isRoomFull = room.participants.length >= room.maxParticipants;
+  const isRoomFull =
+    effectiveRoom.participants.length >= effectiveRoom.maxParticipants;
   const shouldShowNicknameModal =
-    !currentParticipant && !isRoomFull && isNicknameModalOpen;
-  const roomRangeLabel = formatRoomRange(room.startDate, room.endDate);
-  const hasSelectionToReset = currentParticipant
-    ? currentParticipant.weekdayRules.length > 0 ||
-      Object.keys(currentParticipant.overrides).length > 0
+    !effectiveCurrentParticipant && !isRoomFull && isNicknameModalOpen;
+  const roomRangeLabel = formatRoomRange(
+    effectiveRoom.startDate,
+    effectiveRoom.endDate
+  );
+  const hasSelectionToReset = effectiveCurrentParticipant
+    ? effectiveCurrentParticipant.weekdayRules.length > 0 ||
+      Object.keys(effectiveCurrentParticipant.overrides).length > 0
     : false;
 
   const submitRemoveParticipant = async (participantId: string) => {
@@ -158,10 +182,13 @@ export function RoomPage({
               aria-label={ARIA_LABELS.room.inviteCodeHeading}
               className="room-title"
             >
-              {room.inviteCode}
+              {effectiveRoom.inviteCode}
             </h1>
           </div>
-          <InviteSection inviteCode={room.inviteCode} roomId={room.id} />
+          <InviteSection
+            inviteCode={effectiveRoom.inviteCode}
+            roomId={effectiveRoom.id}
+          />
         </div>
       </header>
       <RoomDashboard
@@ -172,15 +199,15 @@ export function RoomPage({
         onShareRanking={() => void onShareRanking()}
         removingParticipantId={removingParticipantId}
         rankings={roomSummary.rankings}
-        room={room}
+        room={effectiveRoom}
         stickyTopOffset={dashboardStickyTop}
       />
 
-      {currentParticipant && (
+      {effectiveCurrentParticipant && (
         <ControlGroupSection
-          currentNickname={currentParticipant.nickname}
-          currentParticipant={currentParticipant}
-          roomId={room.id}
+          currentNickname={effectiveCurrentParticipant.nickname}
+          currentParticipant={effectiveCurrentParticipant}
+          roomId={effectiveRoom.id}
         />
       )}
       <ControlSection />
@@ -227,7 +254,7 @@ export function RoomPage({
         />
       </section>
 
-      {!currentParticipant && isRoomFull && (
+      {!effectiveCurrentParticipant && isRoomFull && (
         <section className="panel stack-gap">
           <p className="eyebrow">room is full</p>
           <h2>이 방은 정원이 모두 찼어요</h2>
@@ -247,7 +274,11 @@ export function RoomPage({
       )}
 
       {shouldShowNicknameModal && (
-        <NicknameModal onClose={() => setIsNicknameModalOpen(false)} />
+        <NicknameModal
+          currentParticipant={effectiveCurrentParticipant}
+          onClose={() => setIsNicknameModalOpen(false)}
+          room={effectiveRoom}
+        />
       )}
     </main>
   );
