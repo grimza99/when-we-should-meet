@@ -489,8 +489,6 @@ export function useAppState() {
     currentRoom,
     currentRoomSummary,
     currentRoute: route,
-    goToLanding: () => navigate({ name: "landing" }),
-    goToReport: () => navigate({ name: "report" }),
     isHydratingRoom,
     isCurrentUserHost,
     moveVisibleMonth,

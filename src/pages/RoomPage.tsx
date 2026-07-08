@@ -26,7 +26,6 @@ type RoomPageProps = {
   isHydratingRoom?: boolean;
   room?: Room;
   roomSummary?: RoomSummary;
-  onBackToLanding: () => void;
   onMoveMonth: (offset: number) => void;
   onRemoveParticipant: (participantId: string) => Promise<boolean>;
   onResetSelection: () => Promise<void> | void;
@@ -37,7 +36,6 @@ export function RoomPage({
   currentParticipant,
   isCurrentUserHost = false,
   isHydratingRoom = false,
-  onBackToLanding,
   onMoveMonth,
   onRemoveParticipant,
   onResetSelection,
@@ -46,7 +44,7 @@ export function RoomPage({
   roomSummary,
 }: RoomPageProps) {
   const headerRef = useRef<HTMLElement | null>(null);
-  const { route } = useRouteState();
+  const { navigate, route } = useRouteState();
   const [storage] = useLocalStorageState<AppStorage>(
     STORAGE_KEY,
     DEFAULT_STORAGE
@@ -117,7 +115,7 @@ export function RoomPage({
       <main aria-label={ARIA_LABELS.room.page} className="page room-page">
         <HomeBrandButton
           ariaLabel={ARIA_LABELS.room.homeButton}
-          onClick={onBackToLanding}
+          onClick={() => navigate({ name: "landing" })}
         />
         <section className="hero-card">
           <h1>방 정보를 불러오는 중입니다</h1>
@@ -175,7 +173,7 @@ export function RoomPage({
           <div className="brand-button-and-invite-code">
             <HomeBrandButton
               ariaLabel={ARIA_LABELS.room.homeButton}
-              onClick={onBackToLanding}
+              onClick={() => navigate({ name: "landing" })}
             />
             <h1
               aria-label={ARIA_LABELS.room.inviteCodeHeading}
@@ -264,7 +262,7 @@ export function RoomPage({
           <Button
             ariaLabel={ARIA_LABELS.room.homeButton}
             block
-            onClick={onBackToLanding}
+            onClick={() => navigate({ name: "landing" })}
             variant="secondary"
           >
             랜딩으로 돌아가기

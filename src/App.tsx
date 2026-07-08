@@ -22,9 +22,9 @@ function AppContent() {
       {appState.currentRoute.name === "landing" ? (
         <LandingPage setVisibleMonth={appState.setVisibleMonth} />
       ) : appState.currentRoute.name === "report" ? (
-        <ReportPage onBackToLanding={appState.goToLanding} />
+        <ReportPage />
       ) : appState.currentRoute.name === "room_access_restricted" ? (
-        <RoomAccessRestrictedPage onBackToLanding={appState.goToLanding} />
+        <RoomAccessRestrictedPage />
       ) : appState.currentRoute.name === "not-found-room" ? (
         <NotFoundRoomPage />
       ) : (
@@ -33,7 +33,6 @@ function AppContent() {
           isHydratingRoom={appState.isHydratingRoom}
           room={appState.currentRoom}
           roomSummary={appState.currentRoomSummary}
-          onBackToLanding={appState.goToLanding}
           onMoveMonth={appState.moveVisibleMonth}
           onRemoveParticipant={appState.removeParticipant}
           onResetSelection={appState.resetCurrentSelection}
@@ -41,9 +40,7 @@ function AppContent() {
           isCurrentUserHost={appState.isCurrentUserHost}
         />
       )}
-      {appState.currentRoute.name !== "report" && (
-        <ReportEntryButton onClick={appState.goToReport} />
-      )}
+      {appState.currentRoute.name !== "report" && <ReportEntryButton />}
     </>
   );
 }
