@@ -8,7 +8,6 @@ import {
   clampVisibleMonth,
   formatMonthLabel,
 } from "../lib/date";
-import { DEFAULT_STORAGE, STORAGE_KEY } from "../lib/constants";
 import { useRouteState } from "../lib/router";
 import { getOrCreateClientKey } from "../lib/session/clientIdentity";
 import { isFirebaseConfigured } from "../integrations/firebase/client";
@@ -18,7 +17,7 @@ import {
   subscribeToRoomChanges,
   unsubscribeFromRoomChanges,
 } from "../integrations/firebase/services/room-service";
-import type { AppStorage, RoomChangeSubscription } from "../types";
+import type { RoomChangeSubscription } from "../types";
 import { mapRoomSnapshotToDraftRoom } from "../integrations/firebase/mapper";
 import {
   restoreParticipant,
@@ -34,10 +33,7 @@ export function useAppState() {
   const { navigate, route } = useRouteState();
   const { showToast: emitToast } = useToast();
   const updateCurrentParticipant = useCurrentParticipantUpdater();
-  const [storage, setStorage] = useLocalStorageState<AppStorage>(
-    STORAGE_KEY,
-    DEFAULT_STORAGE
-  );
+  const [storage, setStorage] = useLocalStorageState();
   const [visibleMonth, setVisibleMonth] = useState("");
   const [isHydratingRoom, setIsHydratingRoom] = useState(false);
   const roomChangeSubscriptionRef = useRef<RoomChangeSubscription | null>(null);

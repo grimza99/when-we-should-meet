@@ -1,114 +1,122 @@
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from "react";
+import {
+  DEFAULT_STORAGE,
+  LOCAL_STORAGE_SYNC_EVENT,
+  STORAGE_KEY,
+} from "../lib/constants";
+import type { AppStorage } from "../types";
 
-const LOCAL_STORAGE_SYNC_EVENT = 'when-should-we-meet:storage-sync'
-
-export function useLocalStorageState<T>(key: string, initialValue: T) {
-  const [state, setState] = useState<T>(() => {
-    const stored = window.localStorage.getItem(key)
+export function useLocalStorageState() {
+  const [state, setState] = useState<AppStorage>(() => {
+    const stored = window.localStorage.getItem(STORAGE_KEY);
 
     if (!stored) {
-      return initialValue
+      return DEFAULT_STORAGE;
     }
 
     try {
-      return JSON.parse(stored) as T
+      return JSON.parse(stored) as AppStorage;
     } catch {
-      return initialValue
+      return DEFAULT_STORAGE;
     }
-  })
-  const stateRef = useRef(state)
-  const lastSerializedRef = useRef<string | null>(JSON.stringify(state))
+  });
+  const stateRef = useRef(state);
+  const lastSerializedRef = useRef<string | null>(JSON.stringify(state));
 
   const persistState = useCallback(
-    (nextState: T) => {
-      const serializedState = JSON.stringify(nextState)
+    (nextState: AppStorage) => {
+      const serializedState = JSON.stringify(nextState);
 
       if (lastSerializedRef.current === serializedState) {
-        return
+        return;
       }
 
-      lastSerializedRef.current = serializedState
-      window.localStorage.setItem(key, serializedState)
+      lastSerializedRef.current = serializedState;
+      window.localStorage.setItem(STORAGE_KEY, serializedState);
       window.dispatchEvent(
         new CustomEvent(LOCAL_STORAGE_SYNC_EVENT, {
           detail: {
-            key,
+            STORAGE_KEY,
             value: serializedState,
           },
-        }),
-      )
+        })
+      );
     },
-    [key],
-  )
+    [STORAGE_KEY]
+  );
 
   useEffect(() => {
     const syncState = (serializedState: string | null) => {
       if (serializedState === lastSerializedRef.current) {
-        return
+        return;
       }
 
       if (!serializedState) {
-        stateRef.current = initialValue
-        lastSerializedRef.current = JSON.stringify(initialValue)
-        setState(initialValue)
-        return
+        stateRef.current = DEFAULT_STORAGE;
+        lastSerializedRef.current = JSON.stringify(DEFAULT_STORAGE);
+        setState(DEFAULT_STORAGE);
+        return;
       }
 
       try {
-        const nextState = JSON.parse(serializedState) as T
-        stateRef.current = nextState
-        lastSerializedRef.current = serializedState
-        setState(nextState)
+        const nextState = JSON.parse(serializedState) as AppStorage;
+        stateRef.current = nextState;
+        lastSerializedRef.current = serializedState;
+        setState(nextState);
       } catch {
-        stateRef.current = initialValue
-        lastSerializedRef.current = JSON.stringify(initialValue)
-        setState(initialValue)
+        stateRef.current = DEFAULT_STORAGE;
+        lastSerializedRef.current = JSON.stringify(DEFAULT_STORAGE);
+        setState(DEFAULT_STORAGE);
       }
-    }
+    };
 
     const handleStorage = (event: StorageEvent) => {
-      if (event.key !== key) {
-        return
+      if (event.key !== STORAGE_KEY) {
+        return;
       }
 
-      syncState(event.newValue)
-    }
+      syncState(event.newValue);
+    };
 
     const handleCustomStorageEvent = (event: Event) => {
-      const customEvent = event as CustomEvent<{ key: string; value: string | null }>
+      const customEvent = event as CustomEvent<{
+        key: string;
+        value: string | null;
+      }>;
 
-      if (customEvent.detail?.key !== key) {
-        return
+      if (customEvent.detail?.key !== STORAGE_KEY) {
+        return;
       }
 
-      syncState(customEvent.detail.value)
-    }
+      syncState(customEvent.detail.value);
+    };
 
-    window.addEventListener('storage', handleStorage)
-    window.addEventListener(LOCAL_STORAGE_SYNC_EVENT, handleCustomStorageEvent)
+    window.addEventListener("storage", handleStorage);
+    window.addEventListener(LOCAL_STORAGE_SYNC_EVENT, handleCustomStorageEvent);
 
     return () => {
-      window.removeEventListener('storage', handleStorage)
-      window.removeEventListener(LOCAL_STORAGE_SYNC_EVENT, handleCustomStorageEvent)
-    }
-  }, [initialValue, key])
+      window.removeEventListener("storage", handleStorage);
+      window.removeEventListener(
+        LOCAL_STORAGE_SYNC_EVENT,
+        handleCustomStorageEvent
+      );
+    };
+  }, [DEFAULT_STORAGE, STORAGE_KEY]);
 
   const setAndPersistState = useCallback(
-    (
-      value: T | ((previousState: T) => T),
-    ) => {
-      const previousState = stateRef.current
+    (value: AppStorage | ((previousState: AppStorage) => AppStorage)) => {
+      const previousState = stateRef.current;
       const nextState =
-        typeof value === 'function'
-          ? (value as (previousState: T) => T)(previousState)
-          : value
+        typeof value === "function"
+          ? (value as (previousState: AppStorage) => AppStorage)(previousState)
+          : value;
 
-      stateRef.current = nextState
-      persistState(nextState)
-      setState(nextState)
+      stateRef.current = nextState;
+      persistState(nextState);
+      setState(nextState);
     },
-    [persistState],
-  )
+    [persistState]
+  );
 
-  return [state, setAndPersistState] as const
+  return [state, setAndPersistState] as const;
 }

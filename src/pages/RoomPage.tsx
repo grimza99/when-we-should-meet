@@ -11,13 +11,12 @@ import { RoomDashboard } from "../components/room/RoomDashboard";
 import { Button } from "../components/ui/Button";
 import { HomeBrandButton } from "../components/ui/HomeBrandButton";
 import { ARIA_LABELS } from "../lib/ariaLabels";
-import type { AppStorage, Participant, Room, RoomSummary } from "../types";
+import type { Participant, Room, RoomSummary } from "../types";
 import { ControlSection } from "../components/roomPage/ControlSection";
 import InviteSection from "../components/roomPage/InviteSection";
 import { useRouteState } from "../lib/router";
 import ControlGroupSection from "../components/roomPage/ControlGroupSection";
 import { useLocalStorageState } from "../hooks/useLocalStorageState";
-import { DEFAULT_STORAGE, STORAGE_KEY } from "../lib/constants";
 import { formatRoomRange } from "../util";
 
 type RoomPageProps = {
@@ -45,10 +44,7 @@ export function RoomPage({
 }: RoomPageProps) {
   const headerRef = useRef<HTMLElement | null>(null);
   const { navigate, route } = useRouteState();
-  const [storage] = useLocalStorageState<AppStorage>(
-    STORAGE_KEY,
-    DEFAULT_STORAGE
-  );
+  const [storage] = useLocalStorageState();
 
   const [isNicknameModalOpen, setIsNicknameModalOpen] = useState(true);
   const [dashboardStickyTop, setDashboardStickyTop] = useState(80);
