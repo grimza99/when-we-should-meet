@@ -18,6 +18,7 @@ import { useRouteState } from "../lib/router";
 import ControlGroupSection from "../components/roomPage/ControlGroupSection";
 import { useLocalStorageState } from "../hooks/useLocalStorageState";
 import { formatRoomRange } from "../util";
+import RoomFullState from "../components/roomPage/RoomFullState";
 
 type RoomPageProps = {
   currentParticipant?: Participant;
@@ -247,24 +248,7 @@ export function RoomPage({
         />
       </section>
 
-      {!effectiveCurrentParticipant && isRoomFull && (
-        <section className="panel stack-gap">
-          <p className="eyebrow">room is full</p>
-          <h2>이 방은 정원이 모두 찼어요</h2>
-          <p className="hero-copy">
-            방 만든 사람에게 정원 추가를 요청하거나, 새 방을 만들어 일정을 다시
-            조율해 주세요.
-          </p>
-          <Button
-            ariaLabel={ARIA_LABELS.room.homeButton}
-            block
-            onClick={() => navigate({ name: "landing" })}
-            variant="secondary"
-          >
-            랜딩으로 돌아가기
-          </Button>
-        </section>
-      )}
+      {!effectiveCurrentParticipant && isRoomFull && <RoomFullState />}
 
       {shouldShowNicknameModal && (
         <NicknameModal
