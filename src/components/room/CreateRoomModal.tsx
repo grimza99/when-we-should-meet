@@ -5,13 +5,12 @@ import { Button } from "../ui/Button";
 import { Modal } from "../ui/Modal";
 import { SegmentedButtonGroup } from "../ui/SegmentedButtonGroup";
 import { TextInput } from "../ui/TextInput";
-import type { AppStorage, CreateRoomPayload, DateRangeType } from "../../types";
+import type { CreateRoomPayload, DateRangeType } from "../../types";
 import { isFirebaseConfigured } from "../../integrations/firebase/client";
 import { getOrCreateClientKey } from "../../lib/session/clientIdentity";
 import { createRoomRecord } from "../../util/room";
 import { useRouteState } from "../../lib/router";
 import { useLocalStorageState } from "../../hooks/useLocalStorageState";
-import { DEFAULT_STORAGE, STORAGE_KEY } from "../../lib/constants";
 import { mapRoomRowToDraftRoom } from "../../integrations/firebase/mapper";
 import { createRoom as createFirebaseRoom } from "../../integrations/firebase/services/room-service";
 import { useToast } from "../shell/toast/toast-context";
@@ -32,10 +31,7 @@ export function CreateRoomModal({
   const [startDate, setStartDate] = useState(today);
   const [endDate, setEndDate] = useState(today);
   const { navigate } = useRouteState();
-  const [, setStorage] = useLocalStorageState<AppStorage>(
-    STORAGE_KEY,
-    DEFAULT_STORAGE
-  );
+  const [, setStorage] = useLocalStorageState();
   const { showToast } = useToast();
   const participantCount = Number(maxParticipants);
 

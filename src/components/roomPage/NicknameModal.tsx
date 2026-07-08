@@ -8,8 +8,7 @@ import { isFirebaseConfigured } from "../../integrations/firebase/client";
 import { createParticipant, upsertParticipant } from "../../util/participant";
 import { getOrCreateClientKey } from "../../lib/session/clientIdentity";
 import { useLocalStorageState } from "../../hooks/useLocalStorageState";
-import type { AppStorage, Participant, Room } from "../../types";
-import { DEFAULT_STORAGE, STORAGE_KEY } from "../../lib/constants";
+import type { Participant, Room } from "../../types";
 import { mapParticipantRow } from "../../integrations/firebase/mapper";
 import { joinRoom as joinFirebaseRoom } from "../../integrations/firebase/services/room-service";
 
@@ -26,10 +25,7 @@ export function NicknameModal({
 }: NicknameModalProps) {
   const [nickname, setNickname] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [, setStorage] = useLocalStorageState<AppStorage>(
-    STORAGE_KEY,
-    DEFAULT_STORAGE
-  );
+  const [, setStorage] = useLocalStorageState();
   const { showToast } = useToast();
   const joinCurrentRoom = async (nickname: string) => {
     if (currentParticipant) {
