@@ -8,54 +8,47 @@ import { isFirebaseConfigured } from "../../integrations/firebase/client";
 import { createParticipant, upsertParticipant } from "../../util/participant";
 import { getOrCreateClientKey } from "../../lib/session/clientIdentity";
 import { useLocalStorageState } from "../../hooks/useLocalStorageState";
-import type { AppStorage } from "../../types";
+import type { AppStorage, Participant, Room } from "../../types";
 import { DEFAULT_STORAGE, STORAGE_KEY } from "../../lib/constants";
 import { mapParticipantRow } from "../../integrations/firebase/mapper";
-import { useRouteState } from "../../lib/router";
 import { joinRoom as joinFirebaseRoom } from "../../integrations/firebase/services/room-service";
 
 type NicknameModalProps = {
+  currentParticipant?: Participant;
   onClose: () => void;
+  room: Room;
 };
 
-export function NicknameModal({ onClose }: NicknameModalProps) {
+export function NicknameModal({
+  currentParticipant,
+  onClose,
+  room,
+}: NicknameModalProps) {
   const [nickname, setNickname] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [storage, setStorage] = useLocalStorageState<AppStorage>(
+  const [, setStorage] = useLocalStorageState<AppStorage>(
     STORAGE_KEY,
     DEFAULT_STORAGE
   );
-  const { route } = useRouteState();
   const { showToast } = useToast();
-
-  const currentRoom =
-    route.name === "room" ? storage.rooms[route.roomId] : undefined;
-  const currentParticipantId =
-    route.name === "room" ? storage.memberships[route.roomId] : undefined;
-  const currentParticipant = currentRoom?.participants.find(
-    (participant) => participant.id === currentParticipantId
-  );
   const joinCurrentRoom = async (nickname: string) => {
-    if (!currentRoom || currentParticipant) {
+    if (currentParticipant) {
       return false;
     }
 
-    if (currentRoom.participants.length >= currentRoom.maxParticipants) {
+    if (room.participants.length >= room.maxParticipants) {
       showToast({ msg: "이 방은 정원이 모두 찼어요." });
       return false;
     }
 
     if (!isFirebaseConfigured) {
-      const nextParticipant = createParticipant(
-        currentRoom,
-        getOrCreateClientKey()
-      );
+      const nextParticipant = createParticipant(room, getOrCreateClientKey());
 
       nextParticipant.nickname = nickname;
       showToast({ msg: `${nickname} 님으로 방에 참여했어요.` });
 
       setStorage((previous) => {
-        const previousRoom = previous.rooms[currentRoom.id];
+        const previousRoom = previous.rooms[room.id];
 
         if (!previousRoom) {
           return previous;
@@ -65,14 +58,14 @@ export function NicknameModal({ onClose }: NicknameModalProps) {
           ...previous,
           rooms: {
             ...previous.rooms,
-            [currentRoom.id]: {
+            [room.id]: {
               ...previousRoom,
               participants: [...previousRoom.participants, nextParticipant],
             },
           },
           memberships: {
             ...previous.memberships,
-            [currentRoom.id]: nextParticipant.id,
+            [room.id]: nextParticipant.id,
           },
         };
       });
@@ -83,14 +76,14 @@ export function NicknameModal({ onClose }: NicknameModalProps) {
       const participantRow = await joinFirebaseRoom({
         clientKey: getOrCreateClientKey(),
         nickname,
-        roomId: currentRoom.id,
+        roomId: room.id,
       });
 
       const nextParticipant = mapParticipantRow(participantRow);
 
       showToast({ msg: `${nickname} 님으로 방에 참여했어요.` });
       setStorage((previous) => {
-        const previousRoom = previous.rooms[currentRoom.id];
+        const previousRoom = previous.rooms[room.id];
 
         if (!previousRoom) {
           return previous;
@@ -100,7 +93,7 @@ export function NicknameModal({ onClose }: NicknameModalProps) {
           ...previous,
           rooms: {
             ...previous.rooms,
-            [currentRoom.id]: {
+            [room.id]: {
               ...previousRoom,
               participants: upsertParticipant(
                 previousRoom.participants,
@@ -110,7 +103,7 @@ export function NicknameModal({ onClose }: NicknameModalProps) {
           },
           memberships: {
             ...previous.memberships,
-            [currentRoom.id]: nextParticipant.id,
+            [room.id]: nextParticipant.id,
           },
         };
       });

@@ -15,14 +15,11 @@ import { isFirebaseConfigured } from "../integrations/firebase/client";
 import {
   isKakaoConfigured,
   shareRankingWithKakao,
-  shareRoomWithKakao,
 } from "../integrations/kakao/client";
 import { trackShareEvent } from "../integrations/firebase/analytics";
 import {
-  deleteRoom as deleteFirebaseRoom,
   getRoomSnapshot,
   isRoomAccessRestricted,
-  leaveRoom as leaveFirebaseRoom,
   subscribeToRoomChanges,
   unsubscribeFromRoomChanges,
 } from "../integrations/firebase/services/room-service";
@@ -32,7 +29,6 @@ import {
   restoreParticipant,
   resetParticipantSelections as resetFirebaseParticipantSelections,
   removeParticipant as removeFirebaseParticipant,
-  updateParticipantNickname,
   setParticipantDateOverride,
 } from "../integrations/firebase/services/participant-service";
 import { updateMembership } from "../util/participant";
@@ -112,6 +108,14 @@ export function useAppState() {
   );
 
   useEffect(() => {
+    if (route.name !== "room" || isFirebaseConfigured || hasCurrentRoom) {
+      return;
+    }
+
+    navigate({ name: "not-found-room" }, { replace: true });
+  }, [hasCurrentRoom, navigate, route]);
+
+  useEffect(() => {
     if (!isFirebaseConfigured || !routeRoomId) {
       setIsHydratingRoom(false);
       return;
@@ -132,6 +136,7 @@ export function useAppState() {
         if (!roomSnapshot) {
           if (!isCancelled) {
             showToast("존재하지 않는 방이거나 이미 접근할 수 없는 방입니다.");
+            navigate({ name: "not-found-room" }, { replace: true });
           }
           return;
         }
@@ -198,6 +203,7 @@ export function useAppState() {
     goToRoomAccessRestricted,
     hasCurrentParticipant,
     hasCurrentRoom,
+    navigate,
     needsRoomSnapshot,
     routeRoomId,
     setStorage,
@@ -242,6 +248,7 @@ export function useAppState() {
                 };
               });
               showToast("방이 삭제되었거나 더 이상 접근할 수 없어요.");
+              navigate({ name: "not-found-room" }, { replace: true });
               return;
             }
 
@@ -270,14 +277,6 @@ export function useAppState() {
 
             setStorage((previous) => ({
               ...previous,
-              memberships:
-                previous.memberships[room.id] &&
-                !room.participants.some(
-                  (participant) =>
-                    participant.id === previous.memberships[room.id]
-                )
-                  ? updateMembership(previous.memberships, room.id, undefined)
-                  : previous.memberships,
               rooms: {
                 ...previous.rooms,
                 [room.id]: mergeRoomSnapshot(
@@ -328,6 +327,7 @@ export function useAppState() {
   }, [
     currentParticipantId,
     goToRoomAccessRestricted,
+    navigate,
     routeRoomId,
     setStorage,
     showToast,
@@ -424,48 +424,6 @@ export function useAppState() {
     }
   };
 
-  const changeNickname = async (nickname: string) => {
-    if (!currentRoom || !currentParticipant) {
-      return false;
-    }
-
-    const trimmedNickname = nickname.trim();
-
-    if (!trimmedNickname) {
-      showToast("닉네임을 입력해 주세요.");
-      return false;
-    }
-
-    const previousParticipant = currentParticipant;
-    const updatedAt = new Date().toISOString();
-    const nextParticipant = {
-      ...currentParticipant,
-      nickname: trimmedNickname,
-      updatedAt,
-    };
-
-    updateCurrentParticipant(nextParticipant);
-    showToast("닉네임을 변경했어요.");
-
-    if (!isFirebaseConfigured) {
-      return true;
-    }
-
-    try {
-      await updateParticipantNickname({
-        clientKey: getOrCreateClientKey(),
-        nickname: trimmedNickname,
-        participantId: nextParticipant.id,
-        roomId: currentRoom.id,
-      });
-      return true;
-    } catch {
-      updateCurrentParticipant(previousParticipant);
-      showToast("닉네임을 저장하지 못했어요. 잠시 후 다시 시도해 주세요.");
-      return false;
-    }
-  };
-
   const removeParticipant = async (participantId: string) => {
     if (!currentRoom || !isCurrentUserHost) {
       showToast("방장만 참가자를 관리할 수 있어요.");
@@ -518,102 +476,6 @@ export function useAppState() {
     }
   };
 
-  const leaveCurrentRoom = async () => {
-    if (!currentRoom || !currentParticipant) {
-      return false;
-    }
-
-    if (isCurrentUserHost) {
-      showToast("방장은 방을 나갈 수 없어요. 방 삭제 기능을 사용해 주세요.");
-      return false;
-    }
-
-    const roomId = currentRoom.id;
-    const participantId = currentParticipant.id;
-
-    if (isFirebaseConfigured) {
-      try {
-        await leaveFirebaseRoom({
-          clientKey: getOrCreateClientKey(),
-          participantId,
-          roomId,
-        });
-      } catch {
-        showToast("방을 나가지 못했어요. 잠시 후 다시 시도해 주세요.");
-        return false;
-      }
-    }
-
-    setStorage((previous) => {
-      const nextRoom = previous.rooms[roomId]
-        ? {
-            ...previous.rooms[roomId],
-            participants: previous.rooms[roomId].participants.filter(
-              (participant) => participant.id !== participantId
-            ),
-          }
-        : undefined;
-      const memberships = updateMembership(
-        previous.memberships,
-        roomId,
-        undefined
-      );
-
-      return {
-        ...previous,
-        memberships,
-        rooms: nextRoom
-          ? {
-              ...previous.rooms,
-              [roomId]: nextRoom,
-            }
-          : previous.rooms,
-      };
-    });
-    showToast("방에서 나갔어요.");
-    navigate({ name: "landing" });
-
-    return true;
-  };
-
-  const deleteCurrentRoom = async () => {
-    if (!currentRoom || !isCurrentUserHost) {
-      showToast("방장만 방을 삭제할 수 있어요.");
-      return false;
-    }
-
-    const roomId = currentRoom.id;
-    if (isFirebaseConfigured) {
-      try {
-        await deleteFirebaseRoom({
-          hostClientKey: getOrCreateClientKey(),
-          roomId,
-        });
-      } catch {
-        showToast("방을 삭제하지 못했어요. 잠시 후 다시 시도해 주세요.");
-        return false;
-      }
-    }
-
-    setStorage((previous) => {
-      const rooms = { ...previous.rooms };
-      const memberships = { ...previous.memberships };
-
-      delete rooms[roomId];
-      delete memberships[roomId];
-
-      return {
-        ...previous,
-        memberships,
-        rooms,
-      };
-    });
-    showToast("방을 삭제했어요.");
-    navigate({ name: "landing" });
-
-    return true;
-  };
-
   const moveVisibleMonth = (offset: number) => {
     if (!currentRoom) {
       return;
@@ -625,69 +487,6 @@ export function useAppState() {
         addMonths(previous || currentRoom.startDate, offset)
       )
     );
-  };
-
-  const copyInviteCode = async () => {
-    if (!currentRoom) {
-      return;
-    }
-
-    try {
-      await navigator.clipboard.writeText(currentRoom.inviteCode);
-      showToast("초대 코드가 복사되었어요.");
-    } catch {
-      showToast("복사에 실패했어요. 브라우저 권한을 확인해 주세요.");
-    }
-  };
-
-  const shareRoom = async () => {
-    if (!currentRoom) {
-      return;
-    }
-
-    const roomUrl = new URL(
-      `/room/${currentRoom.id}`,
-      window.location.origin
-    ).toString();
-    const shareData = {
-      title: "when should we meet?",
-      text: `초대 코드 ${currentRoom.inviteCode}로 방에 참여해 주세요.`,
-      url: roomUrl,
-    };
-
-    try {
-      if (isKakaoConfigured) {
-        void trackShareEvent({
-          eventName: "share_room_click",
-          method: "kakao",
-        });
-        await shareRoomWithKakao({
-          inviteCode: currentRoom.inviteCode,
-          roomId: currentRoom.id,
-        });
-        showToast("카카오톡 공유 창을 열었어요.");
-        return;
-      }
-
-      if (navigator.share) {
-        void trackShareEvent({
-          eventName: "share_room_click",
-          method: "web_share",
-        });
-        await navigator.share(shareData);
-        showToast("공유 시트를 열었어요.");
-        return;
-      }
-
-      void trackShareEvent({
-        eventName: "share_room_click",
-        method: "clipboard",
-      });
-      await navigator.clipboard.writeText(shareData.url);
-      showToast("공유 링크를 복사했어요.");
-    } catch {
-      showToast("공유를 완료하지 못했어요.");
-    }
   };
 
   const shareRanking = async () => {
@@ -751,21 +550,16 @@ export function useAppState() {
   };
 
   return {
-    copyInviteCode,
     currentParticipant,
     currentRoom,
     currentRoomSummary,
     currentRoute: route,
-    deleteCurrentRoom,
     goToLanding: () => navigate({ name: "landing" }),
     goToReport: () => navigate({ name: "report" }),
     isHydratingRoom,
     isCurrentUserHost,
-    leaveCurrentRoom,
     moveVisibleMonth,
     shareRanking,
-    shareRoom,
-    changeNickname,
     removeParticipant,
     resetCurrentSelection,
     toggleDate,

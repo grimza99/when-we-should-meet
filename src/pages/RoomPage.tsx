@@ -10,10 +10,14 @@ import { NicknameModal } from "../components/roomPage/NicknameModal";
 import { RoomDashboard } from "../components/room/RoomDashboard";
 import { Button } from "../components/ui/Button";
 import { HomeBrandButton } from "../components/ui/HomeBrandButton";
-import { TextInput } from "../components/ui/TextInput";
 import { ARIA_LABELS } from "../lib/ariaLabels";
-import type { Participant, Room, RoomSummary } from "../types";
+import type { AppStorage, Participant, Room, RoomSummary } from "../types";
 import { ControlSection } from "../components/roomPage/ControlSection";
+import InviteSection from "../components/roomPage/InviteSection";
+import { useRouteState } from "../lib/router";
+import ControlGroupSection from "../components/roomPage/ControlGroupSection";
+import { useLocalStorageState } from "../hooks/useLocalStorageState";
+import { DEFAULT_STORAGE, STORAGE_KEY } from "../lib/constants";
 
 type RoomPageProps = {
   currentParticipant?: Participant;
@@ -22,16 +26,11 @@ type RoomPageProps = {
   room?: Room;
   roomSummary?: RoomSummary;
   onBackToLanding: () => void;
-  onChangeNickname: (nickname: string) => Promise<boolean>;
-  onCopyInviteCode: () => void;
-  onDeleteRoom: () => Promise<boolean>;
-  onLeaveRoom: () => Promise<boolean>;
   onMoveMonth: (offset: number) => void;
   onRemoveParticipant: (participantId: string) => Promise<boolean>;
   onShareRanking: () => Promise<void> | void;
   onResetSelection: () => Promise<void> | void;
   onSelectDate: (isoDate: string) => void;
-  onShareRoom: () => void;
 };
 
 export function RoomPage({
@@ -39,39 +38,45 @@ export function RoomPage({
   isCurrentUserHost = false,
   isHydratingRoom = false,
   onBackToLanding,
-  onChangeNickname,
-  onCopyInviteCode,
-  onDeleteRoom,
-  onLeaveRoom,
   onMoveMonth,
   onRemoveParticipant,
   onShareRanking,
   onResetSelection,
   onSelectDate,
-  onShareRoom,
   room,
   roomSummary,
 }: RoomPageProps) {
   const headerRef = useRef<HTMLElement | null>(null);
-  const [nicknameInput, setNicknameInput] = useState(
-    currentParticipant?.nickname ?? ""
+  const { route } = useRouteState();
+  const [storage] = useLocalStorageState<AppStorage>(
+    STORAGE_KEY,
+    DEFAULT_STORAGE
   );
-  const [isSavingNickname, setIsSavingNickname] = useState(false);
-  const [isDeletingRoom, setIsDeletingRoom] = useState(false);
-  const [isLeavingRoom, setIsLeavingRoom] = useState(false);
+
   const [isNicknameModalOpen, setIsNicknameModalOpen] = useState(true);
   const [dashboardStickyTop, setDashboardStickyTop] = useState(80);
   const [removingParticipantId, setRemovingParticipantId] = useState<
     string | null
   >(null);
-
-  useEffect(() => {
-    setNicknameInput(currentParticipant?.nickname ?? "");
-  }, [currentParticipant?.nickname]);
+  const localRoom =
+    route.name === "room" ? storage.rooms[route.roomId] : undefined;
+  const localParticipantId =
+    route.name === "room" ? storage.memberships[route.roomId] : undefined;
+  const effectiveRoom = localRoom ?? room;
+  const effectiveCurrentParticipant =
+    localRoom?.participants.find(
+      (participant) => participant.id === localParticipantId
+    ) ?? currentParticipant;
 
   useEffect(() => {
     setIsNicknameModalOpen(true);
-  }, [room?.id]);
+  }, [effectiveRoom?.id]);
+
+  useEffect(() => {
+    if (effectiveCurrentParticipant) {
+      setIsNicknameModalOpen(false);
+    }
+  }, [effectiveCurrentParticipant]);
 
   useEffect(() => {
     const headerElement = headerRef.current;
@@ -125,53 +130,22 @@ export function RoomPage({
     );
   }
 
-  if (!room || !roomSummary) {
-    return (
-      <main aria-label={ARIA_LABELS.room.page} className="page room-page">
-        <HomeBrandButton
-          ariaLabel={ARIA_LABELS.room.homeButton}
-          onClick={onBackToLanding}
-        />
-        <section className="hero-card">
-          <h1>존재하지 않는 방입니다</h1>
-          <p className="hero-copy">
-            초대 코드를 다시 확인하거나 새 방을 만들어 주세요.
-          </p>
-        </section>
-        <Button
-          ariaLabel={ARIA_LABELS.room.homeButton}
-          block
-          onClick={onBackToLanding}
-        >
-          랜딩으로 돌아가기
-        </Button>
-      </main>
-    );
+  if (!effectiveRoom || !roomSummary) {
+    return null;
   }
 
-  const isRoomFull = room.participants.length >= room.maxParticipants;
+  const isRoomFull =
+    effectiveRoom.participants.length >= effectiveRoom.maxParticipants;
   const shouldShowNicknameModal =
-    !currentParticipant && !isRoomFull && isNicknameModalOpen;
-  const trimmedNickname = nicknameInput.trim();
-  const roomRangeLabel = formatRoomRange(room.startDate, room.endDate);
-  const hasSelectionToReset = currentParticipant
-    ? currentParticipant.weekdayRules.length > 0 ||
-      Object.keys(currentParticipant.overrides).length > 0
+    !effectiveCurrentParticipant && !isRoomFull && isNicknameModalOpen;
+  const roomRangeLabel = formatRoomRange(
+    effectiveRoom.startDate,
+    effectiveRoom.endDate
+  );
+  const hasSelectionToReset = effectiveCurrentParticipant
+    ? effectiveCurrentParticipant.weekdayRules.length > 0 ||
+      Object.keys(effectiveCurrentParticipant.overrides).length > 0
     : false;
-
-  const submitNicknameChange = async () => {
-    if (!trimmedNickname || isSavingNickname) {
-      return;
-    }
-
-    setIsSavingNickname(true);
-
-    try {
-      await onChangeNickname(trimmedNickname);
-    } finally {
-      setIsSavingNickname(false);
-    }
-  };
 
   const submitRemoveParticipant = async (participantId: string) => {
     if (removingParticipantId) {
@@ -184,42 +158,6 @@ export function RoomPage({
       await onRemoveParticipant(participantId);
     } finally {
       setRemovingParticipantId(null);
-    }
-  };
-
-  const submitDeleteRoom = async () => {
-    if (
-      isDeletingRoom ||
-      !window.confirm("이 방과 참가자 정보를 모두 삭제할까요?")
-    ) {
-      return;
-    }
-
-    setIsDeletingRoom(true);
-
-    try {
-      await onDeleteRoom();
-    } finally {
-      setIsDeletingRoom(false);
-    }
-  };
-
-  const submitLeaveRoom = async () => {
-    if (
-      isLeavingRoom ||
-      !window.confirm(
-        "이 방에서 나가면 선택한 날짜도 함께 사라집니다. 나갈까요?"
-      )
-    ) {
-      return;
-    }
-
-    setIsLeavingRoom(true);
-
-    try {
-      await onLeaveRoom();
-    } finally {
-      setIsLeavingRoom(false);
     }
   };
 
@@ -244,25 +182,13 @@ export function RoomPage({
               aria-label={ARIA_LABELS.room.inviteCodeHeading}
               className="room-title"
             >
-              {room.inviteCode}
+              {effectiveRoom.inviteCode}
             </h1>
           </div>
-          <div className="header-actions">
-            <Button
-              ariaLabel={ARIA_LABELS.room.copyInviteCodeButton}
-              onClick={onCopyInviteCode}
-              variant="chip"
-            >
-              입장 코드 복사
-            </Button>
-            <Button
-              ariaLabel={ARIA_LABELS.room.shareRoomButton}
-              onClick={onShareRoom}
-              variant="chip"
-            >
-              공유
-            </Button>
-          </div>
+          <InviteSection
+            inviteCode={effectiveRoom.inviteCode}
+            roomId={effectiveRoom.id}
+          />
         </div>
       </header>
       <RoomDashboard
@@ -273,63 +199,16 @@ export function RoomPage({
         onShareRanking={() => void onShareRanking()}
         removingParticipantId={removingParticipantId}
         rankings={roomSummary.rankings}
-        room={room}
+        room={effectiveRoom}
         stickyTopOffset={dashboardStickyTop}
       />
 
-      {currentParticipant && (
-        <section className="controls-card">
-          <div className="control-group">
-            <p className="section-label">관리</p>
-            <div className="nickname-edit-row">
-              <TextInput
-                ariaLabel={ARIA_LABELS.room.nicknameInput}
-                label="닉네임"
-                onChange={setNicknameInput}
-                placeholder="새 닉네임"
-                value={nicknameInput}
-                inputStyle={{ minHeight: "40px" }}
-              />
-              <Button
-                ariaLabel={ARIA_LABELS.room.nicknameSaveButton}
-                disabled={
-                  !trimmedNickname ||
-                  trimmedNickname === currentParticipant.nickname ||
-                  isSavingNickname
-                }
-                onClick={() => void submitNicknameChange()}
-                variant="secondary"
-                style={{ minHeight: "40px" }}
-              >
-                {isSavingNickname ? "저장 중..." : "변경"}
-              </Button>
-            </div>
-          </div>
-
-          <div className="control-group danger-zone">
-            {isCurrentUserHost ? (
-              <Button
-                ariaLabel={ARIA_LABELS.room.deleteRoomButton}
-                block
-                disabled={isDeletingRoom}
-                onClick={() => void submitDeleteRoom()}
-                variant="secondary"
-              >
-                {isDeletingRoom ? "삭제 중..." : "방 삭제"}
-              </Button>
-            ) : (
-              <Button
-                ariaLabel={ARIA_LABELS.room.leaveRoomButton}
-                block
-                disabled={isLeavingRoom}
-                onClick={() => void submitLeaveRoom()}
-                variant="secondary"
-              >
-                {isLeavingRoom ? "나가는 중..." : "방 나가기"}
-              </Button>
-            )}
-          </div>
-        </section>
+      {effectiveCurrentParticipant && (
+        <ControlGroupSection
+          currentNickname={effectiveCurrentParticipant.nickname}
+          currentParticipant={effectiveCurrentParticipant}
+          roomId={effectiveRoom.id}
+        />
       )}
       <ControlSection />
       <section
@@ -375,7 +254,7 @@ export function RoomPage({
         />
       </section>
 
-      {!currentParticipant && isRoomFull && (
+      {!effectiveCurrentParticipant && isRoomFull && (
         <section className="panel stack-gap">
           <p className="eyebrow">room is full</p>
           <h2>이 방은 정원이 모두 찼어요</h2>
@@ -395,7 +274,11 @@ export function RoomPage({
       )}
 
       {shouldShowNicknameModal && (
-        <NicknameModal onClose={() => setIsNicknameModalOpen(false)} />
+        <NicknameModal
+          currentParticipant={effectiveCurrentParticipant}
+          onClose={() => setIsNicknameModalOpen(false)}
+          room={effectiveRoom}
+        />
       )}
     </main>
   );

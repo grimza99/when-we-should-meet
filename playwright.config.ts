@@ -2,12 +2,14 @@ import { defineConfig } from '@playwright/test'
 
 const localFallbackEnv =
   'VITE_FIREBASE_API_KEY= VITE_FIREBASE_AUTH_DOMAIN= VITE_FIREBASE_PROJECT_ID= VITE_FIREBASE_STORAGE_BUCKET= VITE_FIREBASE_MESSAGING_SENDER_ID= VITE_FIREBASE_APP_ID= VITE_FIREBASE_MEASUREMENT_ID= VITE_KAKAO_JAVASCRIPT_KEY='
+const outputDir = process.env.PLAYWRIGHT_OUTPUT_DIR ?? `test-results/${process.pid}`
 
 export default defineConfig({
   testDir: './tests/e2e',
   testIgnore: ['**/firebase-*.spec.ts', '**/kakao-*.spec.ts'],
   fullyParallel: true,
   forbidOnly: Boolean(process.env.CI),
+  outputDir,
   reporter: 'list',
   retries: process.env.CI ? 2 : 0,
   use: {
