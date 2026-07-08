@@ -146,6 +146,13 @@ export default function ControlGroupSection({
       });
       return false;
     }
+    if (
+      !currentRoom ||
+      !currentParticipant ||
+      !currentRoom.id ||
+      !currentParticipant.id
+    )
+      return false;
 
     const roomId = currentRoom.id;
     const participantId = currentParticipant.id;

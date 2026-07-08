@@ -7,6 +7,9 @@ export function parseRoute(pathname: string): RouteState {
   if (pathname === "/page/report") {
     return { name: "report" };
   }
+  if (pathname === "/not-found-room") {
+    return { name: "not-found-room" };
+  }
 
   const matchedRestrictedRoom = pathname.match(/^\/room\/([^/]+)\/restricted$/);
   if (matchedRestrictedRoom) {
