@@ -36,13 +36,13 @@ export function useLocalStorageState() {
       window.dispatchEvent(
         new CustomEvent(LOCAL_STORAGE_SYNC_EVENT, {
           detail: {
-            STORAGE_KEY,
+            key: STORAGE_KEY,
             value: serializedState,
           },
         })
       );
     },
-    [STORAGE_KEY]
+    []
   );
 
   useEffect(() => {
@@ -101,7 +101,7 @@ export function useLocalStorageState() {
         handleCustomStorageEvent
       );
     };
-  }, [DEFAULT_STORAGE, STORAGE_KEY]);
+  }, []);
 
   const setAndPersistState = useCallback(
     (value: AppStorage | ((previousState: AppStorage) => AppStorage)) => {

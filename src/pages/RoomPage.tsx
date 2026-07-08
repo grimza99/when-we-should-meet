@@ -45,7 +45,8 @@ export function RoomPage({
   const { navigate, route } = useRouteState();
   const [storage] = useLocalStorageState();
 
-  const [isNicknameModalOpen, setIsNicknameModalOpen] = useState(true);
+  const [nicknameModalDismissedRoomId, setNicknameModalDismissedRoomId] =
+    useState<string | null>(null);
   const [dashboardStickyTop, setDashboardStickyTop] = useState(80);
 
   const localRoom =
@@ -57,16 +58,6 @@ export function RoomPage({
     localRoom?.participants.find(
       (participant) => participant.id === localParticipantId
     ) ?? currentParticipant;
-
-  useEffect(() => {
-    setIsNicknameModalOpen(true);
-  }, [effectiveRoom?.id]);
-
-  useEffect(() => {
-    if (effectiveCurrentParticipant) {
-      setIsNicknameModalOpen(false);
-    }
-  }, [effectiveCurrentParticipant]);
 
   useEffect(() => {
     const headerElement = headerRef.current;
@@ -127,7 +118,9 @@ export function RoomPage({
   const isRoomFull =
     effectiveRoom.participants.length >= effectiveRoom.maxParticipants;
   const shouldShowNicknameModal =
-    !effectiveCurrentParticipant && !isRoomFull && isNicknameModalOpen;
+    !effectiveCurrentParticipant &&
+    !isRoomFull &&
+    nicknameModalDismissedRoomId !== effectiveRoom.id;
   const roomRangeLabel = formatRoomRange(
     effectiveRoom.startDate,
     effectiveRoom.endDate
@@ -231,7 +224,7 @@ export function RoomPage({
       {shouldShowNicknameModal && (
         <NicknameModal
           currentParticipant={effectiveCurrentParticipant}
-          onClose={() => setIsNicknameModalOpen(false)}
+          onClose={() => setNicknameModalDismissedRoomId(effectiveRoom.id)}
           room={effectiveRoom}
         />
       )}

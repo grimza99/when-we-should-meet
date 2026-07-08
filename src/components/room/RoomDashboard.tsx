@@ -38,7 +38,7 @@ export function RoomDashboard({
   const [removingParticipantId, setRemovingParticipantId] = useState<
     string | null
   >(null);
-  const [_, setStorage] = useLocalStorageState();
+  const [, setStorage] = useLocalStorageState();
 
   const participantCount = room.participants.length;
   const hasRankings = rankings.some((ranking) => ranking.score > 0);
