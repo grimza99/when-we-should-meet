@@ -18,6 +18,7 @@ import { useRouteState } from "../lib/router";
 import ControlGroupSection from "../components/roomPage/ControlGroupSection";
 import { useLocalStorageState } from "../hooks/useLocalStorageState";
 import { DEFAULT_STORAGE, STORAGE_KEY } from "../lib/constants";
+import { formatRoomRange } from "../util";
 
 type RoomPageProps = {
   currentParticipant?: Participant;
@@ -280,30 +281,4 @@ export function RoomPage({
       )}
     </main>
   );
-}
-
-function formatRoomRange(startDate: string, endDate: string) {
-  const start = parseDateOnly(startDate);
-  const end = parseDateOnly(endDate);
-
-  if (startDate === endDate) {
-    return `${start.getMonth() + 1}월 ${start.getDate()}일`;
-  }
-
-  if (start.getFullYear() === end.getFullYear()) {
-    return `${start.getMonth() + 1}월 ${start.getDate()}일 - ${
-      end.getMonth() + 1
-    }월 ${end.getDate()}일`;
-  }
-
-  return `${start.getFullYear()}년 ${
-    start.getMonth() + 1
-  }월 ${start.getDate()}일 - ${end.getFullYear()}년 ${
-    end.getMonth() + 1
-  }월 ${end.getDate()}일`;
-}
-
-function parseDateOnly(isoDate: string) {
-  const [year, month, day] = isoDate.split("-").map(Number);
-  return new Date(year, month - 1, day);
 }
