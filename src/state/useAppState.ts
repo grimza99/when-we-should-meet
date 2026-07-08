@@ -108,6 +108,14 @@ export function useAppState() {
   );
 
   useEffect(() => {
+    if (route.name !== "room" || isFirebaseConfigured || hasCurrentRoom) {
+      return;
+    }
+
+    navigate({ name: "not-found-room" }, { replace: true });
+  }, [hasCurrentRoom, navigate, route]);
+
+  useEffect(() => {
     if (!isFirebaseConfigured || !routeRoomId) {
       setIsHydratingRoom(false);
       return;
@@ -121,17 +129,17 @@ export function useAppState() {
     let isCancelled = false;
     setIsHydratingRoom(true);
 
-        const hydrateRoom = async () => {
-          try {
-            const roomSnapshot = await getRoomSnapshot(routeRoomId);
+    const hydrateRoom = async () => {
+      try {
+        const roomSnapshot = await getRoomSnapshot(routeRoomId);
 
-            if (!roomSnapshot) {
-              if (!isCancelled) {
-                showToast("존재하지 않는 방이거나 이미 접근할 수 없는 방입니다.");
-                navigate({ name: "not-found-room" }, { replace: true });
-              }
-              return;
-            }
+        if (!roomSnapshot) {
+          if (!isCancelled) {
+            showToast("존재하지 않는 방이거나 이미 접근할 수 없는 방입니다.");
+            navigate({ name: "not-found-room" }, { replace: true });
+          }
+          return;
+        }
 
         const room = mapRoomSnapshotToDraftRoom(roomSnapshot);
         let restoredParticipant = null;
