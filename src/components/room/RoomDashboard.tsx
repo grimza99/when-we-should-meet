@@ -4,26 +4,32 @@ import {
   getParticipantRemoveAriaLabel,
 } from "../../lib/ariaLabels";
 import { COLOR_PALETTE } from "../../lib/constants";
-import type { RankingItem, Room } from "../../types";
+import type { RankingItem, Room, RoomSummary } from "../../types";
+import {
+  isKakaoConfigured,
+  shareRankingWithKakao,
+} from "../../integrations/kakao/client";
+import { trackShareEvent } from "../../integrations/firebase/analytics";
+import { useToast } from "../shell/toast/toast-context";
 
 type RoomDashboardProps = {
   rankings: RankingItem[];
   room: Room;
   isCurrentUserHost?: boolean;
   onRemoveParticipant?: (participantId: string) => void;
-  onShareRanking?: () => void;
   removingParticipantId?: string | null;
   stickyTopOffset?: number;
+  roomSummary: RoomSummary;
 };
 
 export function RoomDashboard({
   isCurrentUserHost = false,
   onRemoveParticipant,
-  onShareRanking,
   removingParticipantId = null,
   rankings,
   room,
   stickyTopOffset = 92,
+  roomSummary,
 }: RoomDashboardProps) {
   const dashboardContentId = useId();
   const sentinelRef = useRef<HTMLDivElement | null>(null);
@@ -38,6 +44,7 @@ export function RoomDashboard({
     color: COLOR_PALETTE[participant.colorIndex] ?? COLOR_PALETTE[0],
   }));
 
+  const { showToast } = useToast();
   useEffect(() => {
     const updateStickyState = () => {
       const nextSticky =
@@ -68,6 +75,66 @@ export function RoomDashboard({
     }
 
     setIsExpanded((previous) => !previous);
+  };
+
+  const shareRanking = async () => {
+    if (!room || !roomSummary) {
+      return;
+    }
+
+    const roomUrl = new URL(
+      `/room/${room.id}`,
+      window.location.origin
+    ).toString();
+    const topRankings = roomSummary.rankings.slice(0, 3);
+    const rankingText =
+      topRankings.length > 0
+        ? topRankings
+            .map(
+              (ranking) =>
+                `${ranking.rank}위 ${ranking.label} · ${ranking.score}명 가능`
+            )
+            .join("\n")
+        : "아직 공유할 랭킹이 없어요.";
+    const shareText = `우리 언제 볼까? 일정 랭킹이에요.\n${rankingText}`;
+
+    try {
+      if (isKakaoConfigured) {
+        void trackShareEvent({
+          eventName: "share_ranking_click",
+          method: "kakao",
+        });
+        await shareRankingWithKakao({
+          roomId: room.id,
+          text: shareText,
+        });
+        showToast({ msg: "카카오톡 공유 창을 열었어요" });
+        return;
+      }
+
+      if (navigator.share) {
+        void trackShareEvent({
+          eventName: "share_ranking_click",
+          method: "web_share",
+        });
+        await navigator.share({
+          text: shareText,
+          title: "when should we meet?",
+          url: roomUrl,
+        });
+        showToast({ msg: "공유 시트를 열었어요." });
+        return;
+      }
+
+      void trackShareEvent({
+        eventName: "share_ranking_click",
+        method: "clipboard",
+      });
+      await navigator.clipboard.writeText(`${shareText}\n${roomUrl}`);
+      showToast({ msg: "랭킹 공유 문구를 복사했어요." });
+    } catch {
+      showToast({ msg: "랭킹을 공유하지 못했어요" });
+    }
   };
 
   return (
@@ -109,7 +176,7 @@ export function RoomDashboard({
               className="dashboard-share-button"
               onClick={(event) => {
                 event.stopPropagation();
-                onShareRanking?.();
+                shareRanking();
               }}
               type="button"
             >

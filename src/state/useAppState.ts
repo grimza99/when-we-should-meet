@@ -13,11 +13,6 @@ import { useRouteState } from "../lib/router";
 import { getOrCreateClientKey } from "../lib/session/clientIdentity";
 import { isFirebaseConfigured } from "../integrations/firebase/client";
 import {
-  isKakaoConfigured,
-  shareRankingWithKakao,
-} from "../integrations/kakao/client";
-import { trackShareEvent } from "../integrations/firebase/analytics";
-import {
   getRoomSnapshot,
   isRoomAccessRestricted,
   subscribeToRoomChanges,
@@ -489,66 +484,6 @@ export function useAppState() {
     );
   };
 
-  const shareRanking = async () => {
-    if (!currentRoom || !currentRoomSummary) {
-      return;
-    }
-
-    const roomUrl = new URL(
-      `/room/${currentRoom.id}`,
-      window.location.origin
-    ).toString();
-    const topRankings = currentRoomSummary.rankings.slice(0, 3);
-    const rankingText =
-      topRankings.length > 0
-        ? topRankings
-            .map(
-              (ranking) =>
-                `${ranking.rank}위 ${ranking.label} · ${ranking.score}명 가능`
-            )
-            .join("\n")
-        : "아직 공유할 랭킹이 없어요.";
-    const shareText = `우리 언제 볼까? 일정 랭킹이에요.\n${rankingText}`;
-
-    try {
-      if (isKakaoConfigured) {
-        void trackShareEvent({
-          eventName: "share_ranking_click",
-          method: "kakao",
-        });
-        await shareRankingWithKakao({
-          roomId: currentRoom.id,
-          text: shareText,
-        });
-        showToast("카카오톡 공유 창을 열었어요.");
-        return;
-      }
-
-      if (navigator.share) {
-        void trackShareEvent({
-          eventName: "share_ranking_click",
-          method: "web_share",
-        });
-        await navigator.share({
-          text: shareText,
-          title: "when should we meet?",
-          url: roomUrl,
-        });
-        showToast("공유 시트를 열었어요.");
-        return;
-      }
-
-      void trackShareEvent({
-        eventName: "share_ranking_click",
-        method: "clipboard",
-      });
-      await navigator.clipboard.writeText(`${shareText}\n${roomUrl}`);
-      showToast("랭킹 공유 문구를 복사했어요.");
-    } catch {
-      showToast("랭킹을 공유하지 못했어요.");
-    }
-  };
-
   return {
     currentParticipant,
     currentRoom,
@@ -559,7 +494,6 @@ export function useAppState() {
     isHydratingRoom,
     isCurrentUserHost,
     moveVisibleMonth,
-    shareRanking,
     removeParticipant,
     resetCurrentSelection,
     toggleDate,

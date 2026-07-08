@@ -36,7 +36,6 @@ function AppContent() {
           onBackToLanding={appState.goToLanding}
           onMoveMonth={appState.moveVisibleMonth}
           onRemoveParticipant={appState.removeParticipant}
-          onShareRanking={appState.shareRanking}
           onResetSelection={appState.resetCurrentSelection}
           onSelectDate={appState.toggleDate}
           isCurrentUserHost={appState.isCurrentUserHost}

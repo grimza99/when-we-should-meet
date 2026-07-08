@@ -28,7 +28,6 @@ type RoomPageProps = {
   onBackToLanding: () => void;
   onMoveMonth: (offset: number) => void;
   onRemoveParticipant: (participantId: string) => Promise<boolean>;
-  onShareRanking: () => Promise<void> | void;
   onResetSelection: () => Promise<void> | void;
   onSelectDate: (isoDate: string) => void;
 };
@@ -40,7 +39,6 @@ export function RoomPage({
   onBackToLanding,
   onMoveMonth,
   onRemoveParticipant,
-  onShareRanking,
   onResetSelection,
   onSelectDate,
   room,
@@ -196,11 +194,11 @@ export function RoomPage({
         onRemoveParticipant={(participantId) =>
           void submitRemoveParticipant(participantId)
         }
-        onShareRanking={() => void onShareRanking()}
         removingParticipantId={removingParticipantId}
         rankings={roomSummary.rankings}
         room={effectiveRoom}
         stickyTopOffset={dashboardStickyTop}
+        roomSummary={roomSummary}
       />
 
       {effectiveCurrentParticipant && (
