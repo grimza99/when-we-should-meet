@@ -22,7 +22,6 @@ import { mapRoomSnapshotToDraftRoom } from "../integrations/firebase/mapper";
 import {
   restoreParticipant,
   resetParticipantSelections as resetFirebaseParticipantSelections,
-  removeParticipant as removeFirebaseParticipant,
   setParticipantDateOverride,
 } from "../integrations/firebase/services/participant-service";
 import { updateMembership } from "../util/participant";
@@ -415,58 +414,6 @@ export function useAppState() {
     }
   };
 
-  const removeParticipant = async (participantId: string) => {
-    if (!currentRoom || !isCurrentUserHost) {
-      showToast("방장만 참가자를 관리할 수 있어요.");
-      return false;
-    }
-
-    if (participantId === currentRoom.hostClientKey) {
-      showToast("방장은 참가자 목록에서 제거할 수 없어요.");
-      return false;
-    }
-
-    const previousRoom = currentRoom;
-    const nextRoom = {
-      ...currentRoom,
-      participants: currentRoom.participants.filter(
-        (participant) => participant.id !== participantId
-      ),
-    };
-
-    setStorage((previous) => ({
-      ...previous,
-      rooms: {
-        ...previous.rooms,
-        [currentRoom.id]: nextRoom,
-      },
-    }));
-    showToast("참가자를 내보냈어요.");
-
-    if (!isFirebaseConfigured) {
-      return true;
-    }
-
-    try {
-      await removeFirebaseParticipant({
-        hostClientKey: getOrCreateClientKey(),
-        participantId,
-        roomId: currentRoom.id,
-      });
-      return true;
-    } catch {
-      setStorage((previous) => ({
-        ...previous,
-        rooms: {
-          ...previous.rooms,
-          [previousRoom.id]: previousRoom,
-        },
-      }));
-      showToast("참가자를 내보내지 못했어요. 잠시 후 다시 시도해 주세요.");
-      return false;
-    }
-  };
-
   const moveVisibleMonth = (offset: number) => {
     if (!currentRoom) {
       return;
@@ -488,7 +435,6 @@ export function useAppState() {
     isHydratingRoom,
     isCurrentUserHost,
     moveVisibleMonth,
-    removeParticipant,
     resetCurrentSelection,
     toggleDate,
     setVisibleMonth: (date: string) => setVisibleMonth(date),

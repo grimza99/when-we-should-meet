@@ -27,7 +27,6 @@ type RoomPageProps = {
   room?: Room;
   roomSummary?: RoomSummary;
   onMoveMonth: (offset: number) => void;
-  onRemoveParticipant: (participantId: string) => Promise<boolean>;
   onResetSelection: () => Promise<void> | void;
   onSelectDate: (isoDate: string) => void;
 };
@@ -37,7 +36,6 @@ export function RoomPage({
   isCurrentUserHost = false,
   isHydratingRoom = false,
   onMoveMonth,
-  onRemoveParticipant,
   onResetSelection,
   onSelectDate,
   room,
@@ -49,9 +47,7 @@ export function RoomPage({
 
   const [isNicknameModalOpen, setIsNicknameModalOpen] = useState(true);
   const [dashboardStickyTop, setDashboardStickyTop] = useState(80);
-  const [removingParticipantId, setRemovingParticipantId] = useState<
-    string | null
-  >(null);
+
   const localRoom =
     route.name === "room" ? storage.rooms[route.roomId] : undefined;
   const localParticipantId =
@@ -141,20 +137,6 @@ export function RoomPage({
       Object.keys(effectiveCurrentParticipant.overrides).length > 0
     : false;
 
-  const submitRemoveParticipant = async (participantId: string) => {
-    if (removingParticipantId) {
-      return;
-    }
-
-    setRemovingParticipantId(participantId);
-
-    try {
-      await onRemoveParticipant(participantId);
-    } finally {
-      setRemovingParticipantId(null);
-    }
-  };
-
   return (
     <main
       aria-label={ARIA_LABELS.room.page}
@@ -187,10 +169,6 @@ export function RoomPage({
       </header>
       <RoomDashboard
         isCurrentUserHost={isCurrentUserHost}
-        onRemoveParticipant={(participantId) =>
-          void submitRemoveParticipant(participantId)
-        }
-        removingParticipantId={removingParticipantId}
         rankings={roomSummary.rankings}
         room={effectiveRoom}
         stickyTopOffset={dashboardStickyTop}

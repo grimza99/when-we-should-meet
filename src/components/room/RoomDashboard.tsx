@@ -11,21 +11,20 @@ import {
 } from "../../integrations/kakao/client";
 import { trackShareEvent } from "../../integrations/firebase/analytics";
 import { useToast } from "../shell/toast/toast-context";
-
+import { getOrCreateClientKey } from "../../lib/session/clientIdentity";
+import { isFirebaseConfigured } from "../../integrations/firebase/client";
+import { useLocalStorageState } from "../../hooks/useLocalStorageState";
+import { removeParticipant as removeFirebaseParticipant } from "../../integrations/firebase/services/participant-service";
 type RoomDashboardProps = {
   rankings: RankingItem[];
   room: Room;
   isCurrentUserHost?: boolean;
-  onRemoveParticipant?: (participantId: string) => void;
-  removingParticipantId?: string | null;
   stickyTopOffset?: number;
   roomSummary: RoomSummary;
 };
 
 export function RoomDashboard({
   isCurrentUserHost = false,
-  onRemoveParticipant,
-  removingParticipantId = null,
   rankings,
   room,
   stickyTopOffset = 92,
@@ -36,6 +35,11 @@ export function RoomDashboard({
   const wasStickyRef = useRef(false);
   const [isSticky, setIsSticky] = useState(false);
   const [isExpanded, setIsExpanded] = useState(true);
+  const [removingParticipantId, setRemovingParticipantId] = useState<
+    string | null
+  >(null);
+  const [_, setStorage] = useLocalStorageState();
+
   const participantCount = room.participants.length;
   const hasRankings = rankings.some((ranking) => ranking.score > 0);
   const topRanking = hasRankings ? rankings[0] : undefined;
@@ -137,6 +141,73 @@ export function RoomDashboard({
     }
   };
 
+  const removeParticipant = async (participantId: string) => {
+    if (!room || !isCurrentUserHost) {
+      showToast({ msg: "방장만 참가자를 관리할 수 있어요." });
+      return false;
+    }
+
+    if (participantId === room.hostClientKey) {
+      showToast({ msg: "방장은 참가자 목록에서 제거할 수 없어요." });
+      return false;
+    }
+
+    const previousRoom = room;
+    const nextRoom = {
+      ...room,
+      participants: room.participants.filter(
+        (participant) => participant.id !== participantId
+      ),
+    };
+
+    setStorage((previous) => ({
+      ...previous,
+      rooms: {
+        ...previous.rooms,
+        [room.id]: nextRoom,
+      },
+    }));
+    showToast({ msg: "참가자를 내보냈어요." });
+
+    if (!isFirebaseConfigured) {
+      return true;
+    }
+
+    try {
+      await removeFirebaseParticipant({
+        hostClientKey: getOrCreateClientKey(),
+        participantId,
+        roomId: room.id,
+      });
+      return true;
+    } catch {
+      setStorage((previous) => ({
+        ...previous,
+        rooms: {
+          ...previous.rooms,
+          [previousRoom.id]: previousRoom,
+        },
+      }));
+      showToast({
+        msg: "참가자를 내보내지 못했어요. 잠시 후 다시 시도해 주세요.",
+      });
+      return false;
+    }
+  };
+
+  const submitRemoveParticipant = async (participantId: string) => {
+    if (removingParticipantId) {
+      return;
+    }
+
+    setRemovingParticipantId(participantId);
+
+    try {
+      await removeParticipant(participantId);
+    } finally {
+      setRemovingParticipantId(null);
+    }
+  };
   return (
     <>
       <div className="dashboard-sticky-sentinel" ref={sentinelRef} />
@@ -237,7 +308,9 @@ export function RoomDashboard({
                           )}
                           className="text-icon-button"
                           disabled={removingParticipantId === participant.id}
-                          onClick={() => onRemoveParticipant?.(participant.id)}
+                          onClick={() =>
+                            submitRemoveParticipant(participant.id)
+                          }
                         >
                           {removingParticipantId !== participant.id && "삭제"}
                         </button>
