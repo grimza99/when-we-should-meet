@@ -18,6 +18,7 @@ import { useRouteState } from "../lib/router";
 import ControlGroupSection from "../components/roomPage/ControlGroupSection";
 import { useLocalStorageState } from "../hooks/useLocalStorageState";
 import { DEFAULT_STORAGE, STORAGE_KEY } from "../lib/constants";
+import { formatRoomRange } from "../util";
 
 type RoomPageProps = {
   currentParticipant?: Participant;
@@ -25,10 +26,8 @@ type RoomPageProps = {
   isHydratingRoom?: boolean;
   room?: Room;
   roomSummary?: RoomSummary;
-  onBackToLanding: () => void;
   onMoveMonth: (offset: number) => void;
   onRemoveParticipant: (participantId: string) => Promise<boolean>;
-  onShareRanking: () => Promise<void> | void;
   onResetSelection: () => Promise<void> | void;
   onSelectDate: (isoDate: string) => void;
 };
@@ -37,17 +36,15 @@ export function RoomPage({
   currentParticipant,
   isCurrentUserHost = false,
   isHydratingRoom = false,
-  onBackToLanding,
   onMoveMonth,
   onRemoveParticipant,
-  onShareRanking,
   onResetSelection,
   onSelectDate,
   room,
   roomSummary,
 }: RoomPageProps) {
   const headerRef = useRef<HTMLElement | null>(null);
-  const { route } = useRouteState();
+  const { navigate, route } = useRouteState();
   const [storage] = useLocalStorageState<AppStorage>(
     STORAGE_KEY,
     DEFAULT_STORAGE
@@ -118,7 +115,7 @@ export function RoomPage({
       <main aria-label={ARIA_LABELS.room.page} className="page room-page">
         <HomeBrandButton
           ariaLabel={ARIA_LABELS.room.homeButton}
-          onClick={onBackToLanding}
+          onClick={() => navigate({ name: "landing" })}
         />
         <section className="hero-card">
           <h1>방 정보를 불러오는 중입니다</h1>
@@ -176,7 +173,7 @@ export function RoomPage({
           <div className="brand-button-and-invite-code">
             <HomeBrandButton
               ariaLabel={ARIA_LABELS.room.homeButton}
-              onClick={onBackToLanding}
+              onClick={() => navigate({ name: "landing" })}
             />
             <h1
               aria-label={ARIA_LABELS.room.inviteCodeHeading}
@@ -196,11 +193,11 @@ export function RoomPage({
         onRemoveParticipant={(participantId) =>
           void submitRemoveParticipant(participantId)
         }
-        onShareRanking={() => void onShareRanking()}
         removingParticipantId={removingParticipantId}
         rankings={roomSummary.rankings}
         room={effectiveRoom}
         stickyTopOffset={dashboardStickyTop}
+        roomSummary={roomSummary}
       />
 
       {effectiveCurrentParticipant && (
@@ -265,7 +262,7 @@ export function RoomPage({
           <Button
             ariaLabel={ARIA_LABELS.room.homeButton}
             block
-            onClick={onBackToLanding}
+            onClick={() => navigate({ name: "landing" })}
             variant="secondary"
           >
             랜딩으로 돌아가기
@@ -282,30 +279,4 @@ export function RoomPage({
       )}
     </main>
   );
-}
-
-function formatRoomRange(startDate: string, endDate: string) {
-  const start = parseDateOnly(startDate);
-  const end = parseDateOnly(endDate);
-
-  if (startDate === endDate) {
-    return `${start.getMonth() + 1}월 ${start.getDate()}일`;
-  }
-
-  if (start.getFullYear() === end.getFullYear()) {
-    return `${start.getMonth() + 1}월 ${start.getDate()}일 - ${
-      end.getMonth() + 1
-    }월 ${end.getDate()}일`;
-  }
-
-  return `${start.getFullYear()}년 ${
-    start.getMonth() + 1
-  }월 ${start.getDate()}일 - ${end.getFullYear()}년 ${
-    end.getMonth() + 1
-  }월 ${end.getDate()}일`;
-}
-
-function parseDateOnly(isoDate: string) {
-  const [year, month, day] = isoDate.split("-").map(Number);
-  return new Date(year, month - 1, day);
 }
