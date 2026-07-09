@@ -21,7 +21,6 @@ import type { RoomChangeSubscription } from "../types";
 import { mapRoomSnapshotToDraftRoom } from "../integrations/firebase/mapper";
 import {
   restoreParticipant,
-  resetParticipantSelections as resetFirebaseParticipantSelections,
   setParticipantDateOverride,
 } from "../integrations/firebase/services/participant-service";
 import { updateMembership } from "../util/participant";
@@ -31,10 +30,11 @@ import { useCurrentParticipantUpdater } from "../hooks/useParticipant";
 export function useAppState() {
   const { navigate, route } = useRouteState();
   const { showToast: emitToast } = useToast();
-  const updateCurrentParticipant = useCurrentParticipantUpdater();
   const [storage, setStorage] = useLocalStorageState();
   const [visibleMonth, setVisibleMonth] = useState("");
   const [isHydratingRoom, setIsHydratingRoom] = useState(false);
+  const updateCurrentParticipant = useCurrentParticipantUpdater();
+
   const roomChangeSubscriptionRef = useRef<RoomChangeSubscription | null>(null);
 
   const currentRoom =
@@ -373,47 +373,6 @@ export function useAppState() {
     }
   };
 
-  const resetCurrentSelection = async () => {
-    if (!currentRoom || !currentParticipant) {
-      return;
-    }
-
-    const hasSelectionToReset =
-      currentParticipant.weekdayRules.length > 0 ||
-      Object.keys(currentParticipant.overrides).length > 0;
-
-    if (!hasSelectionToReset) {
-      return;
-    }
-
-    const previousParticipant = currentParticipant;
-    const updatedAt = new Date().toISOString();
-    const nextParticipant = {
-      ...currentParticipant,
-      overrides: {},
-      updatedAt,
-      weekdayRules: [],
-    };
-
-    updateCurrentParticipant(nextParticipant);
-    showToast("선택한 날짜와 요일 규칙을 초기화했어요.");
-
-    if (!isFirebaseConfigured) {
-      return;
-    }
-
-    try {
-      await resetFirebaseParticipantSelections({
-        clientKey: getOrCreateClientKey(),
-        participantId: nextParticipant.id,
-        roomId: currentRoom.id,
-      });
-    } catch {
-      updateCurrentParticipant(previousParticipant);
-      showToast("선택 내용을 초기화하지 못했어요. 잠시 후 다시 시도해 주세요.");
-    }
-  };
-
   const moveVisibleMonth = (offset: number) => {
     if (!currentRoom) {
       return;
@@ -435,7 +394,6 @@ export function useAppState() {
     isHydratingRoom,
     isCurrentUserHost,
     moveVisibleMonth,
-    resetCurrentSelection,
     toggleDate,
     setVisibleMonth: (date: string) => setVisibleMonth(date),
   };

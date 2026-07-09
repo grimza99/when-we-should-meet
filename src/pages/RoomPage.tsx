@@ -19,7 +19,11 @@ import ControlGroupSection from "../components/roomPage/ControlGroupSection";
 import { useLocalStorageState } from "../hooks/useLocalStorageState";
 import { formatRoomRange } from "../util";
 import RoomFullState from "../components/roomPage/RoomFullState";
-
+import { useToast } from "../components/shell/toast/toast-context";
+import { getOrCreateClientKey } from "../lib/session/clientIdentity";
+import { useCurrentParticipantUpdater } from "../hooks/useParticipant";
+import { isFirebaseConfigured } from "../integrations/firebase/client";
+import { resetParticipantSelections as resetFirebaseParticipantSelections } from "../integrations/firebase/services/participant-service";
 type RoomPageProps = {
   currentParticipant?: Participant;
   isCurrentUserHost?: boolean;
@@ -27,7 +31,6 @@ type RoomPageProps = {
   room?: Room;
   roomSummary?: RoomSummary;
   onMoveMonth: (offset: number) => void;
-  onResetSelection: () => Promise<void> | void;
   onSelectDate: (isoDate: string) => void;
 };
 
@@ -36,7 +39,6 @@ export function RoomPage({
   isCurrentUserHost = false,
   isHydratingRoom = false,
   onMoveMonth,
-  onResetSelection,
   onSelectDate,
   room,
   roomSummary,
@@ -48,6 +50,8 @@ export function RoomPage({
   const [nicknameModalDismissedRoomId, setNicknameModalDismissedRoomId] =
     useState<string | null>(null);
   const [dashboardStickyTop, setDashboardStickyTop] = useState(80);
+  const { showToast } = useToast();
+  const updateCurrentParticipant = useCurrentParticipantUpdater();
 
   const localRoom =
     route.name === "room" ? storage.rooms[route.roomId] : undefined;
@@ -130,6 +134,49 @@ export function RoomPage({
       Object.keys(effectiveCurrentParticipant.overrides).length > 0
     : false;
 
+  const resetCurrentSelection = async () => {
+    if (!room || !currentParticipant) {
+      return;
+    }
+
+    const hasSelectionToReset =
+      currentParticipant.weekdayRules.length > 0 ||
+      Object.keys(currentParticipant.overrides).length > 0;
+
+    if (!hasSelectionToReset) {
+      return;
+    }
+
+    const previousParticipant = currentParticipant;
+    const updatedAt = new Date().toISOString();
+    const nextParticipant = {
+      ...currentParticipant,
+      overrides: {},
+      updatedAt,
+      weekdayRules: [],
+    };
+
+    updateCurrentParticipant(nextParticipant);
+    showToast({ msg: "선택한 날짜와 요일 규칙을 초기화했어요." });
+
+    if (!isFirebaseConfigured) {
+      return;
+    }
+
+    try {
+      await resetFirebaseParticipantSelections({
+        clientKey: getOrCreateClientKey(),
+        participantId: nextParticipant.id,
+        roomId: room.id,
+      });
+    } catch {
+      updateCurrentParticipant(previousParticipant);
+      showToast({
+        msg: "선택 내용을 초기화하지 못했어요. 잠시 후 다시 시도해 주세요.",
+      });
+    }
+  };
+
   return (
     <main
       aria-label={ARIA_LABELS.room.page}
@@ -197,7 +244,7 @@ export function RoomPage({
               aria-label={ARIA_LABELS.room.resetSelectionButton}
               className="calendar-reset-button"
               disabled={!hasSelectionToReset}
-              onClick={() => void onResetSelection()}
+              onClick={() => void resetCurrentSelection()}
               type="button"
             >
               ↺
