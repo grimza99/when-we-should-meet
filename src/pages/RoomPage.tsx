@@ -136,22 +136,22 @@ export function RoomPage({
     : false;
 
   const resetCurrentSelection = async () => {
-    if (!room || !currentParticipant) {
+    if (!effectiveCurrentParticipant) {
       return;
     }
 
     const hasSelectionToReset =
-      currentParticipant.weekdayRules.length > 0 ||
-      Object.keys(currentParticipant.overrides).length > 0;
+      effectiveCurrentParticipant.weekdayRules.length > 0 ||
+      Object.keys(effectiveCurrentParticipant.overrides).length > 0;
 
     if (!hasSelectionToReset) {
       return;
     }
 
-    const previousParticipant = currentParticipant;
+    const previousParticipant = effectiveCurrentParticipant;
     const updatedAt = new Date().toISOString();
     const nextParticipant = {
-      ...currentParticipant,
+      ...effectiveCurrentParticipant,
       overrides: {},
       updatedAt,
       weekdayRules: [],
@@ -168,7 +168,7 @@ export function RoomPage({
       await resetFirebaseParticipantSelections({
         clientKey: getOrCreateClientKey(),
         participantId: nextParticipant.id,
-        roomId: room.id,
+        roomId: effectiveRoom.id,
       });
     } catch {
       updateCurrentParticipant(previousParticipant);
@@ -179,23 +179,23 @@ export function RoomPage({
   };
 
   const toggleDate = async (isoDate: string) => {
-    if (!room || !currentParticipant) {
+    if (!effectiveCurrentParticipant) {
       return;
     }
 
-    if (isoDate < room.startDate || isoDate > room.endDate) {
+    if (isoDate < effectiveRoom.startDate || isoDate > effectiveRoom.endDate) {
       showToast({ msg: "방에서 정한 날짜 범위 안에서만 선택할 수 있어요." });
       return;
     }
 
-    const previousParticipant = currentParticipant;
+    const previousParticipant = effectiveCurrentParticipant;
     const updatedAt = new Date().toISOString();
-    const nextOverrides = { ...currentParticipant.overrides };
+    const nextOverrides = { ...effectiveCurrentParticipant.overrides };
     const currentOverride = nextOverrides[isoDate];
     const nextStatus =
-      currentOverride === currentParticipant.selectionMode
+      currentOverride === effectiveCurrentParticipant.selectionMode
         ? null
-        : currentParticipant.selectionMode;
+        : effectiveCurrentParticipant.selectionMode;
 
     if (nextStatus === null) {
       delete nextOverrides[isoDate];
@@ -204,7 +204,7 @@ export function RoomPage({
     }
 
     const nextParticipant = {
-      ...currentParticipant,
+      ...effectiveCurrentParticipant,
       overrides: nextOverrides,
       updatedAt,
     };
@@ -219,7 +219,7 @@ export function RoomPage({
       await setParticipantDateOverride({
         clientKey: getOrCreateClientKey(),
         participantId: nextParticipant.id,
-        roomId: room.id,
+        roomId: effectiveRoom.id,
         overrides: nextParticipant.overrides,
       });
     } catch {
@@ -273,10 +273,15 @@ export function RoomPage({
           currentNickname={effectiveCurrentParticipant.nickname}
           currentParticipant={effectiveCurrentParticipant}
           roomId={effectiveRoom.id}
-          room={room}
+          room={effectiveRoom}
         />
       )}
-      <ControlSection room={room} participant={currentParticipant} />
+      {effectiveCurrentParticipant && (
+        <ControlSection
+          room={effectiveRoom}
+          participant={effectiveCurrentParticipant}
+        />
+      )}
       <section
         aria-label={ARIA_LABELS.room.calendarCard}
         className="calendar-card"
