@@ -1,29 +1,22 @@
-import { useLocalStorageState } from "../../hooks/useLocalStorageState";
 import { useCurrentParticipantUpdater } from "../../hooks/useParticipant";
 import { isFirebaseConfigured } from "../../integrations/firebase/client";
 import { updateParticipantAvailability } from "../../integrations/firebase/services/participant-service";
 import { ARIA_LABELS, getWeekdayRuleAriaLabel } from "../../lib/ariaLabels";
 import { MODE_LABELS, WEEKDAY_LABELS } from "../../lib/constants";
 import { convertParticipantSelectionMode } from "../../lib/date";
-import { useRouteState } from "../../lib/router";
 import { getOrCreateClientKey } from "../../lib/session/clientIdentity";
-import type { DateMode } from "../../types";
+import type { DateMode, Participant, Room } from "../../types";
 import { useToast } from "../shell/toast/toast-context";
 import { SegmentedButtonGroup } from "../ui/SegmentedButtonGroup";
-
-export function ControlSection() {
+interface IControlSectionProps {
+  room: Room;
+  participant: Participant;
+}
+export function ControlSection({ room, participant }: IControlSectionProps) {
   const { showToast } = useToast();
-  const { route } = useRouteState();
   const updateCurrentParticipant = useCurrentParticipantUpdater();
-  const [storage] = useLocalStorageState();
-  const currentRoom =
-    route.name === "room" ? storage.rooms[route.roomId] : undefined;
-  const currentParticipantId =
-    route.name === "room" ? storage.memberships[route.roomId] : undefined;
-  const currentParticipant = currentRoom?.participants.find(
-    (participant) => participant.id === currentParticipantId
-  );
-  const selectedMode = currentParticipant?.selectionMode ?? "available";
+
+  const selectedMode = participant?.selectionMode ?? "available";
 
   const modeOptions = (Object.keys(MODE_LABELS) as DateMode[]).map((value) => ({
     label: MODE_LABELS[value],
@@ -32,23 +25,23 @@ export function ControlSection() {
   const weekdayOptions = WEEKDAY_LABELS.map((label, value) => ({
     label,
     value,
-    selected: currentParticipant?.weekdayRules.includes(value) ?? false,
+    selected: participant?.weekdayRules.includes(value) ?? false,
   }));
 
   const changeSelectionMode = async (mode: DateMode) => {
-    if (!currentRoom || !currentParticipant) {
+    if (!room || !participant) {
       return;
     }
 
-    const previousParticipant = currentParticipant;
+    const previousParticipant = participant;
     const updatedAt = new Date().toISOString();
     const nextSelection = convertParticipantSelectionMode(
-      currentRoom,
-      currentParticipant,
+      room,
+      participant,
       mode
     );
     const nextParticipant = {
-      ...currentParticipant,
+      ...participant,
       overrides: nextSelection.overrides,
       selectionMode: nextSelection.selectionMode,
       updatedAt,
@@ -72,7 +65,7 @@ export function ControlSection() {
         clientKey: getOrCreateClientKey(),
         overrides: nextParticipant.overrides,
         participantId: nextParticipant.id,
-        roomId: currentRoom.id,
+        roomId: room.id,
         selectionMode: nextParticipant.selectionMode,
         weekdayRules: nextParticipant.weekdayRules,
       });
@@ -84,20 +77,20 @@ export function ControlSection() {
     }
   };
   const toggleWeekday = async (weekday: number) => {
-    if (!currentRoom || !currentParticipant) {
+    if (!room || !participant) {
       return;
     }
 
-    const previousParticipant = currentParticipant;
+    const previousParticipant = participant;
     const updatedAt = new Date().toISOString();
-    const weekdayRules = currentParticipant.weekdayRules.includes(weekday)
-      ? currentParticipant.weekdayRules.filter((value) => value !== weekday)
-      : [...currentParticipant.weekdayRules, weekday].sort(
+    const weekdayRules = participant.weekdayRules.includes(weekday)
+      ? participant.weekdayRules.filter((value) => value !== weekday)
+      : [...participant.weekdayRules, weekday].sort(
           (left, right) => left - right
         );
 
     const nextParticipant = {
-      ...currentParticipant,
+      ...participant,
       weekdayRules,
       updatedAt,
     };
@@ -114,7 +107,7 @@ export function ControlSection() {
         clientKey: getOrCreateClientKey(),
         overrides: nextParticipant.overrides,
         participantId: nextParticipant.id,
-        roomId: currentRoom.id,
+        roomId: room.id,
         selectionMode: nextParticipant.selectionMode,
         weekdayRules: nextParticipant.weekdayRules,
       });

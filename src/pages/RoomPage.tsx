@@ -273,9 +273,10 @@ export function RoomPage({
           currentNickname={effectiveCurrentParticipant.nickname}
           currentParticipant={effectiveCurrentParticipant}
           roomId={effectiveRoom.id}
+          room={room}
         />
       )}
-      <ControlSection />
+      <ControlSection room={room} participant={currentParticipant} />
       <section
         aria-label={ARIA_LABELS.room.calendarCard}
         className="calendar-card"
