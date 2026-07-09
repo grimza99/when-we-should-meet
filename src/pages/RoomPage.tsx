@@ -19,7 +19,14 @@ import ControlGroupSection from "../components/roomPage/ControlGroupSection";
 import { useLocalStorageState } from "../hooks/useLocalStorageState";
 import { formatRoomRange } from "../util";
 import RoomFullState from "../components/roomPage/RoomFullState";
-
+import { useToast } from "../components/shell/toast/toast-context";
+import { getOrCreateClientKey } from "../lib/session/clientIdentity";
+import { useCurrentParticipantUpdater } from "../hooks/useParticipant";
+import { isFirebaseConfigured } from "../integrations/firebase/client";
+import {
+  resetParticipantSelections as resetFirebaseParticipantSelections,
+  setParticipantDateOverride,
+} from "../integrations/firebase/services/participant-service";
 type RoomPageProps = {
   currentParticipant?: Participant;
   isCurrentUserHost?: boolean;
@@ -27,8 +34,6 @@ type RoomPageProps = {
   room?: Room;
   roomSummary?: RoomSummary;
   onMoveMonth: (offset: number) => void;
-  onResetSelection: () => Promise<void> | void;
-  onSelectDate: (isoDate: string) => void;
 };
 
 export function RoomPage({
@@ -36,8 +41,6 @@ export function RoomPage({
   isCurrentUserHost = false,
   isHydratingRoom = false,
   onMoveMonth,
-  onResetSelection,
-  onSelectDate,
   room,
   roomSummary,
 }: RoomPageProps) {
@@ -48,6 +51,8 @@ export function RoomPage({
   const [nicknameModalDismissedRoomId, setNicknameModalDismissedRoomId] =
     useState<string | null>(null);
   const [dashboardStickyTop, setDashboardStickyTop] = useState(80);
+  const { showToast } = useToast();
+  const updateCurrentParticipant = useCurrentParticipantUpdater();
 
   const localRoom =
     route.name === "room" ? storage.rooms[route.roomId] : undefined;
@@ -130,6 +135,101 @@ export function RoomPage({
       Object.keys(effectiveCurrentParticipant.overrides).length > 0
     : false;
 
+  const resetCurrentSelection = async () => {
+    if (!effectiveCurrentParticipant) {
+      return;
+    }
+
+    const hasSelectionToReset =
+      effectiveCurrentParticipant.weekdayRules.length > 0 ||
+      Object.keys(effectiveCurrentParticipant.overrides).length > 0;
+
+    if (!hasSelectionToReset) {
+      return;
+    }
+
+    const previousParticipant = effectiveCurrentParticipant;
+    const updatedAt = new Date().toISOString();
+    const nextParticipant = {
+      ...effectiveCurrentParticipant,
+      overrides: {},
+      updatedAt,
+      weekdayRules: [],
+    };
+
+    updateCurrentParticipant(nextParticipant);
+    showToast({ msg: "선택한 날짜와 요일 규칙을 초기화했어요." });
+
+    if (!isFirebaseConfigured) {
+      return;
+    }
+
+    try {
+      await resetFirebaseParticipantSelections({
+        clientKey: getOrCreateClientKey(),
+        participantId: nextParticipant.id,
+        roomId: effectiveRoom.id,
+      });
+    } catch {
+      updateCurrentParticipant(previousParticipant);
+      showToast({
+        msg: "선택 내용을 초기화하지 못했어요. 잠시 후 다시 시도해 주세요.",
+      });
+    }
+  };
+
+  const toggleDate = async (isoDate: string) => {
+    if (!effectiveCurrentParticipant) {
+      return;
+    }
+
+    if (isoDate < effectiveRoom.startDate || isoDate > effectiveRoom.endDate) {
+      showToast({ msg: "방에서 정한 날짜 범위 안에서만 선택할 수 있어요." });
+      return;
+    }
+
+    const previousParticipant = effectiveCurrentParticipant;
+    const updatedAt = new Date().toISOString();
+    const nextOverrides = { ...effectiveCurrentParticipant.overrides };
+    const currentOverride = nextOverrides[isoDate];
+    const nextStatus =
+      currentOverride === effectiveCurrentParticipant.selectionMode
+        ? null
+        : effectiveCurrentParticipant.selectionMode;
+
+    if (nextStatus === null) {
+      delete nextOverrides[isoDate];
+    } else {
+      nextOverrides[isoDate] = nextStatus;
+    }
+
+    const nextParticipant = {
+      ...effectiveCurrentParticipant,
+      overrides: nextOverrides,
+      updatedAt,
+    };
+
+    updateCurrentParticipant(nextParticipant);
+
+    if (!isFirebaseConfigured) {
+      return;
+    }
+
+    try {
+      await setParticipantDateOverride({
+        clientKey: getOrCreateClientKey(),
+        participantId: nextParticipant.id,
+        roomId: effectiveRoom.id,
+        overrides: nextParticipant.overrides,
+      });
+    } catch {
+      updateCurrentParticipant(previousParticipant);
+      showToast({
+        msg: "날짜 선택을 저장하지 못했어요. 잠시 후 다시 시도해 주세요.",
+      });
+    }
+  };
+
   return (
     <main
       aria-label={ARIA_LABELS.room.page}
@@ -173,9 +273,15 @@ export function RoomPage({
           currentNickname={effectiveCurrentParticipant.nickname}
           currentParticipant={effectiveCurrentParticipant}
           roomId={effectiveRoom.id}
+          room={effectiveRoom}
         />
       )}
-      <ControlSection />
+      {effectiveCurrentParticipant && (
+        <ControlSection
+          room={effectiveRoom}
+          participant={effectiveCurrentParticipant}
+        />
+      )}
       <section
         aria-label={ARIA_LABELS.room.calendarCard}
         className="calendar-card"
@@ -197,7 +303,7 @@ export function RoomPage({
               aria-label={ARIA_LABELS.room.resetSelectionButton}
               className="calendar-reset-button"
               disabled={!hasSelectionToReset}
-              onClick={() => void onResetSelection()}
+              onClick={() => void resetCurrentSelection()}
               type="button"
             >
               ↺
@@ -215,7 +321,7 @@ export function RoomPage({
         <CalendarGrid
           days={roomSummary.calendarDays}
           rankByDate={rankByDate}
-          onSelectDate={onSelectDate}
+          onSelectDate={toggleDate}
         />
       </section>
 

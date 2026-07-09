@@ -7,7 +7,7 @@ import { isFirebaseConfigured } from "../../integrations/firebase/client";
 import { updateParticipantNickname } from "../../integrations/firebase/services/participant-service";
 import { getOrCreateClientKey } from "../../lib/session/clientIdentity";
 import { useLocalStorageState } from "../../hooks/useLocalStorageState";
-import type { Participant } from "../../types";
+import type { Participant, Room } from "../../types";
 import { useCurrentParticipantUpdater } from "../../hooks/useParticipant";
 import {
   deleteRoom as deleteFirebaseRoom,
@@ -19,32 +19,30 @@ interface IControlGroupSectionProps {
   currentNickname: string;
   currentParticipant: Participant;
   roomId: string;
+  room: Room;
 }
 export default function ControlGroupSection({
   currentNickname,
   currentParticipant,
   roomId,
+  room,
 }: IControlGroupSectionProps) {
   const [isSavingNickname, setIsSavingNickname] = useState(false);
   const [isDeletingRoom, setIsDeletingRoom] = useState(false);
   const [isLeavingRoom, setIsLeavingRoom] = useState(false);
   const [nickname, setNickname] = useState(currentNickname);
   const { showToast } = useToast();
-  const [storage, setStorage] = useLocalStorageState();
+  const [, setStorage] = useLocalStorageState();
 
-  const { navigate, route } = useRouteState();
+  const { navigate } = useRouteState();
 
   const updateCurrentParticipant = useCurrentParticipantUpdater();
 
   const trimmedNickname = nickname.trim();
-  const currentRoom =
-    route.name === "room" ? storage.rooms[route.roomId] : undefined;
-  const currentParticipantId =
-    route.name === "room" ? storage.memberships[route.roomId] : undefined;
 
   const isCurrentUserHost =
-    Boolean(currentParticipantId) &&
-    currentParticipantId === currentRoom?.hostClientKey;
+    Boolean(currentParticipant.id) &&
+    currentParticipant.id === room?.hostClientKey;
   const submitNicknameChange = async () => {
     if (!trimmedNickname || isSavingNickname) {
       return;
@@ -142,15 +140,10 @@ export default function ControlGroupSection({
       });
       return false;
     }
-    if (
-      !currentRoom ||
-      !currentParticipant ||
-      !currentRoom.id ||
-      !currentParticipant.id
-    )
+    if (!room || !currentParticipant || !room.id || !currentParticipant.id)
       return false;
 
-    const roomId = currentRoom.id;
+    const roomId = room.id;
     const participantId = currentParticipant.id;
 
     if (isFirebaseConfigured) {
