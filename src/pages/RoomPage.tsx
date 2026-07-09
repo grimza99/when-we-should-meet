@@ -11,14 +11,14 @@ import { RoomDashboard } from "../components/room/RoomDashboard";
 import { Button } from "../components/ui/Button";
 import { HomeBrandButton } from "../components/ui/HomeBrandButton";
 import { ARIA_LABELS } from "../lib/ariaLabels";
-import type { AppStorage, Participant, Room, RoomSummary } from "../types";
+import type { Participant, Room, RoomSummary } from "../types";
 import { ControlSection } from "../components/roomPage/ControlSection";
 import InviteSection from "../components/roomPage/InviteSection";
 import { useRouteState } from "../lib/router";
 import ControlGroupSection from "../components/roomPage/ControlGroupSection";
 import { useLocalStorageState } from "../hooks/useLocalStorageState";
-import { DEFAULT_STORAGE, STORAGE_KEY } from "../lib/constants";
 import { formatRoomRange } from "../util";
+import RoomFullState from "../components/roomPage/RoomFullState";
 
 type RoomPageProps = {
   currentParticipant?: Participant;
@@ -27,7 +27,6 @@ type RoomPageProps = {
   room?: Room;
   roomSummary?: RoomSummary;
   onMoveMonth: (offset: number) => void;
-  onRemoveParticipant: (participantId: string) => Promise<boolean>;
   onResetSelection: () => Promise<void> | void;
   onSelectDate: (isoDate: string) => void;
 };
@@ -37,7 +36,6 @@ export function RoomPage({
   isCurrentUserHost = false,
   isHydratingRoom = false,
   onMoveMonth,
-  onRemoveParticipant,
   onResetSelection,
   onSelectDate,
   room,
@@ -45,16 +43,12 @@ export function RoomPage({
 }: RoomPageProps) {
   const headerRef = useRef<HTMLElement | null>(null);
   const { navigate, route } = useRouteState();
-  const [storage] = useLocalStorageState<AppStorage>(
-    STORAGE_KEY,
-    DEFAULT_STORAGE
-  );
+  const [storage] = useLocalStorageState();
 
-  const [isNicknameModalOpen, setIsNicknameModalOpen] = useState(true);
+  const [nicknameModalDismissedRoomId, setNicknameModalDismissedRoomId] =
+    useState<string | null>(null);
   const [dashboardStickyTop, setDashboardStickyTop] = useState(80);
-  const [removingParticipantId, setRemovingParticipantId] = useState<
-    string | null
-  >(null);
+
   const localRoom =
     route.name === "room" ? storage.rooms[route.roomId] : undefined;
   const localParticipantId =
@@ -64,16 +58,6 @@ export function RoomPage({
     localRoom?.participants.find(
       (participant) => participant.id === localParticipantId
     ) ?? currentParticipant;
-
-  useEffect(() => {
-    setIsNicknameModalOpen(true);
-  }, [effectiveRoom?.id]);
-
-  useEffect(() => {
-    if (effectiveCurrentParticipant) {
-      setIsNicknameModalOpen(false);
-    }
-  }, [effectiveCurrentParticipant]);
 
   useEffect(() => {
     const headerElement = headerRef.current;
@@ -134,7 +118,9 @@ export function RoomPage({
   const isRoomFull =
     effectiveRoom.participants.length >= effectiveRoom.maxParticipants;
   const shouldShowNicknameModal =
-    !effectiveCurrentParticipant && !isRoomFull && isNicknameModalOpen;
+    !effectiveCurrentParticipant &&
+    !isRoomFull &&
+    nicknameModalDismissedRoomId !== effectiveRoom.id;
   const roomRangeLabel = formatRoomRange(
     effectiveRoom.startDate,
     effectiveRoom.endDate
@@ -143,20 +129,6 @@ export function RoomPage({
     ? effectiveCurrentParticipant.weekdayRules.length > 0 ||
       Object.keys(effectiveCurrentParticipant.overrides).length > 0
     : false;
-
-  const submitRemoveParticipant = async (participantId: string) => {
-    if (removingParticipantId) {
-      return;
-    }
-
-    setRemovingParticipantId(participantId);
-
-    try {
-      await onRemoveParticipant(participantId);
-    } finally {
-      setRemovingParticipantId(null);
-    }
-  };
 
   return (
     <main
@@ -190,10 +162,6 @@ export function RoomPage({
       </header>
       <RoomDashboard
         isCurrentUserHost={isCurrentUserHost}
-        onRemoveParticipant={(participantId) =>
-          void submitRemoveParticipant(participantId)
-        }
-        removingParticipantId={removingParticipantId}
         rankings={roomSummary.rankings}
         room={effectiveRoom}
         stickyTopOffset={dashboardStickyTop}
@@ -251,29 +219,12 @@ export function RoomPage({
         />
       </section>
 
-      {!effectiveCurrentParticipant && isRoomFull && (
-        <section className="panel stack-gap">
-          <p className="eyebrow">room is full</p>
-          <h2>이 방은 정원이 모두 찼어요</h2>
-          <p className="hero-copy">
-            방 만든 사람에게 정원 추가를 요청하거나, 새 방을 만들어 일정을 다시
-            조율해 주세요.
-          </p>
-          <Button
-            ariaLabel={ARIA_LABELS.room.homeButton}
-            block
-            onClick={() => navigate({ name: "landing" })}
-            variant="secondary"
-          >
-            랜딩으로 돌아가기
-          </Button>
-        </section>
-      )}
+      {!effectiveCurrentParticipant && isRoomFull && <RoomFullState />}
 
       {shouldShowNicknameModal && (
         <NicknameModal
           currentParticipant={effectiveCurrentParticipant}
-          onClose={() => setIsNicknameModalOpen(false)}
+          onClose={() => setNicknameModalDismissedRoomId(effectiveRoom.id)}
           room={effectiveRoom}
         />
       )}

@@ -3,16 +3,11 @@ import { useCurrentParticipantUpdater } from "../../hooks/useParticipant";
 import { isFirebaseConfigured } from "../../integrations/firebase/client";
 import { updateParticipantAvailability } from "../../integrations/firebase/services/participant-service";
 import { ARIA_LABELS, getWeekdayRuleAriaLabel } from "../../lib/ariaLabels";
-import {
-  DEFAULT_STORAGE,
-  MODE_LABELS,
-  STORAGE_KEY,
-  WEEKDAY_LABELS,
-} from "../../lib/constants";
+import { MODE_LABELS, WEEKDAY_LABELS } from "../../lib/constants";
 import { convertParticipantSelectionMode } from "../../lib/date";
 import { useRouteState } from "../../lib/router";
 import { getOrCreateClientKey } from "../../lib/session/clientIdentity";
-import type { AppStorage, DateMode } from "../../types";
+import type { DateMode } from "../../types";
 import { useToast } from "../shell/toast/toast-context";
 import { SegmentedButtonGroup } from "../ui/SegmentedButtonGroup";
 
@@ -20,10 +15,7 @@ export function ControlSection() {
   const { showToast } = useToast();
   const { route } = useRouteState();
   const updateCurrentParticipant = useCurrentParticipantUpdater();
-  const [storage] = useLocalStorageState<AppStorage>(
-    STORAGE_KEY,
-    DEFAULT_STORAGE
-  );
+  const [storage] = useLocalStorageState();
   const currentRoom =
     route.name === "room" ? storage.rooms[route.roomId] : undefined;
   const currentParticipantId =

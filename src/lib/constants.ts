@@ -26,3 +26,4 @@ export const DEFAULT_STORAGE: AppStorage = {
 };
 
 export const STORAGE_KEY = "when-should-we-meet-storage";
+export const LOCAL_STORAGE_SYNC_EVENT = "when-should-we-meet:storage-sync";

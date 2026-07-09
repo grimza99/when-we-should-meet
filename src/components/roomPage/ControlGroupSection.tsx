@@ -7,8 +7,7 @@ import { isFirebaseConfigured } from "../../integrations/firebase/client";
 import { updateParticipantNickname } from "../../integrations/firebase/services/participant-service";
 import { getOrCreateClientKey } from "../../lib/session/clientIdentity";
 import { useLocalStorageState } from "../../hooks/useLocalStorageState";
-import type { AppStorage, Participant } from "../../types";
-import { DEFAULT_STORAGE, STORAGE_KEY } from "../../lib/constants";
+import type { Participant } from "../../types";
 import { useCurrentParticipantUpdater } from "../../hooks/useParticipant";
 import {
   deleteRoom as deleteFirebaseRoom,
@@ -31,10 +30,7 @@ export default function ControlGroupSection({
   const [isLeavingRoom, setIsLeavingRoom] = useState(false);
   const [nickname, setNickname] = useState(currentNickname);
   const { showToast } = useToast();
-  const [storage, setStorage] = useLocalStorageState<AppStorage>(
-    STORAGE_KEY,
-    DEFAULT_STORAGE
-  );
+  const [storage, setStorage] = useLocalStorageState();
 
   const { navigate, route } = useRouteState();
 

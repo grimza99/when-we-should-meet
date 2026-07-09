@@ -4,11 +4,9 @@ import { Button } from "../components/ui/Button";
 import { TextInput } from "../components/ui/TextInput";
 import { ARIA_LABELS } from "../lib/ariaLabels";
 import { normalizeInviteCodeInput } from "../lib/inviteCode";
-import type { AppStorage } from "../types";
 import { useRouteState } from "../lib/router";
 import { isFirebaseConfigured } from "../integrations/firebase/client";
 import { useLocalStorageState } from "../hooks/useLocalStorageState";
-import { DEFAULT_STORAGE, STORAGE_KEY } from "../lib/constants";
 import {
   getRoomByInviteCode,
   getRoomSnapshot,
@@ -30,10 +28,7 @@ interface ILandingPageProps {
 }
 export function LandingPage({ setVisibleMonth }: ILandingPageProps) {
   const { navigate } = useRouteState();
-  const [storage, setStorage] = useLocalStorageState<AppStorage>(
-    STORAGE_KEY,
-    DEFAULT_STORAGE
-  );
+  const [storage, setStorage] = useLocalStorageState();
   const [joinInviteCode, setJoinInviteCode] = useState("");
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [isJoiningRoom, setIsJoiningRoom] = useState(false);
