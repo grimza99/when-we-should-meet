@@ -34,7 +34,6 @@ function AppContent() {
           room={appState.currentRoom}
           roomSummary={appState.currentRoomSummary}
           onMoveMonth={appState.moveVisibleMonth}
-          onSelectDate={appState.toggleDate}
           isCurrentUserHost={appState.isCurrentUserHost}
         />
       )}

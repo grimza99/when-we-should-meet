@@ -19,13 +19,9 @@ import {
 } from "../integrations/firebase/services/room-service";
 import type { RoomChangeSubscription } from "../types";
 import { mapRoomSnapshotToDraftRoom } from "../integrations/firebase/mapper";
-import {
-  restoreParticipant,
-  setParticipantDateOverride,
-} from "../integrations/firebase/services/participant-service";
+import { restoreParticipant } from "../integrations/firebase/services/participant-service";
 import { updateMembership } from "../util/participant";
 import { mergeRoomSnapshot } from "../util/room";
-import { useCurrentParticipantUpdater } from "../hooks/useParticipant";
 
 export function useAppState() {
   const { navigate, route } = useRouteState();
@@ -33,7 +29,6 @@ export function useAppState() {
   const [storage, setStorage] = useLocalStorageState();
   const [visibleMonth, setVisibleMonth] = useState("");
   const [isHydratingRoom, setIsHydratingRoom] = useState(false);
-  const updateCurrentParticipant = useCurrentParticipantUpdater();
 
   const roomChangeSubscriptionRef = useRef<RoomChangeSubscription | null>(null);
 
@@ -323,56 +318,6 @@ export function useAppState() {
     showToast,
   ]);
 
-  const toggleDate = async (isoDate: string) => {
-    if (!currentRoom || !currentParticipant) {
-      return;
-    }
-
-    if (isoDate < currentRoom.startDate || isoDate > currentRoom.endDate) {
-      showToast("방에서 정한 날짜 범위 안에서만 선택할 수 있어요.");
-      return;
-    }
-
-    const previousParticipant = currentParticipant;
-    const updatedAt = new Date().toISOString();
-    const nextOverrides = { ...currentParticipant.overrides };
-    const currentOverride = nextOverrides[isoDate];
-    const nextStatus =
-      currentOverride === currentParticipant.selectionMode
-        ? null
-        : currentParticipant.selectionMode;
-
-    if (nextStatus === null) {
-      delete nextOverrides[isoDate];
-    } else {
-      nextOverrides[isoDate] = nextStatus;
-    }
-
-    const nextParticipant = {
-      ...currentParticipant,
-      overrides: nextOverrides,
-      updatedAt,
-    };
-
-    updateCurrentParticipant(nextParticipant);
-
-    if (!isFirebaseConfigured) {
-      return;
-    }
-
-    try {
-      await setParticipantDateOverride({
-        clientKey: getOrCreateClientKey(),
-        participantId: nextParticipant.id,
-        roomId: currentRoom.id,
-        overrides: nextParticipant.overrides,
-      });
-    } catch {
-      updateCurrentParticipant(previousParticipant);
-      showToast("날짜 선택을 저장하지 못했어요. 잠시 후 다시 시도해 주세요.");
-    }
-  };
-
   const moveVisibleMonth = (offset: number) => {
     if (!currentRoom) {
       return;
@@ -394,7 +339,6 @@ export function useAppState() {
     isHydratingRoom,
     isCurrentUserHost,
     moveVisibleMonth,
-    toggleDate,
     setVisibleMonth: (date: string) => setVisibleMonth(date),
   };
 }

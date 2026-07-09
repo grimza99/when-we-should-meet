@@ -23,7 +23,10 @@ import { useToast } from "../components/shell/toast/toast-context";
 import { getOrCreateClientKey } from "../lib/session/clientIdentity";
 import { useCurrentParticipantUpdater } from "../hooks/useParticipant";
 import { isFirebaseConfigured } from "../integrations/firebase/client";
-import { resetParticipantSelections as resetFirebaseParticipantSelections } from "../integrations/firebase/services/participant-service";
+import {
+  resetParticipantSelections as resetFirebaseParticipantSelections,
+  setParticipantDateOverride,
+} from "../integrations/firebase/services/participant-service";
 type RoomPageProps = {
   currentParticipant?: Participant;
   isCurrentUserHost?: boolean;
@@ -31,7 +34,6 @@ type RoomPageProps = {
   room?: Room;
   roomSummary?: RoomSummary;
   onMoveMonth: (offset: number) => void;
-  onSelectDate: (isoDate: string) => void;
 };
 
 export function RoomPage({
@@ -39,7 +41,6 @@ export function RoomPage({
   isCurrentUserHost = false,
   isHydratingRoom = false,
   onMoveMonth,
-  onSelectDate,
   room,
   roomSummary,
 }: RoomPageProps) {
@@ -177,6 +178,58 @@ export function RoomPage({
     }
   };
 
+  const toggleDate = async (isoDate: string) => {
+    if (!room || !currentParticipant) {
+      return;
+    }
+
+    if (isoDate < room.startDate || isoDate > room.endDate) {
+      showToast({ msg: "방에서 정한 날짜 범위 안에서만 선택할 수 있어요." });
+      return;
+    }
+
+    const previousParticipant = currentParticipant;
+    const updatedAt = new Date().toISOString();
+    const nextOverrides = { ...currentParticipant.overrides };
+    const currentOverride = nextOverrides[isoDate];
+    const nextStatus =
+      currentOverride === currentParticipant.selectionMode
+        ? null
+        : currentParticipant.selectionMode;
+
+    if (nextStatus === null) {
+      delete nextOverrides[isoDate];
+    } else {
+      nextOverrides[isoDate] = nextStatus;
+    }
+
+    const nextParticipant = {
+      ...currentParticipant,
+      overrides: nextOverrides,
+      updatedAt,
+    };
+
+    updateCurrentParticipant(nextParticipant);
+
+    if (!isFirebaseConfigured) {
+      return;
+    }
+
+    try {
+      await setParticipantDateOverride({
+        clientKey: getOrCreateClientKey(),
+        participantId: nextParticipant.id,
+        roomId: room.id,
+        overrides: nextParticipant.overrides,
+      });
+    } catch {
+      updateCurrentParticipant(previousParticipant);
+      showToast({
+        msg: "날짜 선택을 저장하지 못했어요. 잠시 후 다시 시도해 주세요.",
+      });
+    }
+  };
+
   return (
     <main
       aria-label={ARIA_LABELS.room.page}
@@ -262,7 +315,7 @@ export function RoomPage({
         <CalendarGrid
           days={roomSummary.calendarDays}
           rankByDate={rankByDate}
-          onSelectDate={onSelectDate}
+          onSelectDate={toggleDate}
         />
       </section>
 
