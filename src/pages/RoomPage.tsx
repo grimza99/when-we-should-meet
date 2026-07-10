@@ -27,7 +27,7 @@ import {
   resetParticipantSelections as resetFirebaseParticipantSelections,
   setParticipantDateOverride,
 } from "../integrations/firebase/services/participant-service";
-import { useRoom } from "../hooks/useRoom";
+import { useRoomRender } from "../hooks/useRoomRender";
 type RoomPageProps = {
   currentParticipant: Participant;
   isCurrentUserHost?: boolean;
@@ -46,7 +46,7 @@ export function RoomPage({
   const headerRef = useRef<HTMLElement | null>(null);
   const { navigate, route } = useRouteState();
   const [storage] = useLocalStorageState();
-  const { isHydratingRoom } = useRoom(room, currentParticipant);
+  const { isHydratingRoom } = useRoomRender(room, currentParticipant);
   const [nicknameModalDismissedRoomId, setNicknameModalDismissedRoomId] =
     useState<string | null>(null);
   const [dashboardStickyTop, setDashboardStickyTop] = useState(80);
