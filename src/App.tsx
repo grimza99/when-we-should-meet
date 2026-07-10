@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef } from "react";
 import "./App.css";
 import { RoomAccessRestrictedPage } from "./pages/RoomAccessRestrictedPage";
 import { useAppState } from "./state/useAppState";
@@ -20,11 +20,10 @@ import {
 import { useRouteState } from "./lib/router";
 import { mapRoomSnapshotToDraftRoom } from "./integrations/firebase/mapper";
 import { getOrCreateClientKey } from "./lib/session/clientIdentity";
-import { restoreParticipant } from "./integrations/firebase/services/participant-service";
 import { mergeRoomSnapshot } from "./util/room";
-import { updateMembership } from "./util/participant";
 import { useLocalStorageState } from "./hooks/useLocalStorageState";
 import type { RoomChangeSubscription } from "./types";
+import { updateMembership } from "./util/participant";
 
 function AppContent() {
   const {
@@ -36,34 +35,27 @@ function AppContent() {
     isCurrentUserHost,
   } = useAppState();
 
-  const [isHydratingRoom, setIsHydratingRoom] = useState(false);
   const [, setStorage] = useLocalStorageState();
   const { showToast } = useToast();
   const { navigate, route } = useRouteState();
   const roomChangeSubscriptionRef = useRef<RoomChangeSubscription | null>(null);
-  const hasCurrentParticipant = Boolean(currentParticipant);
-  const needsRoomSnapshot = Boolean(
-    currentRoom.id &&
-      (!currentRoom ||
-        (currentParticipant.id !== undefined && !hasCurrentParticipant))
-  );
 
-  useEffect(() => {
-    void trackPageView(route);
-  }, [route]);
   const goToRoomAccessRestricted = useCallback(
     (roomId: string) => {
       setStorage((previous) => ({
         ...previous,
         memberships: updateMembership(previous.memberships, roomId, undefined),
       }));
-      showToast({
-        msg: "이 방은 다시 입장할 수 없도록 제한되었어요.",
-      });
+
       navigate({ name: "room_access_restricted", roomId }, { replace: true });
     },
-    [showToast, navigate, setStorage]
+    [navigate, setStorage]
   );
+
+  useEffect(() => {
+    void trackPageView(route);
+  }, [route]);
+
   useEffect(() => {
     if (!isFirebaseConfigured || !currentRoom.id) {
       roomChangeSubscriptionRef.current = null;
@@ -180,104 +172,6 @@ function AppContent() {
     };
   }, [currentParticipant.id, navigate, currentRoom.id, setStorage, showToast]);
 
-  useEffect(() => {
-    if (!isFirebaseConfigured || !currentRoom.id) {
-      setIsHydratingRoom(false);
-      return;
-    }
-
-    if (!needsRoomSnapshot) {
-      setIsHydratingRoom(false);
-      return;
-    }
-
-    let isCancelled = false;
-    setIsHydratingRoom(true);
-
-    const hydrateRoom = async () => {
-      try {
-        const roomSnapshot = await getRoomSnapshot(currentRoom.id);
-
-        if (!roomSnapshot) {
-          if (!isCancelled) {
-            showToast({
-              msg: "존재하지 않는 방이거나 이미 접근할 수 없는 방입니다.",
-            });
-            navigate({ name: "not-found-room" }, { replace: true });
-          }
-          return;
-        }
-
-        const room = mapRoomSnapshotToDraftRoom(roomSnapshot);
-        let restoredParticipant = null;
-
-        try {
-          restoredParticipant = await restoreParticipant({
-            clientKey: getOrCreateClientKey(),
-            roomId: currentRoom.id,
-          });
-        } catch (error) {
-          if (String(error).includes("ROOM_ACCESS_RESTRICTED")) {
-            if (!isCancelled) {
-              goToRoomAccessRestricted(currentRoom.id);
-            }
-            return;
-          }
-
-          throw error;
-        }
-
-        if (isCancelled) {
-          return;
-        }
-
-        const restoredParticipantId = restoredParticipant?.id;
-
-        setStorage((previous) => ({
-          ...previous,
-          rooms: {
-            ...previous.rooms,
-            [room.id]: mergeRoomSnapshot(
-              previous.rooms[room.id],
-              room,
-              restoredParticipantId
-            ),
-          },
-          memberships: updateMembership(
-            previous.memberships,
-            room.id,
-            restoredParticipantId
-          ),
-        }));
-      } catch {
-        if (!isCancelled) {
-          showToast({
-            msg: "방 정보를 불러오지 못했어요. 잠시 후 다시 시도해 주세요.",
-          });
-        }
-      } finally {
-        if (!isCancelled) {
-          setIsHydratingRoom(false);
-        }
-      }
-    };
-
-    void hydrateRoom();
-
-    return () => {
-      isCancelled = true;
-    };
-  }, [
-    currentParticipant.id,
-    goToRoomAccessRestricted,
-    hasCurrentParticipant,
-    currentRoom,
-    navigate,
-    needsRoomSnapshot,
-    currentRoom.id,
-    setStorage,
-    showToast,
-  ]);
   return (
     <>
       {route.name === "landing" ? (
@@ -291,7 +185,6 @@ function AppContent() {
       ) : (
         <RoomPage
           currentParticipant={currentParticipant}
-          isHydratingRoom={isHydratingRoom}
           room={currentRoom}
           roomSummary={currentRoomSummary}
           onMoveMonth={moveVisibleMonth}
