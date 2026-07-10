@@ -1,49 +1,64 @@
 import { useCallback, useEffect, useRef, useState } from "react";
+import { useToast } from "../components/shell/toast/toast-context";
+import { useLocalStorageState } from "./useLocalStorageState";
+import { useRouteState } from "../lib/router";
+import { getOrCreateClientKey } from "../lib/session/clientIdentity";
 import { isFirebaseConfigured } from "../integrations/firebase/client";
-import type { Participant, Room, RoomChangeSubscription } from "../types";
+import { mapRoomSnapshotToDraftRoom } from "../integrations/firebase/mapper";
+import { restoreParticipant } from "../integrations/firebase/services/participant-service";
 import {
   getRoomSnapshot,
   isRoomAccessRestricted,
   subscribeToRoomChanges,
   unsubscribeFromRoomChanges,
 } from "../integrations/firebase/services/room-service";
-import { useToast } from "../components/shell/toast/toast-context";
-import { useRouteState } from "../lib/router";
-import { mapRoomSnapshotToDraftRoom } from "../integrations/firebase/mapper";
-import { restoreParticipant } from "../integrations/firebase/services/participant-service";
-import { getOrCreateClientKey } from "../lib/session/clientIdentity";
-import { useLocalStorageState } from "./useLocalStorageState";
-import { mergeRoomSnapshot } from "../util/room";
+import type { Participant, Room, RoomChangeSubscription } from "../types";
 import { updateMembership } from "../util/participant";
+import { mergeRoomSnapshot } from "../util/room";
 
-export const useRoomRender = (room: Room, participant: Participant) => {
+type UseRoomRenderParams = {
+  participant?: Participant;
+  room?: Room;
+  roomId?: string;
+};
+
+export function useRoomRender({
+  participant,
+  room,
+  roomId,
+}: UseRoomRenderParams) {
   const [isHydratingRoom, setIsHydratingRoom] = useState(false);
   const [, setStorage] = useLocalStorageState();
   const { showToast } = useToast();
   const { navigate } = useRouteState();
   const roomChangeSubscriptionRef = useRef<RoomChangeSubscription | null>(null);
 
-  if (!room || !participant) {
-    return;
-  }
-  const needsRoomSnapshot = Boolean(
-    room.id && (!room || (participant.id !== undefined && !!participant))
-  );
+  const participantId = participant?.id;
+  const needsRoomSnapshot = Boolean(roomId && (!room || !participantId));
 
   const goToRoomAccessRestricted = useCallback(
-    (roomId: string) => {
+    (nextRoomId: string) => {
       setStorage((previous) => ({
         ...previous,
-        memberships: updateMembership(previous.memberships, roomId, undefined),
+        memberships: updateMembership(
+          previous.memberships,
+          nextRoomId,
+          undefined
+        ),
       }));
-
-      navigate({ name: "room_access_restricted", roomId }, { replace: true });
+      navigate(
+        {
+          name: "room_access_restricted",
+          roomId: nextRoomId,
+        },
+        { replace: true }
+      );
     },
     [navigate, setStorage]
   );
 
   useEffect(() => {
-    if (!isFirebaseConfigured || !room.id) {
+    if (!isFirebaseConfigured || !roomId) {
       setIsHydratingRoom(false);
       return;
     }
@@ -56,7 +71,7 @@ export const useRoomRender = (room: Room, participant: Participant) => {
     let isCancelled = false;
     setIsHydratingRoom(true);
 
-    const hydrateRoom = async (roomId: string) => {
+    const hydrateRoom = async () => {
       try {
         const roomSnapshot = await getRoomSnapshot(roomId);
 
@@ -70,18 +85,18 @@ export const useRoomRender = (room: Room, participant: Participant) => {
           return;
         }
 
-        const room = mapRoomSnapshotToDraftRoom(roomSnapshot);
+        const nextRoom = mapRoomSnapshotToDraftRoom(roomSnapshot);
         let restoredParticipant = null;
 
         try {
           restoredParticipant = await restoreParticipant({
             clientKey: getOrCreateClientKey(),
-            roomId: room.id,
+            roomId: roomId,
           });
         } catch (error) {
           if (String(error).includes("ROOM_ACCESS_RESTRICTED")) {
             if (!isCancelled) {
-              goToRoomAccessRestricted(room.id);
+              goToRoomAccessRestricted(roomId);
             }
             return;
           }
@@ -99,15 +114,15 @@ export const useRoomRender = (room: Room, participant: Participant) => {
           ...previous,
           rooms: {
             ...previous.rooms,
-            [room.id]: mergeRoomSnapshot(
-              previous.rooms[room.id],
-              room,
+            [nextRoom.id]: mergeRoomSnapshot(
+              previous.rooms[nextRoom.id],
+              nextRoom,
               restoredParticipantId
             ),
           },
           memberships: updateMembership(
             previous.memberships,
-            room.id,
+            nextRoom.id,
             restoredParticipantId
           ),
         }));
@@ -124,25 +139,22 @@ export const useRoomRender = (room: Room, participant: Participant) => {
       }
     };
 
-    void hydrateRoom(room.id);
+    void hydrateRoom();
 
     return () => {
       isCancelled = true;
     };
   }, [
-    participant.id,
     goToRoomAccessRestricted,
-    !!participant,
-    room,
-    navigate,
     needsRoomSnapshot,
-    room.id,
+    navigate,
     setStorage,
     showToast,
+    roomId,
   ]);
 
   useEffect(() => {
-    if (!isFirebaseConfigured || !room.id) {
+    if (!isFirebaseConfigured || !roomId) {
       roomChangeSubscriptionRef.current = null;
       return;
     }
@@ -150,7 +162,7 @@ export const useRoomRender = (room: Room, participant: Participant) => {
     let isCancelled = false;
     let refreshTimer: number | undefined;
 
-    const refreshRoomSnapshot = (roomId: string) => {
+    const refreshRoomSnapshot = () => {
       if (refreshTimer) {
         window.clearTimeout(refreshTimer);
       }
@@ -169,8 +181,8 @@ export const useRoomRender = (room: Room, participant: Participant) => {
                 const rooms = { ...previous.rooms };
                 const memberships = { ...previous.memberships };
 
-                delete rooms[room.id];
-                delete memberships[room.id];
+                delete rooms[roomId];
+                delete memberships[roomId];
 
                 return {
                   ...previous,
@@ -183,17 +195,17 @@ export const useRoomRender = (room: Room, participant: Participant) => {
               return;
             }
 
-            const room = mapRoomSnapshotToDraftRoom(roomSnapshot);
+            const nextRoom = mapRoomSnapshotToDraftRoom(roomSnapshot);
             const shouldCheckRestrictedAccess =
-              Boolean(participant.id) &&
-              !room.participants.some(
-                (participant) => participant.id === participant.id
+              Boolean(participantId) &&
+              !nextRoom.participants.some(
+                (nextParticipant) => nextParticipant.id === participantId
               );
 
             if (shouldCheckRestrictedAccess) {
               const isRestricted = await isRoomAccessRestricted({
                 clientKey: getOrCreateClientKey(),
-                roomId: room.id,
+                roomId: roomId,
               });
 
               if (isCancelled) {
@@ -201,7 +213,7 @@ export const useRoomRender = (room: Room, participant: Participant) => {
               }
 
               if (isRestricted) {
-                goToRoomAccessRestricted(room.id);
+                goToRoomAccessRestricted(roomId);
                 return;
               }
             }
@@ -210,16 +222,18 @@ export const useRoomRender = (room: Room, participant: Participant) => {
               ...previous,
               rooms: {
                 ...previous.rooms,
-                [room.id]: mergeRoomSnapshot(
-                  previous.rooms[room.id],
-                  room,
-                  previous.memberships[room.id]
+                [nextRoom.id]: mergeRoomSnapshot(
+                  previous.rooms[nextRoom.id],
+                  nextRoom,
+                  previous.memberships[nextRoom.id]
                 ),
               },
             }));
           } catch {
             if (!isCancelled) {
-              showToast({ msg: "최신 방 정보를 동기화하지 못했어요." });
+              showToast({
+                msg: "최신 방 정보를 동기화하지 못했어요.",
+              });
             }
           }
         };
@@ -229,8 +243,8 @@ export const useRoomRender = (room: Room, participant: Participant) => {
     };
 
     const subscription = subscribeToRoomChanges({
-      roomId: room.id,
-      onChange: () => refreshRoomSnapshot(room.id),
+      roomId: roomId,
+      onChange: refreshRoomSnapshot,
       onStatusChange: (status) => {
         if (status === "SNAPSHOT_ERROR") {
           showToast({
@@ -255,9 +269,14 @@ export const useRoomRender = (room: Room, participant: Participant) => {
 
       void unsubscribeFromRoomChanges(subscription);
     };
-  }, [participant.id, navigate, room.id, setStorage, showToast]);
+  }, [
+    goToRoomAccessRestricted,
+    navigate,
+    participantId,
+    setStorage,
+    showToast,
+    roomId,
+  ]);
 
-  return {
-    isHydratingRoom,
-  };
-};
+  return { isHydratingRoom };
+}

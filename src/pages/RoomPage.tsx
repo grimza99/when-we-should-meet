@@ -29,9 +29,9 @@ import {
 } from "../integrations/firebase/services/participant-service";
 import { useRoomRender } from "../hooks/useRoomRender";
 type RoomPageProps = {
-  currentParticipant: Participant;
+  currentParticipant?: Participant;
   isCurrentUserHost?: boolean;
-  room: Room;
+  room?: Room;
   roomSummary?: RoomSummary;
   onMoveMonth: (offset: number) => void;
 };
@@ -46,17 +46,22 @@ export function RoomPage({
   const headerRef = useRef<HTMLElement | null>(null);
   const { navigate, route } = useRouteState();
   const [storage] = useLocalStorageState();
-  const { isHydratingRoom } = useRoomRender(room, currentParticipant);
+  const routeRoomId = route.name === "room" ? route.roomId : undefined;
+  const { isHydratingRoom } = useRoomRender({
+    participant: currentParticipant,
+    room,
+    roomId: routeRoomId,
+  });
   const [nicknameModalDismissedRoomId, setNicknameModalDismissedRoomId] =
     useState<string | null>(null);
   const [dashboardStickyTop, setDashboardStickyTop] = useState(80);
   const { showToast } = useToast();
   const updateCurrentParticipant = useCurrentParticipantUpdater();
 
-  const localRoom =
-    route.name === "room" ? storage.rooms[route.roomId] : undefined;
-  const localParticipantId =
-    route.name === "room" ? storage.memberships[route.roomId] : undefined;
+  const localRoom = routeRoomId ? storage.rooms[routeRoomId] : undefined;
+  const localParticipantId = routeRoomId
+    ? storage.memberships[routeRoomId]
+    : undefined;
   const effectiveRoom = localRoom ?? room;
   const effectiveCurrentParticipant =
     localRoom?.participants.find(
