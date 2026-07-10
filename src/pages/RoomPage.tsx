@@ -133,8 +133,7 @@ export function RoomPage({
     effectiveRoom.endDate
   );
   const isCurrentUserHost =
-    Boolean(currentParticipant.id) &&
-    currentParticipant.id === room?.hostClientKey;
+    Boolean(localParticipantId) && localParticipantId === room?.hostClientKey;
 
   const hasSelectionToReset = effectiveCurrentParticipant
     ? effectiveCurrentParticipant.weekdayRules.length > 0 ||
