@@ -27,24 +27,30 @@ import { useLocalStorageState } from "./hooks/useLocalStorageState";
 import type { RoomChangeSubscription } from "./types";
 
 function AppContent() {
-  const appState = useAppState();
+  const {
+    currentParticipant,
+    currentRoom,
+    setVisibleMonth,
+    currentRoomSummary,
+    moveVisibleMonth,
+    isCurrentUserHost,
+  } = useAppState();
+
   const [isHydratingRoom, setIsHydratingRoom] = useState(false);
   const [, setStorage] = useLocalStorageState();
   const { showToast } = useToast();
-  const { navigate } = useRouteState();
+  const { navigate, route } = useRouteState();
   const roomChangeSubscriptionRef = useRef<RoomChangeSubscription | null>(null);
-
-  const hasCurrentParticipant = Boolean(appState.currentParticipant);
+  const hasCurrentParticipant = Boolean(currentParticipant);
   const needsRoomSnapshot = Boolean(
-    appState.currentRoom.id &&
-      (!appState.currentRoom ||
-        (appState.currentParticipant.id !== undefined &&
-          !hasCurrentParticipant))
+    currentRoom.id &&
+      (!currentRoom ||
+        (currentParticipant.id !== undefined && !hasCurrentParticipant))
   );
 
   useEffect(() => {
-    void trackPageView(appState.currentRoute);
-  }, [appState.currentRoute]);
+    void trackPageView(route);
+  }, [route]);
   const goToRoomAccessRestricted = useCallback(
     (roomId: string) => {
       setStorage((previous) => ({
@@ -59,7 +65,7 @@ function AppContent() {
     [showToast, navigate, setStorage]
   );
   useEffect(() => {
-    if (!isFirebaseConfigured || !appState.currentRoom.id) {
+    if (!isFirebaseConfigured || !currentRoom.id) {
       roomChangeSubscriptionRef.current = null;
       return;
     }
@@ -75,7 +81,7 @@ function AppContent() {
       refreshTimer = window.setTimeout(() => {
         const refresh = async () => {
           try {
-            const roomSnapshot = await getRoomSnapshot(appState.currentRoom.id);
+            const roomSnapshot = await getRoomSnapshot(currentRoom.id);
 
             if (isCancelled) {
               return;
@@ -86,8 +92,8 @@ function AppContent() {
                 const rooms = { ...previous.rooms };
                 const memberships = { ...previous.memberships };
 
-                delete rooms[appState.currentRoom.id];
-                delete memberships[appState.currentRoom.id];
+                delete rooms[currentRoom.id];
+                delete memberships[currentRoom.id];
 
                 return {
                   ...previous,
@@ -102,16 +108,15 @@ function AppContent() {
 
             const room = mapRoomSnapshotToDraftRoom(roomSnapshot);
             const shouldCheckRestrictedAccess =
-              Boolean(appState.currentParticipant.id) &&
+              Boolean(currentParticipant.id) &&
               !room.participants.some(
-                (participant) =>
-                  participant.id === appState.currentParticipant.id
+                (participant) => participant.id === currentParticipant.id
               );
 
             if (shouldCheckRestrictedAccess) {
               const isRestricted = await isRoomAccessRestricted({
                 clientKey: getOrCreateClientKey(),
-                roomId: appState.currentRoom.id,
+                roomId: currentRoom.id,
               });
 
               if (isCancelled) {
@@ -119,7 +124,7 @@ function AppContent() {
               }
 
               if (isRestricted) {
-                goToRoomAccessRestricted(appState.currentRoom.id);
+                goToRoomAccessRestricted(currentRoom.id);
                 return;
               }
             }
@@ -147,7 +152,7 @@ function AppContent() {
     };
 
     const subscription = subscribeToRoomChanges({
-      roomId: appState.currentRoom.id,
+      roomId: currentRoom.id,
       onChange: refreshRoomSnapshot,
       onStatusChange: (status) => {
         if (status === "SNAPSHOT_ERROR") {
@@ -173,16 +178,10 @@ function AppContent() {
 
       void unsubscribeFromRoomChanges(subscription);
     };
-  }, [
-    appState.currentParticipant.id,
-    navigate,
-    appState.currentRoom.id,
-    setStorage,
-    showToast,
-  ]);
+  }, [currentParticipant.id, navigate, currentRoom.id, setStorage, showToast]);
 
   useEffect(() => {
-    if (!isFirebaseConfigured || !appState.currentRoom.id) {
+    if (!isFirebaseConfigured || !currentRoom.id) {
       setIsHydratingRoom(false);
       return;
     }
@@ -197,7 +196,7 @@ function AppContent() {
 
     const hydrateRoom = async () => {
       try {
-        const roomSnapshot = await getRoomSnapshot(appState.currentRoom.id);
+        const roomSnapshot = await getRoomSnapshot(currentRoom.id);
 
         if (!roomSnapshot) {
           if (!isCancelled) {
@@ -215,12 +214,12 @@ function AppContent() {
         try {
           restoredParticipant = await restoreParticipant({
             clientKey: getOrCreateClientKey(),
-            roomId: appState.currentRoom.id,
+            roomId: currentRoom.id,
           });
         } catch (error) {
           if (String(error).includes("ROOM_ACCESS_RESTRICTED")) {
             if (!isCancelled) {
-              goToRoomAccessRestricted(appState.currentRoom.id);
+              goToRoomAccessRestricted(currentRoom.id);
             }
             return;
           }
@@ -269,37 +268,37 @@ function AppContent() {
       isCancelled = true;
     };
   }, [
-    appState.currentParticipant.id,
+    currentParticipant.id,
     goToRoomAccessRestricted,
     hasCurrentParticipant,
-    appState.currentRoom,
+    currentRoom,
     navigate,
     needsRoomSnapshot,
-    appState.currentRoom.id,
+    currentRoom.id,
     setStorage,
     showToast,
   ]);
   return (
     <>
-      {appState.currentRoute.name === "landing" ? (
-        <LandingPage setVisibleMonth={appState.setVisibleMonth} />
-      ) : appState.currentRoute.name === "report" ? (
+      {route.name === "landing" ? (
+        <LandingPage setVisibleMonth={setVisibleMonth} />
+      ) : route.name === "report" ? (
         <ReportPage />
-      ) : appState.currentRoute.name === "room_access_restricted" ? (
+      ) : route.name === "room_access_restricted" ? (
         <RoomAccessRestrictedPage />
-      ) : appState.currentRoute.name === "not-found-room" ? (
+      ) : route.name === "not-found-room" ? (
         <NotFoundRoomPage />
       ) : (
         <RoomPage
-          currentParticipant={appState.currentParticipant}
+          currentParticipant={currentParticipant}
           isHydratingRoom={isHydratingRoom}
-          room={appState.currentRoom}
-          roomSummary={appState.currentRoomSummary}
-          onMoveMonth={appState.moveVisibleMonth}
-          isCurrentUserHost={appState.isCurrentUserHost}
+          room={currentRoom}
+          roomSummary={currentRoomSummary}
+          onMoveMonth={moveVisibleMonth}
+          isCurrentUserHost={isCurrentUserHost}
         />
       )}
-      {appState.currentRoute.name !== "report" && <ReportEntryButton />}
+      {route.name !== "report" && <ReportEntryButton />}
     </>
   );
 }

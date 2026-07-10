@@ -72,7 +72,6 @@ export function useAppState() {
     currentParticipant,
     currentRoom,
     currentRoomSummary,
-    currentRoute: route,
     isCurrentUserHost,
     moveVisibleMonth,
     setVisibleMonth: (date: string) => setVisibleMonth(date),
