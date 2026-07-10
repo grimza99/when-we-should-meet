@@ -18,7 +18,6 @@ function AppContent() {
     setVisibleMonth,
     currentRoomSummary,
     moveVisibleMonth,
-    isCurrentUserHost,
   } = useAppState();
 
   const { route } = useRouteState();
@@ -43,7 +42,6 @@ function AppContent() {
           room={currentRoom}
           roomSummary={currentRoomSummary}
           onMoveMonth={moveVisibleMonth}
-          isCurrentUserHost={isCurrentUserHost}
         />
       )}
       {route.name !== "report" && <ReportEntryButton />}

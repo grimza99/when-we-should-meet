@@ -30,7 +30,6 @@ import {
 import { useRoomRender } from "../hooks/useRoomRender";
 type RoomPageProps = {
   currentParticipant?: Participant;
-  isCurrentUserHost?: boolean;
   room?: Room;
   roomSummary?: RoomSummary;
   onMoveMonth: (offset: number) => void;
@@ -38,7 +37,6 @@ type RoomPageProps = {
 
 export function RoomPage({
   currentParticipant,
-  isCurrentUserHost = false,
   onMoveMonth,
   room,
   roomSummary,
@@ -134,6 +132,10 @@ export function RoomPage({
     effectiveRoom.startDate,
     effectiveRoom.endDate
   );
+  const isCurrentUserHost =
+    Boolean(currentParticipant.id) &&
+    currentParticipant.id === room?.hostClientKey;
+
   const hasSelectionToReset = effectiveCurrentParticipant
     ? effectiveCurrentParticipant.weekdayRules.length > 0 ||
       Object.keys(effectiveCurrentParticipant.overrides).length > 0

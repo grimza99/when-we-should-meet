@@ -23,9 +23,6 @@ export function useAppState() {
     (participant) => participant.id === currentParticipantId
   );
 
-  const isCurrentUserHost =
-    Boolean(currentParticipantId) &&
-    currentParticipantId === currentRoom?.hostClientKey;
   const effectiveVisibleMonth = currentRoom
     ? clampVisibleMonth(currentRoom, visibleMonth || currentRoom.startDate)
     : "";
@@ -72,7 +69,6 @@ export function useAppState() {
     currentParticipant,
     currentRoom,
     currentRoomSummary,
-    isCurrentUserHost,
     moveVisibleMonth,
     setVisibleMonth: (date: string) => setVisibleMonth(date),
   };
