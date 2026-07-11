@@ -28,18 +28,25 @@ import {
   setParticipantDateOverride,
 } from "../integrations/firebase/services/participant-service";
 import { useRoomRender } from "../hooks/useRoomRender";
+import {
+  addMonths,
+  buildCalendarDays,
+  buildRankings,
+  clampVisibleMonth,
+  formatMonthLabel,
+} from "../lib/date";
 type RoomPageProps = {
   currentParticipant?: Participant;
   room?: Room;
-  roomSummary?: RoomSummary;
-  onMoveMonth: (offset: number) => void;
+  setVisibleMonth: (date: string) => void;
+  visibleMonth: string;
 };
 
 export function RoomPage({
   currentParticipant,
-  onMoveMonth,
   room,
-  roomSummary,
+  setVisibleMonth,
+  visibleMonth,
 }: RoomPageProps) {
   const headerRef = useRef<HTMLElement | null>(null);
   const { navigate, route } = useRouteState();
@@ -65,6 +72,27 @@ export function RoomPage({
     localRoom?.participants.find(
       (participant) => participant.id === localParticipantId
     ) ?? currentParticipant;
+  const effectiveVisibleMonth = effectiveRoom
+    ? clampVisibleMonth(
+        effectiveRoom,
+        visibleMonth || effectiveRoom.startDate
+      )
+    : "";
+  const roomSummary = useMemo<RoomSummary | undefined>(() => {
+    if (!effectiveRoom) {
+      return undefined;
+    }
+
+    return {
+      calendarDays: buildCalendarDays(
+        effectiveRoom,
+        effectiveCurrentParticipant?.id,
+        effectiveVisibleMonth
+      ),
+      monthLabel: formatMonthLabel(effectiveVisibleMonth),
+      rankings: buildRankings(effectiveRoom),
+    };
+  }, [effectiveCurrentParticipant?.id, effectiveRoom, effectiveVisibleMonth]);
 
   useEffect(() => {
     const headerElement = headerRef.current;
@@ -133,7 +161,7 @@ export function RoomPage({
     effectiveRoom.endDate
   );
   const isCurrentUserHost =
-    Boolean(localParticipantId) && localParticipantId === room?.hostClientKey;
+    effectiveCurrentParticipant?.id === effectiveRoom.hostClientKey;
 
   const hasSelectionToReset = effectiveCurrentParticipant
     ? effectiveCurrentParticipant.weekdayRules.length > 0 ||
@@ -235,6 +263,15 @@ export function RoomPage({
     }
   };
 
+  const moveVisibleMonth = (offset: number) => {
+    setVisibleMonth(
+      clampVisibleMonth(
+        effectiveRoom,
+        addMonths(effectiveVisibleMonth || effectiveRoom.startDate, offset)
+      )
+    );
+  };
+
   return (
     <main
       aria-label={ARIA_LABELS.room.page}
@@ -295,7 +332,7 @@ export function RoomPage({
         <div className="calendar-header">
           <Button
             ariaLabel={ARIA_LABELS.room.previousMonthButton}
-            onClick={() => onMoveMonth(-1)}
+            onClick={() => moveVisibleMonth(-1)}
             variant="chip"
           >
             &lt;
@@ -315,7 +352,7 @@ export function RoomPage({
             </button>
             <Button
               ariaLabel={ARIA_LABELS.room.nextMonthButton}
-              onClick={() => onMoveMonth(1)}
+              onClick={() => moveVisibleMonth(1)}
               variant="chip"
             >
               &gt;
