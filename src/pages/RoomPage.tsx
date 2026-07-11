@@ -52,11 +52,6 @@ export function RoomPage({
   const { navigate, route } = useRouteState();
   const [storage] = useLocalStorageState();
   const routeRoomId = route.name === "room" ? route.roomId : undefined;
-  const { isHydratingRoom } = useRoomRender({
-    participant: currentParticipant,
-    room,
-    roomId: routeRoomId,
-  });
   const [nicknameModalDismissedRoomId, setNicknameModalDismissedRoomId] =
     useState<string | null>(null);
   const [dashboardStickyTop, setDashboardStickyTop] = useState(80);
@@ -72,6 +67,11 @@ export function RoomPage({
     localRoom?.participants.find(
       (participant) => participant.id === localParticipantId
     ) ?? currentParticipant;
+  const { isHydratingRoom } = useRoomRender({
+    participant: effectiveCurrentParticipant,
+    room: effectiveRoom,
+    roomId: routeRoomId,
+  });
   const effectiveVisibleMonth = effectiveRoom
     ? clampVisibleMonth(
         effectiveRoom,
