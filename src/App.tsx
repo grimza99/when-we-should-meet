@@ -9,35 +9,41 @@ import { ReportPage } from "./pages/ReportPage";
 import { ReportEntryButton } from "./components/ui/ReportEntryButton";
 import { ToastProvider } from "./components/shell/toast/ToastProvider";
 import NotFoundRoomPage from "./pages/NotFoundRoomPage";
+import { useRouteState } from "./lib/router";
 
 function AppContent() {
-  const appState = useAppState();
+  const {
+    currentParticipant,
+    currentRoom,
+    setVisibleMonth,
+    visibleMonth,
+  } = useAppState();
+
+  const { route } = useRouteState();
 
   useEffect(() => {
-    void trackPageView(appState.currentRoute);
-  }, [appState.currentRoute]);
+    void trackPageView(route);
+  }, [route]);
 
   return (
     <>
-      {appState.currentRoute.name === "landing" ? (
-        <LandingPage setVisibleMonth={appState.setVisibleMonth} />
-      ) : appState.currentRoute.name === "report" ? (
+      {route.name === "landing" ? (
+        <LandingPage setVisibleMonth={setVisibleMonth} />
+      ) : route.name === "report" ? (
         <ReportPage />
-      ) : appState.currentRoute.name === "room_access_restricted" ? (
+      ) : route.name === "room_access_restricted" ? (
         <RoomAccessRestrictedPage />
-      ) : appState.currentRoute.name === "not-found-room" ? (
+      ) : route.name === "not-found-room" ? (
         <NotFoundRoomPage />
       ) : (
         <RoomPage
-          currentParticipant={appState.currentParticipant}
-          isHydratingRoom={appState.isHydratingRoom}
-          room={appState.currentRoom}
-          roomSummary={appState.currentRoomSummary}
-          onMoveMonth={appState.moveVisibleMonth}
-          isCurrentUserHost={appState.isCurrentUserHost}
+          currentParticipant={currentParticipant}
+          room={currentRoom}
+          setVisibleMonth={setVisibleMonth}
+          visibleMonth={visibleMonth}
         />
       )}
-      {appState.currentRoute.name !== "report" && <ReportEntryButton />}
+      {route.name !== "report" && <ReportEntryButton />}
     </>
   );
 }

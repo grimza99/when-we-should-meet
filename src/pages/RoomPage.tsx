@@ -27,42 +27,72 @@ import {
   resetParticipantSelections as resetFirebaseParticipantSelections,
   setParticipantDateOverride,
 } from "../integrations/firebase/services/participant-service";
+import { useRoomRender } from "../hooks/useRoomRender";
+import {
+  addMonths,
+  buildCalendarDays,
+  buildRankings,
+  clampVisibleMonth,
+  formatMonthLabel,
+} from "../lib/date";
 type RoomPageProps = {
   currentParticipant?: Participant;
-  isCurrentUserHost?: boolean;
-  isHydratingRoom?: boolean;
   room?: Room;
-  roomSummary?: RoomSummary;
-  onMoveMonth: (offset: number) => void;
+  setVisibleMonth: (date: string) => void;
+  visibleMonth: string;
 };
 
 export function RoomPage({
   currentParticipant,
-  isCurrentUserHost = false,
-  isHydratingRoom = false,
-  onMoveMonth,
   room,
-  roomSummary,
+  setVisibleMonth,
+  visibleMonth,
 }: RoomPageProps) {
   const headerRef = useRef<HTMLElement | null>(null);
   const { navigate, route } = useRouteState();
   const [storage] = useLocalStorageState();
-
+  const routeRoomId = route.name === "room" ? route.roomId : undefined;
   const [nicknameModalDismissedRoomId, setNicknameModalDismissedRoomId] =
     useState<string | null>(null);
   const [dashboardStickyTop, setDashboardStickyTop] = useState(80);
   const { showToast } = useToast();
   const updateCurrentParticipant = useCurrentParticipantUpdater();
 
-  const localRoom =
-    route.name === "room" ? storage.rooms[route.roomId] : undefined;
-  const localParticipantId =
-    route.name === "room" ? storage.memberships[route.roomId] : undefined;
+  const localRoom = routeRoomId ? storage.rooms[routeRoomId] : undefined;
+  const localParticipantId = routeRoomId
+    ? storage.memberships[routeRoomId]
+    : undefined;
   const effectiveRoom = localRoom ?? room;
   const effectiveCurrentParticipant =
     localRoom?.participants.find(
       (participant) => participant.id === localParticipantId
     ) ?? currentParticipant;
+  const { isHydratingRoom } = useRoomRender({
+    participant: effectiveCurrentParticipant,
+    room: effectiveRoom,
+    roomId: routeRoomId,
+  });
+  const effectiveVisibleMonth = effectiveRoom
+    ? clampVisibleMonth(
+        effectiveRoom,
+        visibleMonth || effectiveRoom.startDate
+      )
+    : "";
+  const roomSummary = useMemo<RoomSummary | undefined>(() => {
+    if (!effectiveRoom) {
+      return undefined;
+    }
+
+    return {
+      calendarDays: buildCalendarDays(
+        effectiveRoom,
+        effectiveCurrentParticipant?.id,
+        effectiveVisibleMonth
+      ),
+      monthLabel: formatMonthLabel(effectiveVisibleMonth),
+      rankings: buildRankings(effectiveRoom),
+    };
+  }, [effectiveCurrentParticipant?.id, effectiveRoom, effectiveVisibleMonth]);
 
   useEffect(() => {
     const headerElement = headerRef.current;
@@ -130,6 +160,9 @@ export function RoomPage({
     effectiveRoom.startDate,
     effectiveRoom.endDate
   );
+  const isCurrentUserHost =
+    effectiveCurrentParticipant?.id === effectiveRoom.hostClientKey;
+
   const hasSelectionToReset = effectiveCurrentParticipant
     ? effectiveCurrentParticipant.weekdayRules.length > 0 ||
       Object.keys(effectiveCurrentParticipant.overrides).length > 0
@@ -230,6 +263,15 @@ export function RoomPage({
     }
   };
 
+  const moveVisibleMonth = (offset: number) => {
+    setVisibleMonth(
+      clampVisibleMonth(
+        effectiveRoom,
+        addMonths(effectiveVisibleMonth || effectiveRoom.startDate, offset)
+      )
+    );
+  };
+
   return (
     <main
       aria-label={ARIA_LABELS.room.page}
@@ -290,7 +332,7 @@ export function RoomPage({
         <div className="calendar-header">
           <Button
             ariaLabel={ARIA_LABELS.room.previousMonthButton}
-            onClick={() => onMoveMonth(-1)}
+            onClick={() => moveVisibleMonth(-1)}
             variant="chip"
           >
             &lt;
@@ -310,7 +352,7 @@ export function RoomPage({
             </button>
             <Button
               ariaLabel={ARIA_LABELS.room.nextMonthButton}
-              onClick={() => onMoveMonth(1)}
+              onClick={() => moveVisibleMonth(1)}
               variant="chip"
             >
               &gt;
