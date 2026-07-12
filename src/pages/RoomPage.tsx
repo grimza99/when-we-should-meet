@@ -127,14 +127,6 @@ export function RoomPage({ setVisibleMonth, visibleMonth }: RoomPageProps) {
       return;
     }
 
-    const hasSelectionToReset =
-      participant.weekdayRules.length > 0 ||
-      Object.keys(participant.overrides).length > 0;
-
-    if (!hasSelectionToReset) {
-      return;
-    }
-
     const previousParticipant = participant;
     const updatedAt = new Date().toISOString();
     const nextParticipant = {
