@@ -1,10 +1,4 @@
-import {
-  useEffect,
-  useMemo,
-  useRef,
-  useState,
-  type CSSProperties,
-} from "react";
+import { useMemo, useRef, useState, type CSSProperties } from "react";
 import { CalendarGrid } from "../components/calendar/CalendarGrid";
 import { NicknameModal } from "../components/roomPage/NicknameModal";
 import { RoomDashboard } from "../components/room/RoomDashboard";
@@ -12,7 +6,6 @@ import { Button } from "../components/ui/Button";
 import { HomeBrandButton } from "../components/ui/HomeBrandButton";
 import { ARIA_LABELS } from "../lib/ariaLabels";
 import { ControlSection } from "../components/roomPage/ControlSection";
-import InviteSection from "../components/roomPage/InviteSection";
 import { useRouteState } from "../lib/router";
 import ControlGroupSection from "../components/roomPage/ControlGroupSection";
 import { formatRoomRange } from "../util";
@@ -28,6 +21,8 @@ import {
 import { useRoomRender } from "../hooks/useRoomRender";
 import { addMonths, clampVisibleMonth } from "../lib/date";
 import { useRoomSummary } from "../hooks/useRoomSummary";
+import HeaderSection from "../components/roomPage/HeaderSection";
+
 type RoomPageProps = {
   setVisibleMonth: (date: string) => void;
   visibleMonth: string;
@@ -49,37 +44,12 @@ export function RoomPage({ setVisibleMonth, visibleMonth }: RoomPageProps) {
   const { isHydratingRoom } = useRoomRender({
     participant,
     room,
-    roomId: room.id,
+    roomId: room?.id ?? (route.name === "room" ? route.roomId : undefined),
   });
   const effectiveVisibleMonth = room
     ? clampVisibleMonth(room, visibleMonth || room.startDate)
     : "";
 
-  useEffect(() => {
-    const headerElement = headerRef.current;
-
-    if (!headerElement) {
-      return;
-    }
-
-    const updateDashboardStickyTop = () => {
-      setDashboardStickyTop(headerElement.offsetHeight + 8);
-    };
-
-    updateDashboardStickyTop();
-
-    const resizeObserver = new ResizeObserver(() => {
-      updateDashboardStickyTop();
-    });
-
-    resizeObserver.observe(headerElement);
-    window.addEventListener("resize", updateDashboardStickyTop);
-
-    return () => {
-      resizeObserver.disconnect();
-      window.removeEventListener("resize", updateDashboardStickyTop);
-    };
-  }, []);
   const rankByDate = useMemo(
     () =>
       Object.fromEntries(
@@ -228,23 +198,11 @@ export function RoomPage({ setVisibleMonth, visibleMonth }: RoomPageProps) {
         } as CSSProperties
       }
     >
-      <header className="room-header" ref={headerRef}>
-        <div className="room-header-top">
-          <div className="brand-button-and-invite-code">
-            <HomeBrandButton
-              ariaLabel={ARIA_LABELS.room.homeButton}
-              onClick={() => navigate({ name: "landing" })}
-            />
-            <h1
-              aria-label={ARIA_LABELS.room.inviteCodeHeading}
-              className="room-title"
-            >
-              {room.inviteCode}
-            </h1>
-          </div>
-          <InviteSection inviteCode={room.inviteCode} roomId={room.id} />
-        </div>
-      </header>
+      <HeaderSection
+        ref={headerRef}
+        room={room}
+        setDashboardStickyTop={setDashboardStickyTop}
+      />
       <RoomDashboard
         isCurrentUserHost={isCurrentUserHost}
         rankings={roomSummary.rankings}

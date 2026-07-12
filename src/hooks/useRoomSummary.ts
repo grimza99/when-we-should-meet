@@ -6,6 +6,7 @@ import type { RoomSummary, RouteState } from "../types";
 import {
   buildCalendarDays,
   buildRankings,
+  clampVisibleMonth,
   formatMonthLabel,
 } from "../lib/date";
 
@@ -17,20 +18,24 @@ export const useRoomSummary = ({ route, visibleMonth }: IUseRoomSummary) => {
   const { navigate } = useRouteState();
   const [storage] = useLocalStorageState();
 
-  if (route.name !== "room") return;
-  const room = storage.rooms[route.roomId] ?? undefined;
-  const participantId = storage.memberships[route.roomId] ?? undefined;
+  const room = route.name === "room" ? storage.rooms[route.roomId] : undefined;
+  const participantId =
+    route.name === "room" ? storage.memberships[route.roomId] : undefined;
   const participant = room?.participants.find(
     (participant) => participant.id === participantId
   );
 
   useEffect(() => {
-    if (route.name !== "room" || isFirebaseConfigured || !!room) {
+    if (route.name !== "room" || isFirebaseConfigured || room) {
       return;
     }
 
     navigate({ name: "not-found-room" }, { replace: true });
   }, [room, navigate, route]);
+
+  const effectiveVisibleMonth = room
+    ? clampVisibleMonth(room, visibleMonth || room.startDate)
+    : "";
 
   const roomSummary = useMemo<RoomSummary | undefined>(() => {
     if (!room) {
@@ -38,11 +43,15 @@ export const useRoomSummary = ({ route, visibleMonth }: IUseRoomSummary) => {
     }
 
     return {
-      calendarDays: buildCalendarDays(room, participant?.id, visibleMonth),
-      monthLabel: formatMonthLabel(visibleMonth),
+      calendarDays: buildCalendarDays(
+        room,
+        participant?.id,
+        effectiveVisibleMonth
+      ),
+      monthLabel: formatMonthLabel(effectiveVisibleMonth),
       rankings: buildRankings(room),
     };
-  }, [participant?.id, room, visibleMonth]);
+  }, [participant?.id, room, effectiveVisibleMonth]);
   return {
     room,
     participant,
