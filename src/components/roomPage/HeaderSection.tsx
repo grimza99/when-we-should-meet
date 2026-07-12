@@ -6,19 +6,19 @@ import { HomeBrandButton } from "../ui/HomeBrandButton";
 import InviteSection from "./InviteSection";
 
 type THeaderSection = {
-  ref: RefObject<HTMLElement | null>;
+  headerRef: RefObject<HTMLElement | null>;
   room: Room;
   setDashboardStickyTop: (num: number) => void;
 };
 export default function HeaderSection({
-  ref,
+  headerRef,
   room,
   setDashboardStickyTop,
 }: THeaderSection) {
   const { navigate } = useRouteState();
 
   useEffect(() => {
-    const headerElement = ref.current;
+    const headerElement = headerRef.current;
 
     if (!headerElement) {
       return;
@@ -41,9 +41,9 @@ export default function HeaderSection({
       resizeObserver.disconnect();
       window.removeEventListener("resize", updateDashboardStickyTop);
     };
-  }, [setDashboardStickyTop, ref, room]);
+  }, [setDashboardStickyTop, headerRef, room]);
   return (
-    <header className="room-header" ref={ref}>
+    <header className="room-header" ref={headerRef}>
       <div className="room-header-top">
         <div className="brand-button-and-invite-code">
           <HomeBrandButton

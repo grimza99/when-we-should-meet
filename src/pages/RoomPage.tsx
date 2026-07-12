@@ -199,7 +199,7 @@ export function RoomPage({ setVisibleMonth, visibleMonth }: RoomPageProps) {
       }
     >
       <HeaderSection
-        ref={headerRef}
+        headerRef={headerRef}
         room={room}
         setDashboardStickyTop={setDashboardStickyTop}
       />
