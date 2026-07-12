@@ -12,12 +12,7 @@ import NotFoundRoomPage from "./pages/NotFoundRoomPage";
 import { useRouteState } from "./lib/router";
 
 function AppContent() {
-  const {
-    currentParticipant,
-    currentRoom,
-    setVisibleMonth,
-    visibleMonth,
-  } = useAppState();
+  const { setVisibleMonth, visibleMonth } = useAppState();
 
   const { route } = useRouteState();
 
@@ -37,8 +32,6 @@ function AppContent() {
         <NotFoundRoomPage />
       ) : (
         <RoomPage
-          currentParticipant={currentParticipant}
-          room={currentRoom}
           setVisibleMonth={setVisibleMonth}
           visibleMonth={visibleMonth}
         />

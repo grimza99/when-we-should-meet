@@ -1,22 +1,13 @@
-import {
-  useEffect,
-  useMemo,
-  useRef,
-  useState,
-  type CSSProperties,
-} from "react";
+import { useMemo, useRef, useState, type CSSProperties } from "react";
 import { CalendarGrid } from "../components/calendar/CalendarGrid";
 import { NicknameModal } from "../components/roomPage/NicknameModal";
 import { RoomDashboard } from "../components/room/RoomDashboard";
 import { Button } from "../components/ui/Button";
 import { HomeBrandButton } from "../components/ui/HomeBrandButton";
 import { ARIA_LABELS } from "../lib/ariaLabels";
-import type { Participant, Room, RoomSummary } from "../types";
 import { ControlSection } from "../components/roomPage/ControlSection";
-import InviteSection from "../components/roomPage/InviteSection";
 import { useRouteState } from "../lib/router";
 import ControlGroupSection from "../components/roomPage/ControlGroupSection";
-import { useLocalStorageState } from "../hooks/useLocalStorageState";
 import { formatRoomRange } from "../util";
 import RoomFullState from "../components/roomPage/RoomFullState";
 import { useToast } from "../components/shell/toast/toast-context";
@@ -28,97 +19,37 @@ import {
   setParticipantDateOverride,
 } from "../integrations/firebase/services/participant-service";
 import { useRoomRender } from "../hooks/useRoomRender";
-import {
-  addMonths,
-  buildCalendarDays,
-  buildRankings,
-  clampVisibleMonth,
-  formatMonthLabel,
-} from "../lib/date";
+import { addMonths, clampVisibleMonth } from "../lib/date";
+import { useRoomSummary } from "../hooks/useRoomSummary";
+import HeaderSection from "../components/roomPage/HeaderSection";
+
 type RoomPageProps = {
-  currentParticipant?: Participant;
-  room?: Room;
   setVisibleMonth: (date: string) => void;
   visibleMonth: string;
 };
 
-export function RoomPage({
-  currentParticipant,
-  room,
-  setVisibleMonth,
-  visibleMonth,
-}: RoomPageProps) {
+export function RoomPage({ setVisibleMonth, visibleMonth }: RoomPageProps) {
   const headerRef = useRef<HTMLElement | null>(null);
   const { navigate, route } = useRouteState();
-  const [storage] = useLocalStorageState();
-  const routeRoomId = route.name === "room" ? route.roomId : undefined;
   const [nicknameModalDismissedRoomId, setNicknameModalDismissedRoomId] =
     useState<string | null>(null);
   const [dashboardStickyTop, setDashboardStickyTop] = useState(80);
   const { showToast } = useToast();
   const updateCurrentParticipant = useCurrentParticipantUpdater();
-
-  const localRoom = routeRoomId ? storage.rooms[routeRoomId] : undefined;
-  const localParticipantId = routeRoomId
-    ? storage.memberships[routeRoomId]
-    : undefined;
-  const effectiveRoom = localRoom ?? room;
-  const effectiveCurrentParticipant =
-    localRoom?.participants.find(
-      (participant) => participant.id === localParticipantId
-    ) ?? currentParticipant;
-  const { isHydratingRoom } = useRoomRender({
-    participant: effectiveCurrentParticipant,
-    room: effectiveRoom,
-    roomId: routeRoomId,
+  const { room, participant, roomSummary } = useRoomSummary({
+    route,
+    visibleMonth,
   });
-  const effectiveVisibleMonth = effectiveRoom
-    ? clampVisibleMonth(
-        effectiveRoom,
-        visibleMonth || effectiveRoom.startDate
-      )
+
+  const { isHydratingRoom } = useRoomRender({
+    participant,
+    room,
+    roomId: room?.id ?? (route.name === "room" ? route.roomId : undefined),
+  });
+  const effectiveVisibleMonth = room
+    ? clampVisibleMonth(room, visibleMonth || room.startDate)
     : "";
-  const roomSummary = useMemo<RoomSummary | undefined>(() => {
-    if (!effectiveRoom) {
-      return undefined;
-    }
 
-    return {
-      calendarDays: buildCalendarDays(
-        effectiveRoom,
-        effectiveCurrentParticipant?.id,
-        effectiveVisibleMonth
-      ),
-      monthLabel: formatMonthLabel(effectiveVisibleMonth),
-      rankings: buildRankings(effectiveRoom),
-    };
-  }, [effectiveCurrentParticipant?.id, effectiveRoom, effectiveVisibleMonth]);
-
-  useEffect(() => {
-    const headerElement = headerRef.current;
-
-    if (!headerElement) {
-      return;
-    }
-
-    const updateDashboardStickyTop = () => {
-      setDashboardStickyTop(headerElement.offsetHeight + 8);
-    };
-
-    updateDashboardStickyTop();
-
-    const resizeObserver = new ResizeObserver(() => {
-      updateDashboardStickyTop();
-    });
-
-    resizeObserver.observe(headerElement);
-    window.addEventListener("resize", updateDashboardStickyTop);
-
-    return () => {
-      resizeObserver.disconnect();
-      window.removeEventListener("resize", updateDashboardStickyTop);
-    };
-  }, []);
   const rankByDate = useMemo(
     () =>
       Object.fromEntries(
@@ -146,45 +77,30 @@ export function RoomPage({
     );
   }
 
-  if (!effectiveRoom || !roomSummary) {
+  if (!room || !roomSummary) {
     return null;
   }
 
-  const isRoomFull =
-    effectiveRoom.participants.length >= effectiveRoom.maxParticipants;
+  const isRoomFull = room.participants.length >= room.maxParticipants;
   const shouldShowNicknameModal =
-    !effectiveCurrentParticipant &&
-    !isRoomFull &&
-    nicknameModalDismissedRoomId !== effectiveRoom.id;
-  const roomRangeLabel = formatRoomRange(
-    effectiveRoom.startDate,
-    effectiveRoom.endDate
-  );
-  const isCurrentUserHost =
-    effectiveCurrentParticipant?.id === effectiveRoom.hostClientKey;
+    !participant && !isRoomFull && nicknameModalDismissedRoomId !== room.id;
+  const roomRangeLabel = formatRoomRange(room.startDate, room.endDate);
+  const isCurrentUserHost = participant?.id === room.hostClientKey;
 
-  const hasSelectionToReset = effectiveCurrentParticipant
-    ? effectiveCurrentParticipant.weekdayRules.length > 0 ||
-      Object.keys(effectiveCurrentParticipant.overrides).length > 0
+  const hasSelectionToReset = participant
+    ? participant.weekdayRules.length > 0 ||
+      Object.keys(participant.overrides).length > 0
     : false;
 
   const resetCurrentSelection = async () => {
-    if (!effectiveCurrentParticipant) {
+    if (!participant) {
       return;
     }
 
-    const hasSelectionToReset =
-      effectiveCurrentParticipant.weekdayRules.length > 0 ||
-      Object.keys(effectiveCurrentParticipant.overrides).length > 0;
-
-    if (!hasSelectionToReset) {
-      return;
-    }
-
-    const previousParticipant = effectiveCurrentParticipant;
+    const previousParticipant = participant;
     const updatedAt = new Date().toISOString();
     const nextParticipant = {
-      ...effectiveCurrentParticipant,
+      ...participant,
       overrides: {},
       updatedAt,
       weekdayRules: [],
@@ -201,7 +117,7 @@ export function RoomPage({
       await resetFirebaseParticipantSelections({
         clientKey: getOrCreateClientKey(),
         participantId: nextParticipant.id,
-        roomId: effectiveRoom.id,
+        roomId: room.id,
       });
     } catch {
       updateCurrentParticipant(previousParticipant);
@@ -212,23 +128,23 @@ export function RoomPage({
   };
 
   const toggleDate = async (isoDate: string) => {
-    if (!effectiveCurrentParticipant) {
+    if (!participant) {
       return;
     }
 
-    if (isoDate < effectiveRoom.startDate || isoDate > effectiveRoom.endDate) {
+    if (isoDate < room.startDate || isoDate > room.endDate) {
       showToast({ msg: "방에서 정한 날짜 범위 안에서만 선택할 수 있어요." });
       return;
     }
 
-    const previousParticipant = effectiveCurrentParticipant;
+    const previousParticipant = participant;
     const updatedAt = new Date().toISOString();
-    const nextOverrides = { ...effectiveCurrentParticipant.overrides };
+    const nextOverrides = { ...participant.overrides };
     const currentOverride = nextOverrides[isoDate];
     const nextStatus =
-      currentOverride === effectiveCurrentParticipant.selectionMode
+      currentOverride === participant.selectionMode
         ? null
-        : effectiveCurrentParticipant.selectionMode;
+        : participant.selectionMode;
 
     if (nextStatus === null) {
       delete nextOverrides[isoDate];
@@ -237,7 +153,7 @@ export function RoomPage({
     }
 
     const nextParticipant = {
-      ...effectiveCurrentParticipant,
+      ...participant,
       overrides: nextOverrides,
       updatedAt,
     };
@@ -252,7 +168,7 @@ export function RoomPage({
       await setParticipantDateOverride({
         clientKey: getOrCreateClientKey(),
         participantId: nextParticipant.id,
-        roomId: effectiveRoom.id,
+        roomId: room.id,
         overrides: nextParticipant.overrides,
       });
     } catch {
@@ -266,8 +182,8 @@ export function RoomPage({
   const moveVisibleMonth = (offset: number) => {
     setVisibleMonth(
       clampVisibleMonth(
-        effectiveRoom,
-        addMonths(effectiveVisibleMonth || effectiveRoom.startDate, offset)
+        room,
+        addMonths(effectiveVisibleMonth || room.startDate, offset)
       )
     );
   };
@@ -282,48 +198,28 @@ export function RoomPage({
         } as CSSProperties
       }
     >
-      <header className="room-header" ref={headerRef}>
-        <div className="room-header-top">
-          <div className="brand-button-and-invite-code">
-            <HomeBrandButton
-              ariaLabel={ARIA_LABELS.room.homeButton}
-              onClick={() => navigate({ name: "landing" })}
-            />
-            <h1
-              aria-label={ARIA_LABELS.room.inviteCodeHeading}
-              className="room-title"
-            >
-              {effectiveRoom.inviteCode}
-            </h1>
-          </div>
-          <InviteSection
-            inviteCode={effectiveRoom.inviteCode}
-            roomId={effectiveRoom.id}
-          />
-        </div>
-      </header>
+      <HeaderSection
+        headerRef={headerRef}
+        room={room}
+        setDashboardStickyTop={setDashboardStickyTop}
+      />
       <RoomDashboard
         isCurrentUserHost={isCurrentUserHost}
         rankings={roomSummary.rankings}
-        room={effectiveRoom}
+        room={room}
         stickyTopOffset={dashboardStickyTop}
         roomSummary={roomSummary}
       />
 
-      {effectiveCurrentParticipant && (
+      {participant && (
         <ControlGroupSection
-          currentNickname={effectiveCurrentParticipant.nickname}
-          currentParticipant={effectiveCurrentParticipant}
-          roomId={effectiveRoom.id}
-          room={effectiveRoom}
+          currentNickname={participant.nickname}
+          currentParticipant={participant}
+          roomId={room.id}
+          room={room}
         />
       )}
-      {effectiveCurrentParticipant && (
-        <ControlSection
-          room={effectiveRoom}
-          participant={effectiveCurrentParticipant}
-        />
-      )}
+      {participant && <ControlSection room={room} participant={participant} />}
       <section
         aria-label={ARIA_LABELS.room.calendarCard}
         className="calendar-card"
@@ -367,13 +263,13 @@ export function RoomPage({
         />
       </section>
 
-      {!effectiveCurrentParticipant && isRoomFull && <RoomFullState />}
+      {!participant && isRoomFull && <RoomFullState />}
 
       {shouldShowNicknameModal && (
         <NicknameModal
-          currentParticipant={effectiveCurrentParticipant}
-          onClose={() => setNicknameModalDismissedRoomId(effectiveRoom.id)}
-          room={effectiveRoom}
+          currentParticipant={participant}
+          onClose={() => setNicknameModalDismissedRoomId(room.id)}
+          room={room}
         />
       )}
     </main>
