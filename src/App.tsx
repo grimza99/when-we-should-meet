@@ -1,7 +1,6 @@
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import "./App.css";
 import { RoomAccessRestrictedPage } from "./pages/RoomAccessRestrictedPage";
-import { useAppState } from "./state/useAppState";
 import { LandingPage } from "./pages/LandingPage";
 import { RoomPage } from "./pages/RoomPage";
 import { trackPageView } from "./integrations/firebase/analytics";
@@ -12,7 +11,7 @@ import NotFoundRoomPage from "./pages/NotFoundRoomPage";
 import { useRouteState } from "./lib/router";
 
 function AppContent() {
-  const { setVisibleMonth, visibleMonth } = useAppState();
+  const [visibleMonth, setVisibleMonth] = useState("");
 
   const { route } = useRouteState();
 
