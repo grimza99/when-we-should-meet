@@ -18,37 +18,29 @@ import {
   resetParticipantSelections as resetFirebaseParticipantSelections,
   setParticipantDateOverride,
 } from "../integrations/firebase/services/participant-service";
+import { useLocalStorageState } from "../hooks/useLocalStorageState";
 import { useRoomRender } from "../hooks/useRoomRender";
 import { addMonths, clampVisibleMonth } from "../lib/date";
 import { useRoomSummary } from "../hooks/useRoomSummary";
 import HeaderSection from "../components/roomPage/HeaderSection";
 
-type RoomPageProps = {
-  setVisibleMonth: (date: string) => void;
-  visibleMonth: string;
-};
-
-export function RoomPage({ setVisibleMonth, visibleMonth }: RoomPageProps) {
+export function RoomPage() {
   const headerRef = useRef<HTMLElement | null>(null);
   const { navigate, route } = useRouteState();
+  const [, setStorage] = useLocalStorageState();
   const [nicknameModalDismissedRoomId, setNicknameModalDismissedRoomId] =
     useState<string | null>(null);
   const [dashboardStickyTop, setDashboardStickyTop] = useState(80);
   const { showToast } = useToast();
   const updateCurrentParticipant = useCurrentParticipantUpdater();
-  const { room, participant, roomSummary } = useRoomSummary({
-    route,
-    visibleMonth,
-  });
+  const { effectiveVisibleMonth, room, participant, roomSummary } =
+    useRoomSummary({ route });
 
   const { isHydratingRoom } = useRoomRender({
     participant,
     room,
     roomId: room?.id ?? (route.name === "room" ? route.roomId : undefined),
   });
-  const effectiveVisibleMonth = room
-    ? clampVisibleMonth(room, visibleMonth || room.startDate)
-    : "";
 
   const rankByDate = useMemo(
     () =>
@@ -180,12 +172,18 @@ export function RoomPage({ setVisibleMonth, visibleMonth }: RoomPageProps) {
   };
 
   const moveVisibleMonth = (offset: number) => {
-    setVisibleMonth(
-      clampVisibleMonth(
-        room,
-        addMonths(effectiveVisibleMonth || room.startDate, offset)
-      )
+    const nextVisibleMonth = clampVisibleMonth(
+      room,
+      addMonths(effectiveVisibleMonth || room.startDate, offset)
     );
+
+    setStorage((previous) => ({
+      ...previous,
+      visibleMonthsByRoomId: {
+        ...previous.visibleMonthsByRoomId,
+        [room.id]: nextVisibleMonth,
+      },
+    }));
   };
 
   return (

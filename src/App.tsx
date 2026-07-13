@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect } from "react";
 import "./App.css";
 import { RoomAccessRestrictedPage } from "./pages/RoomAccessRestrictedPage";
 import { LandingPage } from "./pages/LandingPage";
@@ -11,8 +11,6 @@ import NotFoundRoomPage from "./pages/NotFoundRoomPage";
 import { useRouteState } from "./lib/router";
 
 export default function App() {
-  const [visibleMonth, setVisibleMonth] = useState("");
-
   const { route } = useRouteState();
 
   useEffect(() => {
@@ -24,7 +22,7 @@ export default function App() {
       <div className="mobile-frame">
         <ToastProvider>
           {route.name === "landing" ? (
-            <LandingPage setVisibleMonth={setVisibleMonth} />
+            <LandingPage />
           ) : route.name === "report" ? (
             <ReportPage />
           ) : route.name === "room_access_restricted" ? (
@@ -32,10 +30,7 @@ export default function App() {
           ) : route.name === "not-found-room" ? (
             <NotFoundRoomPage />
           ) : (
-            <RoomPage
-              setVisibleMonth={setVisibleMonth}
-              visibleMonth={visibleMonth}
-            />
+            <RoomPage />
           )}
           {route.name !== "report" && <ReportEntryButton />}
         </ToastProvider>
