@@ -118,14 +118,17 @@ export default function ControlGroupSection({
     setStorage((previous) => {
       const rooms = { ...previous.rooms };
       const memberships = { ...previous.memberships };
+      const visibleMonthsByRoomId = { ...previous.visibleMonthsByRoomId };
 
       delete rooms[roomId];
       delete memberships[roomId];
+      delete visibleMonthsByRoomId[roomId];
 
       return {
         ...previous,
         memberships,
         rooms,
+        visibleMonthsByRoomId,
       };
     });
     showToast({ msg: "방을 삭제했어요." });
@@ -173,10 +176,14 @@ export default function ControlGroupSection({
         roomId,
         undefined
       );
+      const visibleMonthsByRoomId = { ...previous.visibleMonthsByRoomId };
+
+      delete visibleMonthsByRoomId[roomId];
 
       return {
         ...previous,
         memberships,
+        visibleMonthsByRoomId,
         rooms: nextRoom
           ? {
               ...previous.rooms,
