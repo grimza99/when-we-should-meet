@@ -10,7 +10,7 @@ import { ToastProvider } from "./components/shell/toast/ToastProvider";
 import NotFoundRoomPage from "./pages/NotFoundRoomPage";
 import { useRouteState } from "./lib/router";
 
-function AppContent() {
+export default function App() {
   const [visibleMonth, setVisibleMonth] = useState("");
 
   const { route } = useRouteState();
@@ -20,36 +20,26 @@ function AppContent() {
   }, [route]);
 
   return (
-    <>
-      {route.name === "landing" ? (
-        <LandingPage setVisibleMonth={setVisibleMonth} />
-      ) : route.name === "report" ? (
-        <ReportPage />
-      ) : route.name === "room_access_restricted" ? (
-        <RoomAccessRestrictedPage />
-      ) : route.name === "not-found-room" ? (
-        <NotFoundRoomPage />
-      ) : (
-        <RoomPage
-          setVisibleMonth={setVisibleMonth}
-          visibleMonth={visibleMonth}
-        />
-      )}
-      {route.name !== "report" && <ReportEntryButton />}
-    </>
-  );
-}
-
-function App() {
-  return (
     <div className="shell">
       <div className="mobile-frame">
         <ToastProvider>
-          <AppContent />
+          {route.name === "landing" ? (
+            <LandingPage setVisibleMonth={setVisibleMonth} />
+          ) : route.name === "report" ? (
+            <ReportPage />
+          ) : route.name === "room_access_restricted" ? (
+            <RoomAccessRestrictedPage />
+          ) : route.name === "not-found-room" ? (
+            <NotFoundRoomPage />
+          ) : (
+            <RoomPage
+              setVisibleMonth={setVisibleMonth}
+              visibleMonth={visibleMonth}
+            />
+          )}
+          {route.name !== "report" && <ReportEntryButton />}
         </ToastProvider>
       </div>
     </div>
   );
 }
-
-export default App;
