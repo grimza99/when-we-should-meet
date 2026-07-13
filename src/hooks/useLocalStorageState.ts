@@ -1,12 +1,15 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import {
   DEFAULT_STORAGE,
+  LEGACY_STORAGE_KEY,
   LOCAL_STORAGE_SYNC_EVENT,
   STORAGE_KEY,
 } from "../lib/constants";
 import type { AppStorage } from "../types";
 
-function normalizeStorage(value: Partial<AppStorage> | null | undefined): AppStorage {
+function normalizeStorage(
+  value: Partial<AppStorage> | null | undefined
+): AppStorage {
   return {
     ...DEFAULT_STORAGE,
     ...value,
@@ -17,20 +20,46 @@ function normalizeStorage(value: Partial<AppStorage> | null | undefined): AppSto
   };
 }
 
+function readStoredState(storageKey: string) {
+  const stored = window.localStorage.getItem(storageKey);
+
+  if (!stored) {
+    return null;
+  }
+
+  try {
+    return normalizeStorage(JSON.parse(stored) as Partial<AppStorage>);
+  } catch {
+    return null;
+  }
+}
+
 export function useLocalStorageState() {
-  const [state, setState] = useState<AppStorage>(() => {
-    const stored = window.localStorage.getItem(STORAGE_KEY);
+  const [{ initialState, shouldMigrateLegacyStorage }] = useState(() => {
+    const nextState = readStoredState(STORAGE_KEY);
 
-    if (!stored) {
-      return DEFAULT_STORAGE;
+    if (nextState) {
+      return {
+        initialState: nextState,
+        shouldMigrateLegacyStorage: false,
+      };
     }
 
-    try {
-      return normalizeStorage(JSON.parse(stored) as Partial<AppStorage>);
-    } catch {
-      return DEFAULT_STORAGE;
+    const legacyState = readStoredState(LEGACY_STORAGE_KEY);
+
+    if (legacyState) {
+      return {
+        initialState: legacyState,
+        shouldMigrateLegacyStorage: true,
+      };
     }
+
+    return {
+      initialState: DEFAULT_STORAGE,
+      shouldMigrateLegacyStorage: false,
+    };
   });
+  const [state, setState] = useState<AppStorage>(initialState);
   const stateRef = useRef(state);
   const lastSerializedRef = useRef<string | null>(JSON.stringify(state));
 
@@ -55,6 +84,15 @@ export function useLocalStorageState() {
     },
     []
   );
+
+  useEffect(() => {
+    if (!shouldMigrateLegacyStorage) {
+      return;
+    }
+
+    persistState(stateRef.current);
+    window.localStorage.removeItem(LEGACY_STORAGE_KEY);
+  }, [persistState, shouldMigrateLegacyStorage]);
 
   useEffect(() => {
     const syncState = (serializedState: string | null) => {
@@ -84,7 +122,7 @@ export function useLocalStorageState() {
     };
 
     const handleStorage = (event: StorageEvent) => {
-      if (event.key !== STORAGE_KEY) {
+      if (event.key !== STORAGE_KEY && event.key !== LEGACY_STORAGE_KEY) {
         return;
       }
 
