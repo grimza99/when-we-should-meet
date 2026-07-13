@@ -137,6 +137,17 @@ export function useLocalStorageState() {
         return;
       }
 
+      if (event.key === LEGACY_STORAGE_KEY && event.newValue === null) {
+        const migratedState = readStoredState(STORAGE_KEY);
+
+        if (!migratedState) {
+          return;
+        }
+
+        syncState(JSON.stringify(migratedState));
+        return;
+      }
+
       syncState(event.newValue);
     };
 
