@@ -16,13 +16,9 @@ import { createRoom as createFirebaseRoom } from "../../integrations/firebase/se
 import { useToast } from "../shell/toast/toast-context";
 interface ICreateRoomModalProps {
   onClose: () => void;
-  setVisibleMonth: (date: string) => void;
 }
 
-export function CreateRoomModal({
-  onClose,
-  setVisibleMonth,
-}: ICreateRoomModalProps) {
+export function CreateRoomModal({ onClose }: ICreateRoomModalProps) {
   const [maxParticipants, setMaxParticipants] = useState("6");
   const [dateRangeType, setDateRangeType] =
     useState<DateRangeType>("this_month");
@@ -84,9 +80,12 @@ export function CreateRoomModal({
           ...previous.rooms,
           [room.id]: room,
         },
+        visibleMonthsByRoomId: {
+          ...previous.visibleMonthsByRoomId,
+          [room.id]: room.startDate,
+        },
       }));
 
-      setVisibleMonth(room.startDate);
       navigate({ name: "room", roomId: room.id });
       return true;
     }
@@ -104,9 +103,12 @@ export function CreateRoomModal({
           ...previous.rooms,
           [room.id]: room,
         },
+        visibleMonthsByRoomId: {
+          ...previous.visibleMonthsByRoomId,
+          [room.id]: room.startDate,
+        },
       }));
 
-      setVisibleMonth(room.startDate);
       navigate({ name: "room", roomId: room.id });
 
       return true;
