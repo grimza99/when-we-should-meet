@@ -6,6 +6,17 @@ import {
 } from "../lib/constants";
 import type { AppStorage } from "../types";
 
+function normalizeStorage(value: Partial<AppStorage> | null | undefined): AppStorage {
+  return {
+    ...DEFAULT_STORAGE,
+    ...value,
+    memberships: value?.memberships ?? DEFAULT_STORAGE.memberships,
+    rooms: value?.rooms ?? DEFAULT_STORAGE.rooms,
+    visibleMonthsByRoomId:
+      value?.visibleMonthsByRoomId ?? DEFAULT_STORAGE.visibleMonthsByRoomId,
+  };
+}
+
 export function useLocalStorageState() {
   const [state, setState] = useState<AppStorage>(() => {
     const stored = window.localStorage.getItem(STORAGE_KEY);
@@ -15,7 +26,7 @@ export function useLocalStorageState() {
     }
 
     try {
-      return JSON.parse(stored) as AppStorage;
+      return normalizeStorage(JSON.parse(stored) as Partial<AppStorage>);
     } catch {
       return DEFAULT_STORAGE;
     }
@@ -59,9 +70,11 @@ export function useLocalStorageState() {
       }
 
       try {
-        const nextState = JSON.parse(serializedState) as AppStorage;
+        const nextState = normalizeStorage(
+          JSON.parse(serializedState) as Partial<AppStorage>
+        );
         stateRef.current = nextState;
-        lastSerializedRef.current = serializedState;
+        lastSerializedRef.current = JSON.stringify(nextState);
         setState(nextState);
       } catch {
         stateRef.current = DEFAULT_STORAGE;

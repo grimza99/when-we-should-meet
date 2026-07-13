@@ -8,6 +8,7 @@ export type RouteState =
   | { name: "room_access_restricted"; roomId: string };
 
 export type AppStorage = {
+  visibleMonthsByRoomId: Record<string, string>;
   rooms: Record<string, Room>;
   memberships: Record<string, string>;
 };
