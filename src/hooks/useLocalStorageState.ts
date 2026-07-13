@@ -90,9 +90,20 @@ export function useLocalStorageState() {
       return;
     }
 
-    persistState(stateRef.current);
+    const serializedState = JSON.stringify(stateRef.current);
+
+    lastSerializedRef.current = serializedState;
+    window.localStorage.setItem(STORAGE_KEY, serializedState);
+    window.dispatchEvent(
+      new CustomEvent(LOCAL_STORAGE_SYNC_EVENT, {
+        detail: {
+          key: STORAGE_KEY,
+          value: serializedState,
+        },
+      })
+    );
     window.localStorage.removeItem(LEGACY_STORAGE_KEY);
-  }, [persistState, shouldMigrateLegacyStorage]);
+  }, [shouldMigrateLegacyStorage]);
 
   useEffect(() => {
     const syncState = (serializedState: string | null) => {
