@@ -12,9 +12,8 @@ import {
 
 interface IUseRoomSummary {
   route: RouteState;
-  visibleMonth: string;
 }
-export const useRoomSummary = ({ route, visibleMonth }: IUseRoomSummary) => {
+export const useRoomSummary = ({ route }: IUseRoomSummary) => {
   const { navigate } = useRouteState();
   const [storage] = useLocalStorageState();
 
@@ -33,6 +32,10 @@ export const useRoomSummary = ({ route, visibleMonth }: IUseRoomSummary) => {
     navigate({ name: "not-found-room" }, { replace: true });
   }, [room, navigate, route]);
 
+  const visibleMonth =
+    route.name === "room"
+      ? storage.visibleMonthsByRoomId[route.roomId]
+      : undefined;
   const effectiveVisibleMonth = room
     ? clampVisibleMonth(room, visibleMonth || room.startDate)
     : "";
@@ -53,6 +56,7 @@ export const useRoomSummary = ({ route, visibleMonth }: IUseRoomSummary) => {
     };
   }, [participant?.id, room, effectiveVisibleMonth]);
   return {
+    effectiveVisibleMonth,
     room,
     participant,
     roomSummary,

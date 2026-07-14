@@ -23,10 +23,7 @@ import { updateMembership } from "../util/participant";
 import { FeaturesSection } from "../components/landingPage/FeaturesSection";
 import { HeroSection } from "../components/landingPage/HeroSection";
 
-interface ILandingPageProps {
-  setVisibleMonth: (date: string) => void;
-}
-export function LandingPage({ setVisibleMonth }: ILandingPageProps) {
+export function LandingPage() {
   const { navigate } = useRouteState();
   const [storage, setStorage] = useLocalStorageState();
   const [joinInviteCode, setJoinInviteCode] = useState("");
@@ -36,10 +33,21 @@ export function LandingPage({ setVisibleMonth }: ILandingPageProps) {
   const { showToast } = useToast();
   const goToRoomAccessRestricted = useCallback(
     (roomId: string) => {
-      setStorage((previous) => ({
-        ...previous,
-        memberships: updateMembership(previous.memberships, roomId, undefined),
-      }));
+      setStorage((previous) => {
+        const visibleMonthsByRoomId = { ...previous.visibleMonthsByRoomId };
+
+        delete visibleMonthsByRoomId[roomId];
+
+        return {
+          ...previous,
+          memberships: updateMembership(
+            previous.memberships,
+            roomId,
+            undefined
+          ),
+          visibleMonthsByRoomId,
+        };
+      });
       showToast({
         msg: "이 방은 다시 입장할 수 없도록 제한되었어요.",
       });
@@ -67,7 +75,6 @@ export function LandingPage({ setVisibleMonth }: ILandingPageProps) {
         return false;
       }
 
-      setVisibleMonth(room.startDate);
       navigate({ name: "room", roomId: room.id });
       return true;
     }
@@ -111,9 +118,13 @@ export function LandingPage({ setVisibleMonth }: ILandingPageProps) {
             previous.memberships[room.id]
           ),
         },
+        visibleMonthsByRoomId: {
+          ...previous.visibleMonthsByRoomId,
+          [room.id]:
+            previous.visibleMonthsByRoomId[room.id] || room.startDate,
+        },
       }));
 
-      setVisibleMonth(room.startDate);
       navigate({ name: "room", roomId: room.id });
       return true;
     } catch {
@@ -187,10 +198,7 @@ export function LandingPage({ setVisibleMonth }: ILandingPageProps) {
       </section>
       <FeaturesSection />
       {isCreateModalOpen && (
-        <CreateRoomModal
-          onClose={() => setIsCreateModalOpen(false)}
-          setVisibleMonth={setVisibleMonth}
-        />
+        <CreateRoomModal onClose={() => setIsCreateModalOpen(false)} />
       )}
     </main>
   );

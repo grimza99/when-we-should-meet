@@ -38,14 +38,21 @@ export function useRoomRender({
 
   const goToRoomAccessRestricted = useCallback(
     (nextRoomId: string) => {
-      setStorage((previous) => ({
-        ...previous,
-        memberships: updateMembership(
-          previous.memberships,
-          nextRoomId,
-          undefined
-        ),
-      }));
+      setStorage((previous) => {
+        const visibleMonthsByRoomId = { ...previous.visibleMonthsByRoomId };
+
+        delete visibleMonthsByRoomId[nextRoomId];
+
+        return {
+          ...previous,
+          memberships: updateMembership(
+            previous.memberships,
+            nextRoomId,
+            undefined
+          ),
+          visibleMonthsByRoomId,
+        };
+      });
       navigate(
         {
           name: "room_access_restricted",
@@ -125,6 +132,11 @@ export function useRoomRender({
             nextRoom.id,
             restoredParticipantId
           ),
+          visibleMonthsByRoomId: {
+            ...previous.visibleMonthsByRoomId,
+            [nextRoom.id]:
+              previous.visibleMonthsByRoomId[nextRoom.id] || nextRoom.startDate,
+          },
         }));
       } catch {
         if (!isCancelled) {
@@ -180,14 +192,19 @@ export function useRoomRender({
               setStorage((previous) => {
                 const rooms = { ...previous.rooms };
                 const memberships = { ...previous.memberships };
+                const visibleMonthsByRoomId = {
+                  ...previous.visibleMonthsByRoomId,
+                };
 
                 delete rooms[roomId];
                 delete memberships[roomId];
+                delete visibleMonthsByRoomId[roomId];
 
                 return {
                   ...previous,
                   memberships,
                   rooms,
+                  visibleMonthsByRoomId,
                 };
               });
               showToast({ msg: "방이 삭제되었거나 더 이상 접근할 수 없어요." });
@@ -227,6 +244,12 @@ export function useRoomRender({
                   nextRoom,
                   previous.memberships[nextRoom.id]
                 ),
+              },
+              visibleMonthsByRoomId: {
+                ...previous.visibleMonthsByRoomId,
+                [nextRoom.id]:
+                  previous.visibleMonthsByRoomId[nextRoom.id] ||
+                  nextRoom.startDate,
               },
             }));
           } catch {

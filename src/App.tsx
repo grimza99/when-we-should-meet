@@ -1,7 +1,6 @@
 import { useEffect } from "react";
 import "./App.css";
 import { RoomAccessRestrictedPage } from "./pages/RoomAccessRestrictedPage";
-import { useAppState } from "./state/useAppState";
 import { LandingPage } from "./pages/LandingPage";
 import { RoomPage } from "./pages/RoomPage";
 import { trackPageView } from "./integrations/firebase/analytics";
@@ -11,9 +10,7 @@ import { ToastProvider } from "./components/shell/toast/ToastProvider";
 import NotFoundRoomPage from "./pages/NotFoundRoomPage";
 import { useRouteState } from "./lib/router";
 
-function AppContent() {
-  const { setVisibleMonth, visibleMonth } = useAppState();
-
+export default function App() {
   const { route } = useRouteState();
 
   useEffect(() => {
@@ -21,36 +18,23 @@ function AppContent() {
   }, [route]);
 
   return (
-    <>
-      {route.name === "landing" ? (
-        <LandingPage setVisibleMonth={setVisibleMonth} />
-      ) : route.name === "report" ? (
-        <ReportPage />
-      ) : route.name === "room_access_restricted" ? (
-        <RoomAccessRestrictedPage />
-      ) : route.name === "not-found-room" ? (
-        <NotFoundRoomPage />
-      ) : (
-        <RoomPage
-          setVisibleMonth={setVisibleMonth}
-          visibleMonth={visibleMonth}
-        />
-      )}
-      {route.name !== "report" && <ReportEntryButton />}
-    </>
-  );
-}
-
-function App() {
-  return (
     <div className="shell">
       <div className="mobile-frame">
         <ToastProvider>
-          <AppContent />
+          {route.name === "landing" ? (
+            <LandingPage />
+          ) : route.name === "report" ? (
+            <ReportPage />
+          ) : route.name === "room_access_restricted" ? (
+            <RoomAccessRestrictedPage />
+          ) : route.name === "not-found-room" ? (
+            <NotFoundRoomPage />
+          ) : (
+            <RoomPage />
+          )}
+          {route.name !== "report" && <ReportEntryButton />}
         </ToastProvider>
       </div>
     </div>
   );
 }
-
-export default App;
