@@ -43,7 +43,7 @@ async function getFirebaseAnalytics() {
 
   const availabilityStatus = await probeFirebaseAvailability();
 
-  if (availabilityStatus !== "available") {
+  if (availabilityStatus !== "FirebaseAvailable") {
     return null;
   }
 
