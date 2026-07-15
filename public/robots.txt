@@ -1,4 +1,3 @@
 User-agent: *
 Allow: /
-
-Sitemap: https://when-should-we-meet.web.app/sitemap.xml
+Disallow: /room/
