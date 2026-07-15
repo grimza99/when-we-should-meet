@@ -50,7 +50,8 @@
 .landing-page,
 .room-page,
 .room-access-restricted-page,
-.report-page {
+.report-page,
+.route-loading-page {
   display: flex;
   flex-direction: column;
   gap: 16px;
@@ -61,11 +62,24 @@
   min-height: 100svh;
 }
 
+.route-loading-page {
+  justify-content: center;
+  min-height: 100svh;
+}
+
 .restricted-card {
   text-align: center;
 }
 
 .restricted-card .hero-copy {
+  margin-top: 12px;
+}
+
+.route-loading-card {
+  text-align: center;
+}
+
+.route-loading-card .hero-copy {
   margin-top: 12px;
 }
 

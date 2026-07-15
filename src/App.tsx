@@ -1,15 +1,31 @@
-import { useEffect } from "react";
+import { lazy, Suspense, useEffect } from "react";
 import "./App.css";
-import { RoomAccessRestrictedPage } from "./pages/RoomAccessRestrictedPage";
 import { LandingPage } from "./pages/LandingPage";
-import { RoomPage } from "./pages/RoomPage";
 import { trackPageView } from "./integrations/firebase/analytics";
-import { ReportPage } from "./pages/ReportPage";
 import { ReportEntryButton } from "./components/ui/ReportEntryButton";
 import { AvailabilityGuard } from "./components/shell/AvailabilityGuard";
 import { ToastProvider } from "./components/shell/toast/ToastProvider";
-import NotFoundRoomPage from "./pages/NotFoundRoomPage";
 import { useRouteState } from "./lib/router";
+
+const RoomPage = lazy(() =>
+  import("./pages/RoomPage").then((module) => ({
+    default: module.RoomPage,
+  }))
+);
+
+const ReportPage = lazy(() =>
+  import("./pages/ReportPage").then((module) => ({
+    default: module.ReportPage,
+  }))
+);
+
+const RoomAccessRestrictedPage = lazy(() =>
+  import("./pages/RoomAccessRestrictedPage").then((module) => ({
+    default: module.RoomAccessRestrictedPage,
+  }))
+);
+
+const NotFoundRoomPage = lazy(() => import("./pages/NotFoundRoomPage"));
 
 export default function App() {
   const { route } = useRouteState();
@@ -23,21 +39,34 @@ export default function App() {
       <div className="mobile-frame">
         <ToastProvider>
           <AvailabilityGuard>
-            {route.name === "landing" ? (
-              <LandingPage />
-            ) : route.name === "report" ? (
-              <ReportPage />
-            ) : route.name === "room_access_restricted" ? (
-              <RoomAccessRestrictedPage />
-            ) : route.name === "not-found-room" ? (
-              <NotFoundRoomPage />
-            ) : (
-              <RoomPage />
-            )}
+            <Suspense fallback={<RouteLoadingFallback />}>
+              {route.name === "landing" ? (
+                <LandingPage />
+              ) : route.name === "report" ? (
+                <ReportPage />
+              ) : route.name === "room_access_restricted" ? (
+                <RoomAccessRestrictedPage />
+              ) : route.name === "not-found-room" ? (
+                <NotFoundRoomPage />
+              ) : (
+                <RoomPage />
+              )}
+            </Suspense>
             {route.name !== "report" && <ReportEntryButton />}
           </AvailabilityGuard>
         </ToastProvider>
       </div>
     </div>
+  );
+}
+
+function RouteLoadingFallback() {
+  return (
+    <main className="page route-loading-page" aria-busy="true">
+      <section className="hero-card route-loading-card">
+        <h1>화면을 불러오는 중입니다</h1>
+        <p className="hero-copy">잠시만 기다려 주세요.</p>
+      </section>
+    </main>
   );
 }
