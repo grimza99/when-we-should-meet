@@ -4,6 +4,7 @@ import { LandingPage } from "./pages/LandingPage";
 import { trackPageView } from "./integrations/firebase/analytics";
 import { ReportEntryButton } from "./components/ui/ReportEntryButton";
 import { AvailabilityGuard } from "./components/shell/AvailabilityGuard";
+import { RouteErrorBoundary } from "./components/shell/RouteErrorBoundary";
 import { ToastProvider } from "./components/shell/toast/ToastProvider";
 import { useRouteState } from "./lib/router";
 
@@ -29,6 +30,10 @@ const NotFoundRoomPage = lazy(() => import("./pages/NotFoundRoomPage"));
 
 export default function App() {
   const { route } = useRouteState();
+  const routeResetKey =
+    route.name === "room" || route.name === "room_access_restricted"
+      ? `${route.name}:${route.roomId}`
+      : route.name;
 
   useEffect(() => {
     void trackPageView(route);
@@ -39,19 +44,21 @@ export default function App() {
       <div className="mobile-frame">
         <ToastProvider>
           <AvailabilityGuard>
-            <Suspense fallback={<RouteLoadingFallback />}>
-              {route.name === "landing" ? (
-                <LandingPage />
-              ) : route.name === "report" ? (
-                <ReportPage />
-              ) : route.name === "room_access_restricted" ? (
-                <RoomAccessRestrictedPage />
-              ) : route.name === "not-found-room" ? (
-                <NotFoundRoomPage />
-              ) : (
-                <RoomPage />
-              )}
-            </Suspense>
+            <RouteErrorBoundary resetKey={routeResetKey}>
+              <Suspense fallback={<RouteLoadingFallback />}>
+                {route.name === "landing" ? (
+                  <LandingPage />
+                ) : route.name === "report" ? (
+                  <ReportPage />
+                ) : route.name === "room_access_restricted" ? (
+                  <RoomAccessRestrictedPage />
+                ) : route.name === "not-found-room" ? (
+                  <NotFoundRoomPage />
+                ) : (
+                  <RoomPage />
+                )}
+              </Suspense>
+            </RouteErrorBoundary>
             {route.name !== "report" && <ReportEntryButton />}
           </AvailabilityGuard>
         </ToastProvider>

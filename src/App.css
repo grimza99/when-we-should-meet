@@ -51,7 +51,8 @@
 .room-page,
 .room-access-restricted-page,
 .report-page,
-.route-loading-page {
+.route-loading-page,
+.route-error-page {
   display: flex;
   flex-direction: column;
   gap: 16px;
@@ -63,6 +64,11 @@
 }
 
 .route-loading-page {
+  justify-content: center;
+  min-height: 100svh;
+}
+
+.route-error-page {
   justify-content: center;
   min-height: 100svh;
 }
@@ -81,6 +87,20 @@
 
 .route-loading-card .hero-copy {
   margin-top: 12px;
+}
+
+.route-error-card {
+  text-align: center;
+}
+
+.route-error-card .hero-copy {
+  margin-top: 12px;
+}
+
+.route-error-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
 }
 
 .report-hero-card {
