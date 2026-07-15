@@ -5,6 +5,7 @@ import {
   setAnalyticsCollectionEnabled,
 } from "firebase/analytics";
 import { app, isFirebaseConfigured } from "./client";
+import { probeFirebaseAvailability } from "./availability";
 import type { RouteState } from "../../types";
 
 const measurementId = import.meta.env.VITE_FIREBASE_MEASUREMENT_ID?.trim();
@@ -40,6 +41,12 @@ async function getFirebaseAnalytics() {
     return null;
   }
 
+  const availabilityStatus = await probeFirebaseAvailability();
+
+  if (availabilityStatus !== "available") {
+    return null;
+  }
+
   if (!analyticsPromise) {
     analyticsPromise = isSupported()
       .then((supported) => {
@@ -66,11 +73,15 @@ export async function trackPageView(route: RouteState) {
 
   const pagePath = getRoutePath(route);
 
-  logEvent(analytics, "page_view", {
-    page_location: `${window.location.origin}${pagePath}`,
-    page_path: pagePath,
-    page_title: document.title,
-  });
+  try {
+    logEvent(analytics, "page_view", {
+      page_location: `${window.location.origin}${pagePath}`,
+      page_path: pagePath,
+      page_title: document.title,
+    });
+  } catch {
+    // Ignore transient analytics failures in client-only environments.
+  }
 }
 
 export async function trackShareEvent(params: {
@@ -83,7 +94,11 @@ export async function trackShareEvent(params: {
     return;
   }
 
-  logEvent(analytics, params.eventName, {
-    method: params.method,
-  });
+  try {
+    logEvent(analytics, params.eventName, {
+      method: params.method,
+    });
+  } catch {
+    // Ignore transient analytics failures in client-only environments.
+  }
 }

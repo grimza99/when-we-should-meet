@@ -25,7 +25,11 @@ export const DEFAULT_STORAGE: AppStorage = {
   rooms: {},
   memberships: {},
 };
-
 export const LEGACY_STORAGE_KEY = "when-should-we-meet-storage";
 export const STORAGE_KEY = "when-should-we-meet:state:v1";
 export const LOCAL_STORAGE_SYNC_EVENT = "when-should-we-meet:storage-sync";
+
+export const FIREBASE = {
+  AVAILABILITY_RETRY_DELAY_MS: 1200,
+  CONNECTIVITY_PROBE_ROOM_ID: "__firebase_connectivity_probe__",
+};

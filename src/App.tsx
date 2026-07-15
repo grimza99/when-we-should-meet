@@ -6,6 +6,7 @@ import { RoomPage } from "./pages/RoomPage";
 import { trackPageView } from "./integrations/firebase/analytics";
 import { ReportPage } from "./pages/ReportPage";
 import { ReportEntryButton } from "./components/ui/ReportEntryButton";
+import { FirebaseAvailabilityGuard } from "./components/shell/FirebaseAvailabilityGuard";
 import { ToastProvider } from "./components/shell/toast/ToastProvider";
 import NotFoundRoomPage from "./pages/NotFoundRoomPage";
 import { useRouteState } from "./lib/router";
@@ -21,6 +22,7 @@ export default function App() {
     <div className="shell">
       <div className="mobile-frame">
         <ToastProvider>
+          <FirebaseAvailabilityGuard />
           {route.name === "landing" ? (
             <LandingPage />
           ) : route.name === "report" ? (
