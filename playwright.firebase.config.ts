@@ -12,12 +12,14 @@ const firebaseEmulatorEnv = [
   'VITE_FIRESTORE_EMULATOR_HOST=127.0.0.1',
   'VITE_FIRESTORE_EMULATOR_PORT=8080',
 ].join(' ')
+const outputDir = process.env.PLAYWRIGHT_OUTPUT_DIR ?? `test-results/${process.pid}`
 
 export default defineConfig({
   testDir: './tests/e2e',
   testMatch: '**/firebase-*.spec.ts',
   fullyParallel: false,
   forbidOnly: Boolean(process.env.CI),
+  outputDir,
   reporter: 'list',
   retries: process.env.CI ? 2 : 0,
   workers: 1,

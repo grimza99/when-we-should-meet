@@ -10,12 +10,14 @@ const kakaoMockEnv = [
   'VITE_FIREBASE_MEASUREMENT_ID=',
   'VITE_KAKAO_JAVASCRIPT_KEY=test-kakao-key',
 ].join(' ')
+const outputDir = process.env.PLAYWRIGHT_OUTPUT_DIR ?? `test-results/${process.pid}`
 
 export default defineConfig({
   testDir: './tests/e2e',
   testMatch: '**/kakao-*.spec.ts',
   fullyParallel: true,
   forbidOnly: Boolean(process.env.CI),
+  outputDir,
   reporter: 'list',
   retries: process.env.CI ? 2 : 0,
   use: {

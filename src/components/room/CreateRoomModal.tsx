@@ -6,24 +6,33 @@ import { Modal } from "../ui/Modal";
 import { SegmentedButtonGroup } from "../ui/SegmentedButtonGroup";
 import { TextInput } from "../ui/TextInput";
 import type { CreateRoomPayload, DateRangeType } from "../../types";
-
-type CreateRoomModalProps = {
+import { isFirebaseConfigured } from "../../integrations/firebase/client";
+import { getOrCreateClientKey } from "../../lib/session/clientIdentity";
+import { createRoomRecord } from "../../util/room";
+import { useRouteState } from "../../lib/router";
+import { useLocalStorageState } from "../../hooks/useLocalStorageState";
+import { mapRoomRowToDraftRoom } from "../../integrations/firebase/mapper";
+import { createRoom as createFirebaseRoom } from "../../integrations/firebase/services/room-service";
+import { useToast } from "../shell/toast/toast-context";
+interface ICreateRoomModalProps {
   onClose: () => void;
-  onCreateRoom: (payload: CreateRoomPayload) => Promise<boolean>;
-};
+  setVisibleMonth: (date: string) => void;
+}
 
 export function CreateRoomModal({
   onClose,
-  onCreateRoom,
-}: CreateRoomModalProps) {
+  setVisibleMonth,
+}: ICreateRoomModalProps) {
   const [maxParticipants, setMaxParticipants] = useState("6");
   const [dateRangeType, setDateRangeType] =
     useState<DateRangeType>("this_month");
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [submitMessage, setSubmitMessage] = useState("");
   const today = getTodayDateString();
   const [startDate, setStartDate] = useState(today);
   const [endDate, setEndDate] = useState(today);
+  const { navigate } = useRouteState();
+  const [, setStorage] = useLocalStorageState();
+  const { showToast } = useToast();
   const participantCount = Number(maxParticipants);
 
   const resolvedRange = useMemo(
@@ -63,16 +72,56 @@ export function CreateRoomModal({
     participantValidationMessage ?? rangeValidationMessage;
   const canSubmit = validationMessage === null && !isSubmitting;
 
+  const createRoom = async (payload: CreateRoomPayload) => {
+    const hostClientKey = getOrCreateClientKey();
+
+    if (!isFirebaseConfigured) {
+      const room = createRoomRecord(payload, hostClientKey);
+
+      setStorage((previous) => ({
+        ...previous,
+        rooms: {
+          ...previous.rooms,
+          [room.id]: room,
+        },
+      }));
+
+      setVisibleMonth(room.startDate);
+      navigate({ name: "room", roomId: room.id });
+      return true;
+    }
+
+    try {
+      const roomRow = await createFirebaseRoom({
+        ...payload,
+        hostClientKey,
+      });
+      const room = mapRoomRowToDraftRoom(roomRow);
+
+      setStorage((previous) => ({
+        ...previous,
+        rooms: {
+          ...previous.rooms,
+          [room.id]: room,
+        },
+      }));
+
+      setVisibleMonth(room.startDate);
+      navigate({ name: "room", roomId: room.id });
+
+      return true;
+    } catch {
+      return false;
+    }
+  };
+
   const submit = async () => {
     if (!canSubmit) {
       return;
     }
-
     setIsSubmitting(true);
-    setSubmitMessage("");
-
     try {
-      const didCreateRoom = await onCreateRoom({
+      const didCreateRoom = await createRoom({
         maxParticipants: participantCount,
         dateRangeType,
         startDate: resolvedRange.startDate,
@@ -80,9 +129,9 @@ export function CreateRoomModal({
       });
 
       if (!didCreateRoom) {
-        setSubmitMessage(
-          "방을 만들지 못했어요. 연결 상태나 Firebase 설정을 확인해 주세요."
-        );
+        showToast({ msg: "방 생성에 실패했어요. 잠시 후 다시 시도해 주세요." });
+      } else {
+        onClose();
       }
     } finally {
       setIsSubmitting(false);
@@ -162,10 +211,6 @@ export function CreateRoomModal({
             {maxParticipants}명과 함께, {resolvedRange.endDate}일까지 조율할게요
           </p>
         )}
-
-        {submitMessage ? (
-          <p className="modal-validation">{submitMessage}</p>
-        ) : null}
 
         <Button
           ariaLabel={ARIA_LABELS.createRoom.submitButton}
