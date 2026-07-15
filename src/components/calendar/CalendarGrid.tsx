@@ -25,7 +25,9 @@ export function CalendarGrid({
           const rank = day.isoDate ? rankByDate[day.isoDate] : undefined;
           return (
             <button
-              aria-label={day.isoDate ? getCalendarDayAriaLabel(day.isoDate) : undefined}
+              aria-label={
+                day.isoDate ? getCalendarDayAriaLabel(day.isoDate) : undefined
+              }
               key={day.key}
               className={[
                 "calendar-day",
@@ -37,7 +39,9 @@ export function CalendarGrid({
                 .filter(Boolean)
                 .join(" ")}
               disabled={!day.isoDate || !day.isSelectable}
-              onClick={() => day.isoDate && day.isSelectable && onSelectDate(day.isoDate)}
+              onClick={() =>
+                day.isoDate && day.isSelectable && onSelectDate(day.isoDate)
+              }
               type="button"
             >
               <span className="calendar-day-topline">

@@ -1,13 +1,10 @@
 import { HomeBrandButton } from "../components/ui/HomeBrandButton";
 import { ARIA_LABELS } from "../lib/ariaLabels";
+import { useRouteState } from "../lib/router";
 
-type RoomAccessRestrictedPageProps = {
-  onBackToLanding: () => void;
-};
+export function RoomAccessRestrictedPage() {
+  const { navigate } = useRouteState();
 
-export function RoomAccessRestrictedPage({
-  onBackToLanding,
-}: RoomAccessRestrictedPageProps) {
   return (
     <main
       aria-label={ARIA_LABELS.room.restrictedPage}
@@ -15,7 +12,7 @@ export function RoomAccessRestrictedPage({
     >
       <HomeBrandButton
         ariaLabel={ARIA_LABELS.room.homeButton}
-        onClick={onBackToLanding}
+        onClick={() => navigate({ name: "landing" })}
       />
       <section className="hero-card restricted-card">
         <h1>이 방에는 다시 들어갈 수 없어요</h1>
