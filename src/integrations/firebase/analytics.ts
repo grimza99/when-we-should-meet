@@ -1,80 +1,104 @@
-import { getAnalytics, isSupported, logEvent, setAnalyticsCollectionEnabled } from 'firebase/analytics'
-import { app, isFirebaseConfigured } from './client'
-import type { RouteState } from '../../types'
+import {
+  getAnalytics,
+  isSupported,
+  logEvent,
+  setAnalyticsCollectionEnabled,
+} from "firebase/analytics";
+import { app, isFirebaseConfigured } from "./client";
+import { probeFirebaseAvailability } from "./availability";
+import type { RouteState } from "../../types";
 
-const measurementId = import.meta.env.VITE_FIREBASE_MEASUREMENT_ID?.trim()
+const measurementId = import.meta.env.VITE_FIREBASE_MEASUREMENT_ID?.trim();
 
-let analyticsPromise: Promise<ReturnType<typeof getAnalytics> | null> | null = null
+let analyticsPromise: Promise<ReturnType<typeof getAnalytics> | null> | null =
+  null;
 
 export const isFirebaseAnalyticsConfigured = Boolean(
-  isFirebaseConfigured && measurementId,
-)
+  isFirebaseConfigured && measurementId
+);
 
 function getRoutePath(route: RouteState) {
-  if (route.name === 'landing') {
-    return '/'
+  if (route.name === "landing") {
+    return "/";
   }
 
-  if (route.name === 'report') {
-    return '/page/report'
+  if (route.name === "report") {
+    return "/page/report";
   }
 
-  if (route.name === 'room_access_restricted') {
-    return `/room/${route.roomId}/restricted`
+  if (route.name === "not-found-room") {
+    return `/not-found-room`;
+  }
+  if (route.name === "room_access_restricted") {
+    return `/room/${route.roomId}/restricted`;
   }
 
-  return `/room/${route.roomId}`
+  return `/room/${route.roomId}`;
 }
 
 async function getFirebaseAnalytics() {
-  if (!isFirebaseAnalyticsConfigured || typeof window === 'undefined') {
-    return null
+  if (!isFirebaseAnalyticsConfigured || typeof window === "undefined") {
+    return null;
+  }
+
+  const availabilityStatus = await probeFirebaseAvailability();
+
+  if (availabilityStatus !== "FirebaseAvailable") {
+    return null;
   }
 
   if (!analyticsPromise) {
     analyticsPromise = isSupported()
       .then((supported) => {
         if (!supported) {
-          return null
+          return null;
         }
 
-        const analytics = getAnalytics(app)
-        setAnalyticsCollectionEnabled(analytics, true)
-        return analytics
+        const analytics = getAnalytics(app);
+        setAnalyticsCollectionEnabled(analytics, true);
+        return analytics;
       })
-      .catch(() => null)
+      .catch(() => null);
   }
 
-  return analyticsPromise
+  return analyticsPromise;
 }
 
 export async function trackPageView(route: RouteState) {
-  const analytics = await getFirebaseAnalytics()
+  const analytics = await getFirebaseAnalytics();
 
-  if (!analytics || typeof window === 'undefined') {
-    return
+  if (!analytics || typeof window === "undefined") {
+    return;
   }
 
-  const pagePath = getRoutePath(route)
+  const pagePath = getRoutePath(route);
 
-  logEvent(analytics, 'page_view', {
-    page_location: `${window.location.origin}${pagePath}`,
-    page_path: pagePath,
-    page_title: document.title,
-  })
+  try {
+    logEvent(analytics, "page_view", {
+      page_location: `${window.location.origin}${pagePath}`,
+      page_path: pagePath,
+      page_title: document.title,
+    });
+  } catch {
+    // Ignore transient analytics failures in client-only environments.
+  }
 }
 
 export async function trackShareEvent(params: {
-  eventName: 'share_room_click' | 'share_ranking_click'
-  method: 'kakao' | 'web_share' | 'clipboard'
+  eventName: "share_room_click" | "share_ranking_click";
+  method: "kakao" | "web_share" | "clipboard";
 }) {
-  const analytics = await getFirebaseAnalytics()
+  const analytics = await getFirebaseAnalytics();
 
   if (!analytics) {
-    return
+    return;
   }
 
-  logEvent(analytics, params.eventName, {
-    method: params.method,
-  })
+  try {
+    logEvent(analytics, params.eventName, {
+      method: params.method,
+    });
+  } catch {
+    // Ignore transient analytics failures in client-only environments.
+  }
 }

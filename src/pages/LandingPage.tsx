@@ -1,44 +1,139 @@
-import { useState } from "react";
+import { useCallback, useState } from "react";
 import { CreateRoomModal } from "../components/room/CreateRoomModal";
 import { Button } from "../components/ui/Button";
 import { TextInput } from "../components/ui/TextInput";
 import { ARIA_LABELS } from "../lib/ariaLabels";
 import { normalizeInviteCodeInput } from "../lib/inviteCode";
-import type { CreateRoomPayload } from "../types";
+import { useRouteState } from "../lib/router";
+import { isFirebaseConfigured } from "../integrations/firebase/client";
+import { useLocalStorageState } from "../hooks/useLocalStorageState";
+import {
+  getRoomByInviteCode,
+  getRoomSnapshot,
+} from "../integrations/firebase/services/room-service";
+import { useToast } from "../components/shell/toast/toast-context";
+import {
+  mapRoomRowToDraftRoom,
+  mapRoomSnapshotToDraftRoom,
+} from "../integrations/firebase/mapper";
+import { restoreParticipant } from "../integrations/firebase/services/participant-service";
+import { getOrCreateClientKey } from "../lib/session/clientIdentity";
+import { mergeRoomSnapshot } from "../util/room";
+import { updateMembership } from "../util/participant";
+import { FeaturesSection } from "../components/landingPage/FeaturesSection";
+import { HeroSection } from "../components/landingPage/HeroSection";
 
-const landingFeatures = [
-  {
-    description: "아이디도 비번도 필요 없어요. 방 만들고 링크만 보내면 끝!",
-    icon: "🚀",
-    title: "1초만에 시작",
-  },
-  {
-    description: "모바일에 최적화된 달력으로 누구나 쉽게 일정을 입력해요.",
-    icon: "📱",
-    title: "손쉬운 터치",
-  },
-  {
-    description: "가장 많이 모이는 날이 언제인지 저희가 바로 계산해 드릴게요.",
-    icon: "🥇",
-    title: "최적의 날짜 추천",
-  },
-];
-
-type LandingPageProps = {
-  joinInviteCode: string;
-  onCreateRoom: (payload: CreateRoomPayload) => Promise<boolean>;
-  onJoinInviteCodeChange: (inviteCode: string) => void;
-  onJoinRoom: () => Promise<boolean>;
-};
-
-export function LandingPage({
-  joinInviteCode,
-  onCreateRoom,
-  onJoinInviteCodeChange,
-  onJoinRoom,
-}: LandingPageProps) {
+export function LandingPage() {
+  const { navigate } = useRouteState();
+  const [storage, setStorage] = useLocalStorageState();
+  const [joinInviteCode, setJoinInviteCode] = useState("");
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [isJoiningRoom, setIsJoiningRoom] = useState(false);
+
+  const { showToast } = useToast();
+  const goToRoomAccessRestricted = useCallback(
+    (roomId: string) => {
+      setStorage((previous) => {
+        const visibleMonthsByRoomId = { ...previous.visibleMonthsByRoomId };
+
+        delete visibleMonthsByRoomId[roomId];
+
+        return {
+          ...previous,
+          memberships: updateMembership(
+            previous.memberships,
+            roomId,
+            undefined
+          ),
+          visibleMonthsByRoomId,
+        };
+      });
+      showToast({
+        msg: "이 방은 다시 입장할 수 없도록 제한되었어요.",
+      });
+      navigate({ name: "room_access_restricted", roomId }, { replace: true });
+    },
+    [navigate, setStorage, showToast]
+  );
+
+  const joinRoomByInviteCode = async () => {
+    const inviteCode = joinInviteCode.trim().toUpperCase();
+    if (!inviteCode) {
+      showToast({ msg: "초대 코드를 입력해 주세요." });
+      return false;
+    }
+
+    if (!isFirebaseConfigured) {
+      const room = Object.values(storage.rooms).find(
+        (candidate) => candidate.inviteCode === inviteCode
+      );
+
+      if (!room) {
+        showToast({
+          msg: "일치하는 방을 찾지 못했어요. 코드를 다시 확인해 주세요.",
+        });
+        return false;
+      }
+
+      navigate({ name: "room", roomId: room.id });
+      return true;
+    }
+
+    try {
+      const roomRow = await getRoomByInviteCode(inviteCode);
+
+      if (!roomRow) {
+        showToast({
+          msg: "일치하는 방을 찾지 못했어요. 코드를 다시 확인해 주세요.",
+        });
+        return false;
+      }
+
+      const roomSnapshot = await getRoomSnapshot(roomRow.id);
+      const room = roomSnapshot
+        ? mapRoomSnapshotToDraftRoom(roomSnapshot)
+        : mapRoomRowToDraftRoom(roomRow);
+
+      try {
+        await restoreParticipant({
+          clientKey: getOrCreateClientKey(),
+          roomId: room.id,
+        });
+      } catch (error) {
+        if (String(error).includes("ROOM_ACCESS_RESTRICTED")) {
+          goToRoomAccessRestricted(room.id);
+          return false;
+        }
+
+        throw error;
+      }
+
+      setStorage((previous) => ({
+        ...previous,
+        rooms: {
+          ...previous.rooms,
+          [room.id]: mergeRoomSnapshot(
+            previous.rooms[room.id],
+            room,
+            previous.memberships[room.id]
+          ),
+        },
+        visibleMonthsByRoomId: {
+          ...previous.visibleMonthsByRoomId,
+          [room.id]:
+            previous.visibleMonthsByRoomId[room.id] || room.startDate,
+        },
+      }));
+
+      navigate({ name: "room", roomId: room.id });
+      return true;
+    } catch {
+      showToast({
+        msg: "방 조회에 실패했어요. 네트워크 상태를 확인해 주세요.",
+      });
+      return false;
+    }
+  };
 
   const submitJoin = async () => {
     if (isJoiningRoom || !joinInviteCode.trim()) {
@@ -48,7 +143,7 @@ export function LandingPage({
     setIsJoiningRoom(true);
 
     try {
-      await onJoinRoom();
+      await joinRoomByInviteCode();
     } finally {
       setIsJoiningRoom(false);
     }
@@ -56,21 +151,7 @@ export function LandingPage({
 
   return (
     <main aria-label={ARIA_LABELS.landing.page} className="page landing-page">
-      <section className="landing-hero">
-        <img
-          src="/logo.png"
-          className="landing-logo-img"
-          aria-label={ARIA_LABELS.landing.logo}
-        />
-
-        <h1 aria-label={ARIA_LABELS.landing.heading}>우리 언제 볼까?</h1>
-        <p className="hero-copy">
-          번거로운 가입 없이, 링크 하나로
-          <br />
-          모두가 가능한 최적의 날짜를 찾아보세요.
-        </p>
-      </section>
-
+      <HeroSection />
       <section
         className="landing-cta"
         aria-label={ARIA_LABELS.landing.createOrJoinSection}
@@ -99,7 +180,7 @@ export function LandingPage({
             label="초대 코드 입력"
             maxLength={6}
             onChange={(value) =>
-              onJoinInviteCodeChange(normalizeInviteCodeInput(value))
+              setJoinInviteCode(normalizeInviteCodeInput(value))
             }
             placeholder="초대 코드 입력"
             spellCheck={false}
@@ -115,36 +196,10 @@ export function LandingPage({
           </Button>
         </form>
       </section>
-
-      <section
-        className="info-grid"
-        aria-label={ARIA_LABELS.landing.featureSection}
-      >
-        {landingFeatures.map((feature) => (
-          <article className="mini-card" key={feature.title}>
-            <span aria-hidden="true" className="mini-card-icon">
-              {feature.icon}
-            </span>
-            <strong>{feature.title}</strong>
-            <p>{feature.description}</p>
-          </article>
-        ))}
-      </section>
-
-      {isCreateModalOpen ? (
-        <CreateRoomModal
-          onClose={() => setIsCreateModalOpen(false)}
-          onCreateRoom={async (payload) => {
-            const didCreateRoom = await onCreateRoom(payload);
-
-            if (didCreateRoom) {
-              setIsCreateModalOpen(false);
-            }
-
-            return didCreateRoom;
-          }}
-        />
-      ) : null}
+      <FeaturesSection />
+      {isCreateModalOpen && (
+        <CreateRoomModal onClose={() => setIsCreateModalOpen(false)} />
+      )}
     </main>
   );
 }

@@ -1,68 +1,43 @@
-import { useEffect } from 'react'
-import './App.css'
-import { RoomAccessRestrictedPage } from './pages/RoomAccessRestrictedPage'
-import { useAppState } from './state/useAppState'
-import { LandingPage } from './pages/LandingPage'
-import { RoomPage } from './pages/RoomPage'
-import { Toast } from './components/ui/Toast'
-import { trackPageView } from './integrations/firebase/analytics'
-import { ReportPage } from './pages/ReportPage'
-import { ReportEntryButton } from './components/ui/ReportEntryButton'
+import { useEffect } from "react";
+import "./App.css";
+import { RoomAccessRestrictedPage } from "./pages/RoomAccessRestrictedPage";
+import { LandingPage } from "./pages/LandingPage";
+import { RoomPage } from "./pages/RoomPage";
+import { trackPageView } from "./integrations/firebase/analytics";
+import { ReportPage } from "./pages/ReportPage";
+import { ReportEntryButton } from "./components/ui/ReportEntryButton";
+import { AvailabilityGuard } from "./components/shell/AvailabilityGuard";
+import { ToastProvider } from "./components/shell/toast/ToastProvider";
+import NotFoundRoomPage from "./pages/NotFoundRoomPage";
+import { useRouteState } from "./lib/router";
 
-function App() {
-  const appState = useAppState()
+export default function App() {
+  const { route } = useRouteState();
 
   useEffect(() => {
-    void trackPageView(appState.currentRoute)
-  }, [appState.currentRoute])
+    void trackPageView(route);
+  }, [route]);
 
   return (
     <div className="shell">
       <div className="mobile-frame">
-        {appState.currentRoute.name === 'landing' ? (
-          <LandingPage
-            joinInviteCode={appState.joinInviteCode}
-            onCreateRoom={appState.createRoom}
-            onJoinInviteCodeChange={appState.setJoinInviteCode}
-            onJoinRoom={appState.joinRoomByInviteCode}
-          />
-        ) : appState.currentRoute.name === 'report' ? (
-          <ReportPage onBackToLanding={appState.goToLanding} />
-        ) : appState.currentRoute.name === 'room_access_restricted' ? (
-          <RoomAccessRestrictedPage onBackToLanding={appState.goToLanding} />
-        ) : (
-          <RoomPage
-            currentParticipant={appState.currentParticipant}
-            isHydratingRoom={appState.isHydratingRoom}
-            modeOptions={appState.modeOptions}
-            room={appState.currentRoom}
-            roomSummary={appState.currentRoomSummary}
-            selectedMode={appState.selectedMode}
-            weekdayOptions={appState.weekdayOptions}
-            onBackToLanding={appState.goToLanding}
-            onChangeMode={appState.changeSelectionMode}
-            onChangeNickname={appState.changeNickname}
-            onCopyInviteCode={appState.copyInviteCode}
-            onDeleteRoom={appState.deleteCurrentRoom}
-            onJoinRoom={appState.joinCurrentRoom}
-            onLeaveRoom={appState.leaveCurrentRoom}
-            onMoveMonth={appState.moveVisibleMonth}
-            onRemoveParticipant={appState.removeParticipant}
-            onShareRanking={appState.shareRanking}
-            onResetSelection={appState.resetCurrentSelection}
-            onSelectDate={appState.toggleDate}
-            onShareRoom={appState.shareRoom}
-            onToggleWeekday={appState.toggleWeekday}
-            isCurrentUserHost={appState.isCurrentUserHost}
-          />
-        )}
-        {appState.currentRoute.name !== 'report' ? (
-          <ReportEntryButton onClick={appState.goToReport} />
-        ) : null}
-        <Toast message={appState.toastMessage} />
+        <ToastProvider>
+          <AvailabilityGuard>
+            {route.name === "landing" ? (
+              <LandingPage />
+            ) : route.name === "report" ? (
+              <ReportPage />
+            ) : route.name === "room_access_restricted" ? (
+              <RoomAccessRestrictedPage />
+            ) : route.name === "not-found-room" ? (
+              <NotFoundRoomPage />
+            ) : (
+              <RoomPage />
+            )}
+            {route.name !== "report" && <ReportEntryButton />}
+          </AvailabilityGuard>
+        </ToastProvider>
       </div>
     </div>
-  )
+  );
 }
-
-export default App

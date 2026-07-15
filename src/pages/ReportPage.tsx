@@ -1,5 +1,6 @@
 import { Button } from "../components/ui/Button";
 import { HomeBrandButton } from "../components/ui/HomeBrandButton";
+import { useRouteState } from "../lib/router";
 
 const reportLinks = [
   {
@@ -16,18 +17,14 @@ const reportLinks = [
   },
 ];
 
-type ReportPageProps = {
-  onBackToLanding: () => void;
-};
-
-export function ReportPage({ onBackToLanding }: ReportPageProps) {
+export function ReportPage() {
   const openReportLink = (href: string) => {
     window.location.assign(href);
   };
-
+  const { navigate } = useRouteState();
   return (
     <main className="page report-page">
-      <HomeBrandButton onClick={onBackToLanding} />
+      <HomeBrandButton onClick={() => navigate({ name: "landing" })} />
 
       <section className="hero-card report-hero-card">
         <h1>의견을 보내주세요</h1>

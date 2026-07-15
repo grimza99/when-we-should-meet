@@ -14,6 +14,7 @@
   --color-app-primary-end: #bbadff;
   --color-app-primary-strong: #6366f1;
   --color-app-primary-soft: rgba(142, 148, 242, 0.1);
+  --color-app-toast-success: rgba(142, 149, 242, 0.561);
   --color-app-button-shadow: rgba(142, 148, 242, 0.3);
   --color-app-soft-shadow: rgba(0, 0, 0, 0.05);
 
@@ -332,8 +333,6 @@
 .day-chip {
   padding: 10px 12px;
   border-radius: 999px;
-  background: var(--color-app-primary-soft);
-  color: var(--color-app-primary-strong);
 }
 
 .day-chip.is-active {
@@ -412,16 +411,18 @@
   width: min(320px, calc(100vw - 32px));
   margin: 0;
   padding: 12px 14px;
-  border: 1px solid var(--color-app-line);
   border-radius: 16px;
-  background: rgba(51, 45, 65, 0.92);
   box-shadow: var(--shadow-app-card);
-  color: var(--color-app-white);
   font-size: 14px;
   font-weight: 600;
   line-height: 1.45;
   pointer-events: none;
   animation: toast-slide-in 180ms ease;
+}
+.toast-success {
+  background: var(--color-app-toast-success);
+  border: 1px solid var(--color-app-primary);
+  color: var(--color-app-white);
 }
 
 .room-header,
