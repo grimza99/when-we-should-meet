@@ -13,7 +13,8 @@
   --color-app-primary: #8e94f2;
   --color-app-primary-end: #bbadff;
   --color-app-primary-strong: #6366f1;
-  --color-app-primary-soft: rgba(142, 149, 242, 0.561);
+  --color-app-primary-soft: rgba(142, 148, 242, 0.1);
+  --color-app-toast-success: rgba(142, 149, 242, 0.561);
   --color-app-button-shadow: rgba(142, 148, 242, 0.3);
   --color-app-soft-shadow: rgba(0, 0, 0, 0.05);
 
@@ -332,8 +333,6 @@
 .day-chip {
   padding: 10px 12px;
   border-radius: 999px;
-  background: var(--color-app-primary-soft);
-  color: var(--color-app-primary-strong);
 }
 
 .day-chip.is-active {
@@ -421,7 +420,7 @@
   animation: toast-slide-in 180ms ease;
 }
 .toast-success {
-  background: var(--color-app-primary-soft);
+  background: var(--color-app-toast-success);
   border: 1px solid var(--color-app-primary);
   color: var(--color-app-white);
 }
