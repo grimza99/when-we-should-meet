@@ -4,8 +4,8 @@ import { roomRef } from "./docs";
 import { FIREBASE } from "../../lib/constants";
 
 export type FirebaseAvailabilityStatus =
-  | "available"
-  | "unavailable"
+  | "FirebaseAvailable"
+  | "FirebaseUnavailable"
   | "unknown";
 
 let availabilityStatus: FirebaseAvailabilityStatus = "unknown";
@@ -22,11 +22,11 @@ export async function probeFirebaseAvailability(options?: { force?: boolean }) {
   }
 
   if (!window.navigator.onLine) {
-    availabilityStatus = "unavailable";
+    availabilityStatus = "FirebaseUnavailable";
     return availabilityStatus;
   }
 
-  if (!options?.force && availabilityStatus === "available") {
+  if (!options?.force && availabilityStatus === "FirebaseAvailable") {
     return availabilityStatus;
   }
 
@@ -37,10 +37,10 @@ export async function probeFirebaseAvailability(options?: { force?: boolean }) {
   availabilityProbePromise = (async () => {
     try {
       await getDoc(roomRef(FIREBASE.CONNECTIVITY_PROBE_ROOM_ID));
-      availabilityStatus = "available";
+      availabilityStatus = "FirebaseAvailable";
       return availabilityStatus;
     } catch {
-      availabilityStatus = "unavailable";
+      availabilityStatus = "FirebaseUnavailable";
       return availabilityStatus;
     } finally {
       availabilityProbePromise = null;
