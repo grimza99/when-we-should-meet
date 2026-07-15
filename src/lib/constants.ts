@@ -31,5 +31,5 @@ export const LOCAL_STORAGE_SYNC_EVENT = "when-should-we-meet:storage-sync";
 
 export const FIREBASE = {
   AVAILABILITY_RETRY_DELAY_MS: 1200,
-  CONNECTIVITY_PROBE_ROOM_ID: "__firebase_connectivity_probe__",
+  CONNECTIVITY_PROBE_ROOM_ID: "firebase-connectivity-probe",
 };
