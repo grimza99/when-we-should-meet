@@ -44,6 +44,7 @@ import {
   updateParticipantNickname,
   type RoomChangeSubscription,
 } from "../integrations/firebase/services/roomService";
+import type { ToastTone } from "../components/ui/Toast";
 import type {
   AppStorage,
   CreateRoomPayload,
@@ -62,6 +63,7 @@ export function useAppState() {
   );
   const [joinInviteCode, setJoinInviteCode] = useState("");
   const [toastMessage, setToastMessage] = useState("");
+  const [toastTone, setToastTone] = useState<ToastTone>("default");
   const [visibleMonth, setVisibleMonth] = useState("");
   const [isHydratingRoom, setIsHydratingRoom] = useState(false);
   const roomChangeSubscriptionRef = useRef<RoomChangeSubscription | null>(null);
@@ -105,8 +107,9 @@ export function useAppState() {
     };
   }, [currentParticipant?.id, currentRoom, effectiveVisibleMonth]);
 
-  function showToast(message: string) {
+  function showToast(message: string, tone: ToastTone = "default") {
     setToastMessage(message);
+    setToastTone(tone);
 
     if (toastTimerRef.current) {
       window.clearTimeout(toastTimerRef.current);
@@ -114,6 +117,7 @@ export function useAppState() {
 
     toastTimerRef.current = window.setTimeout(() => {
       setToastMessage("");
+      setToastTone("default");
       toastTimerRef.current = null;
     }, 3000);
   }
@@ -483,7 +487,7 @@ export function useAppState() {
       );
 
       nextParticipant.nickname = nickname;
-      showToast(`${nickname} 님으로 방에 참여했어요.`);
+      showToast(`${nickname} 님으로 방에 참여했어요.`, "success");
 
       setStorage((previous) => ({
         rooms: {
@@ -510,7 +514,7 @@ export function useAppState() {
 
       const nextParticipant = mapParticipantRow(participantRow);
 
-      showToast(`${nickname} 님으로 방에 참여했어요.`);
+      showToast(`${nickname} 님으로 방에 참여했어요.`, "success");
       setStorage((previous) => ({
         rooms: {
           ...previous.rooms,
@@ -563,7 +567,8 @@ export function useAppState() {
     showToast(
       mode === "available"
         ? "가능한 날짜를 고르는 모드로 바뀌었어요."
-        : "불가능한 날짜를 고르는 모드로 바뀌었어요."
+        : "불가능한 날짜를 고르는 모드로 바뀌었어요.",
+      "success"
     );
 
     if (!isFirebaseConfigured) {
@@ -605,7 +610,7 @@ export function useAppState() {
     };
 
     updateCurrentParticipant(nextParticipant);
-    showToast(`${WEEKDAY_LABELS[weekday]}요일 규칙을 업데이트했어요.`);
+    showToast(`${WEEKDAY_LABELS[weekday]}요일 규칙을 업데이트했어요.`, "success");
 
     if (!isFirebaseConfigured) {
       return;
@@ -699,7 +704,7 @@ export function useAppState() {
     };
 
     updateCurrentParticipant(nextParticipant);
-    showToast("선택한 날짜와 요일 규칙을 초기화했어요.");
+    showToast("선택한 날짜와 요일 규칙을 초기화했어요.", "success");
 
     if (!isFirebaseConfigured) {
       return;
@@ -738,7 +743,7 @@ export function useAppState() {
     };
 
     updateCurrentParticipant(nextParticipant);
-    showToast("닉네임을 변경했어요.");
+    showToast("닉네임을 변경했어요.", "success");
 
     if (!isFirebaseConfigured) {
       return true;
@@ -785,7 +790,7 @@ export function useAppState() {
         [currentRoom.id]: nextRoom,
       },
     }));
-    showToast("참가자를 내보냈어요.");
+    showToast("참가자를 내보냈어요.", "success");
 
     if (!isFirebaseConfigured) {
       return true;
@@ -863,7 +868,7 @@ export function useAppState() {
           : previous.rooms,
       };
     });
-    showToast("방에서 나갔어요.");
+    showToast("방에서 나갔어요.", "success");
     navigate({ name: "landing" });
 
     return true;
@@ -901,7 +906,7 @@ export function useAppState() {
         rooms,
       };
     });
-    showToast("방을 삭제했어요.");
+    showToast("방을 삭제했어요.", "success");
     navigate({ name: "landing" });
 
     return true;
@@ -956,7 +961,7 @@ export function useAppState() {
 
     try {
       await navigator.clipboard.writeText(currentRoom.inviteCode);
-      showToast("초대 코드가 복사되었어요.");
+      showToast("초대 코드가 복사되었어요.", "success");
     } catch {
       showToast("복사에 실패했어요. 브라우저 권한을 확인해 주세요.");
     }
@@ -987,7 +992,7 @@ export function useAppState() {
           inviteCode: currentRoom.inviteCode,
           roomId: currentRoom.id,
         });
-        showToast("카카오톡 공유 창을 열었어요.");
+        showToast("카카오톡 공유 창을 열었어요.", "success");
         return;
       }
 
@@ -997,7 +1002,7 @@ export function useAppState() {
           method: "web_share",
         });
         await navigator.share(shareData);
-        showToast("공유 시트를 열었어요.");
+        showToast("공유 시트를 열었어요.", "success");
         return;
       }
 
@@ -1006,7 +1011,7 @@ export function useAppState() {
         method: "clipboard",
       });
       await navigator.clipboard.writeText(shareData.url);
-      showToast("공유 링크를 복사했어요.");
+      showToast("공유 링크를 복사했어요.", "success");
     } catch {
       showToast("공유를 완료하지 못했어요.");
     }
@@ -1043,7 +1048,7 @@ export function useAppState() {
           roomId: currentRoom.id,
           text: shareText,
         });
-        showToast("카카오톡 공유 창을 열었어요.");
+        showToast("카카오톡 공유 창을 열었어요.", "success");
         return;
       }
 
@@ -1057,7 +1062,7 @@ export function useAppState() {
           title: "when should we meet?",
           url: roomUrl,
         });
-        showToast("공유 시트를 열었어요.");
+        showToast("공유 시트를 열었어요.", "success");
         return;
       }
 
@@ -1066,7 +1071,7 @@ export function useAppState() {
         method: "clipboard",
       });
       await navigator.clipboard.writeText(`${shareText}\n${roomUrl}`);
-      showToast("랭킹 공유 문구를 복사했어요.");
+      showToast("랭킹 공유 문구를 복사했어요.", "success");
     } catch {
       showToast("랭킹을 공유하지 못했어요.");
     }
@@ -1098,6 +1103,7 @@ export function useAppState() {
     setJoinInviteCode,
     shareRanking,
     shareRoom,
+    toastTone,
     changeNickname,
     removeParticipant,
     resetCurrentSelection,

@@ -59,7 +59,7 @@ function App() {
         {appState.currentRoute.name !== 'report' ? (
           <ReportEntryButton onClick={appState.goToReport} />
         ) : null}
-        <Toast message={appState.toastMessage} />
+        <Toast message={appState.toastMessage} tone={appState.toastTone} />
       </div>
     </div>
   )
