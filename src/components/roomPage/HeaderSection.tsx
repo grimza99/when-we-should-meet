@@ -57,7 +57,7 @@ export default function HeaderSection({
             {room.inviteCode}
           </h1>
         </div>
-        <InviteSection inviteCode={room.inviteCode} roomId={room.id} />
+        <InviteSection room={room} />
       </div>
     </header>
   );

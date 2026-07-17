@@ -5,16 +5,7 @@ import {
 } from "../../lib/ariaLabels";
 import { COLOR_PALETTE } from "../../lib/constants";
 import type { RankingItem, Room, RoomSummary } from "../../types";
-import {
-  isKakaoConfigured,
-  shareRankingWithKakao,
-} from "../../integrations/kakao/client";
-import { trackShareEvent } from "../../integrations/firebase/analytics";
-import { useToast } from "../shell/toast/toast-context";
-import { getOrCreateClientKey } from "../../lib/session/clientIdentity";
-import { isFirebaseConfigured } from "../../integrations/firebase/client";
-import { useLocalStorageState } from "../../hooks/useLocalStorageState";
-import { removeParticipant as removeFirebaseParticipant } from "../../integrations/firebase/services/participant-service";
+import { useRoomActions } from "../../hooks/useRoomActions";
 type RoomDashboardProps = {
   rankings: RankingItem[];
   room: Room;
@@ -38,7 +29,6 @@ export function RoomDashboard({
   const [removingParticipantId, setRemovingParticipantId] = useState<
     string | null
   >(null);
-  const [, setStorage] = useLocalStorageState();
 
   const participantCount = room.participants.length;
   const hasRankings = rankings.some((ranking) => ranking.score > 0);
@@ -47,8 +37,11 @@ export function RoomDashboard({
     ...participant,
     color: COLOR_PALETTE[participant.colorIndex] ?? COLOR_PALETTE[0],
   }));
-
-  const { showToast } = useToast();
+  const { removeParticipant, shareRanking } = useRoomActions({
+    isCurrentUserHost,
+    room,
+    roomSummary,
+  });
   useEffect(() => {
     const updateStickyState = () => {
       const nextSticky =
@@ -79,120 +72,6 @@ export function RoomDashboard({
     }
 
     setIsExpanded((previous) => !previous);
-  };
-
-  const shareRanking = async () => {
-    if (!room || !roomSummary) {
-      return;
-    }
-
-    const roomUrl = new URL(
-      `/room/${room.id}`,
-      window.location.origin
-    ).toString();
-    const topRankings = roomSummary.rankings.slice(0, 3);
-    const rankingText =
-      topRankings.length > 0
-        ? topRankings
-            .map(
-              (ranking) =>
-                `${ranking.rank}위 ${ranking.label} · ${ranking.score}명 가능`
-            )
-            .join("\n")
-        : "아직 공유할 랭킹이 없어요.";
-    const shareText = `우리 언제 볼까? 일정 랭킹이에요.\n${rankingText}`;
-
-    try {
-      if (isKakaoConfigured) {
-        void trackShareEvent({
-          eventName: "share_ranking_click",
-          method: "kakao",
-        });
-        await shareRankingWithKakao({
-          roomId: room.id,
-          text: shareText,
-        });
-        showToast({ msg: "카카오톡 공유 창을 열었어요" });
-        return;
-      }
-
-      if (navigator.share) {
-        void trackShareEvent({
-          eventName: "share_ranking_click",
-          method: "web_share",
-        });
-        await navigator.share({
-          text: shareText,
-          title: "when should we meet?",
-          url: roomUrl,
-        });
-        showToast({ msg: "공유 시트를 열었어요." });
-        return;
-      }
-
-      void trackShareEvent({
-        eventName: "share_ranking_click",
-        method: "clipboard",
-      });
-      await navigator.clipboard.writeText(`${shareText}\n${roomUrl}`);
-      showToast({ msg: "랭킹 공유 문구를 복사했어요." });
-    } catch {
-      showToast({ msg: "랭킹을 공유하지 못했어요" });
-    }
-  };
-
-  const removeParticipant = async (participantId: string) => {
-    if (!room || !isCurrentUserHost) {
-      showToast({ msg: "방장만 참가자를 관리할 수 있어요." });
-      return false;
-    }
-
-    if (participantId === room.hostClientKey) {
-      showToast({ msg: "방장은 참가자 목록에서 제거할 수 없어요." });
-      return false;
-    }
-
-    const previousRoom = room;
-    const nextRoom = {
-      ...room,
-      participants: room.participants.filter(
-        (participant) => participant.id !== participantId
-      ),
-    };
-
-    setStorage((previous) => ({
-      ...previous,
-      rooms: {
-        ...previous.rooms,
-        [room.id]: nextRoom,
-      },
-    }));
-    showToast({ msg: "참가자를 내보냈어요." });
-
-    if (!isFirebaseConfigured) {
-      return true;
-    }
-
-    try {
-      await removeFirebaseParticipant({
-        hostClientKey: getOrCreateClientKey(),
-        participantId,
-        roomId: room.id,
-      });
-      return true;
-    } catch {
-      setStorage((previous) => ({
-        ...previous,
-        rooms: {
-          ...previous.rooms,
-          [previousRoom.id]: previousRoom,
-        },
-      }));
-      showToast({
-        msg: "참가자를 내보내지 못했어요. 잠시 후 다시 시도해 주세요.",
-      });
-      return false;
-    }
   };
 
   const submitRemoveParticipant = async (participantId: string) => {
@@ -247,7 +126,7 @@ export function RoomDashboard({
               className="dashboard-share-button"
               onClick={(event) => {
                 event.stopPropagation();
-                shareRanking();
+                void shareRanking();
               }}
               type="button"
             >

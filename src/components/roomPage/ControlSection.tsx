@@ -1,22 +1,18 @@
-import { useCurrentParticipantUpdater } from "../../hooks/useParticipant";
-import { isFirebaseConfigured } from "../../integrations/firebase/client";
-import { updateParticipantAvailability } from "../../integrations/firebase/services/participant-service";
 import { ARIA_LABELS, getWeekdayRuleAriaLabel } from "../../lib/ariaLabels";
 import { MODE_LABELS, WEEKDAY_LABELS } from "../../lib/constants";
-import { convertParticipantSelectionMode } from "../../lib/date";
-import { getOrCreateClientKey } from "../../lib/session/clientIdentity";
 import type { DateMode, Participant, Room } from "../../types";
-import { useToast } from "../shell/toast/toast-context";
 import { SegmentedButtonGroup } from "../ui/SegmentedButtonGroup";
+import { useRoomActions } from "../../hooks/useRoomActions";
 interface IControlSectionProps {
   room: Room;
   participant: Participant;
 }
 export function ControlSection({ room, participant }: IControlSectionProps) {
-  const { showToast } = useToast();
-  const updateCurrentParticipant = useCurrentParticipantUpdater();
-
   const selectedMode = participant?.selectionMode ?? "available";
+  const { changeSelectionMode, toggleWeekday } = useRoomActions({
+    participant,
+    room,
+  });
 
   const modeOptions = (Object.keys(MODE_LABELS) as DateMode[]).map((value) => ({
     label: MODE_LABELS[value],
@@ -27,97 +23,6 @@ export function ControlSection({ room, participant }: IControlSectionProps) {
     value,
     selected: participant?.weekdayRules.includes(value) ?? false,
   }));
-
-  const changeSelectionMode = async (mode: DateMode) => {
-    if (!room || !participant) {
-      return;
-    }
-
-    const previousParticipant = participant;
-    const updatedAt = new Date().toISOString();
-    const nextSelection = convertParticipantSelectionMode(
-      room,
-      participant,
-      mode
-    );
-    const nextParticipant = {
-      ...participant,
-      overrides: nextSelection.overrides,
-      selectionMode: nextSelection.selectionMode,
-      updatedAt,
-      weekdayRules: nextSelection.weekdayRules,
-    };
-
-    updateCurrentParticipant(nextParticipant);
-    showToast({
-      msg:
-        mode === "available"
-          ? "가능한 날짜를 고르는 모드로 바뀌었어요."
-          : "불가능한 날짜를 고르는 모드로 바뀌었어요.",
-    });
-
-    if (!isFirebaseConfigured) {
-      return;
-    }
-
-    try {
-      await updateParticipantAvailability({
-        clientKey: getOrCreateClientKey(),
-        overrides: nextParticipant.overrides,
-        participantId: nextParticipant.id,
-        roomId: room.id,
-        selectionMode: nextParticipant.selectionMode,
-        weekdayRules: nextParticipant.weekdayRules,
-      });
-    } catch {
-      updateCurrentParticipant(previousParticipant);
-      showToast({
-        msg: "선택 방식을 저장하지 못했어요. 잠시 후 다시 시도해 주세요.",
-      });
-    }
-  };
-  const toggleWeekday = async (weekday: number) => {
-    if (!room || !participant) {
-      return;
-    }
-
-    const previousParticipant = participant;
-    const updatedAt = new Date().toISOString();
-    const weekdayRules = participant.weekdayRules.includes(weekday)
-      ? participant.weekdayRules.filter((value) => value !== weekday)
-      : [...participant.weekdayRules, weekday].sort(
-          (left, right) => left - right
-        );
-
-    const nextParticipant = {
-      ...participant,
-      weekdayRules,
-      updatedAt,
-    };
-
-    updateCurrentParticipant(nextParticipant);
-    showToast({ msg: `${WEEKDAY_LABELS[weekday]}요일 규칙을 업데이트했어요.` });
-
-    if (!isFirebaseConfigured) {
-      return;
-    }
-
-    try {
-      await updateParticipantAvailability({
-        clientKey: getOrCreateClientKey(),
-        overrides: nextParticipant.overrides,
-        participantId: nextParticipant.id,
-        roomId: room.id,
-        selectionMode: nextParticipant.selectionMode,
-        weekdayRules: nextParticipant.weekdayRules,
-      });
-    } catch {
-      updateCurrentParticipant(previousParticipant);
-      showToast({
-        msg: "요일 규칙을 저장하지 못했어요. 잠시 후 다시 시도해 주세요.",
-      });
-    }
-  };
 
   return (
     <section className="controls-card">
