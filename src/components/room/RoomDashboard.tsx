@@ -4,22 +4,23 @@ import {
   getParticipantRemoveAriaLabel,
 } from "../../lib/ariaLabels";
 import { COLOR_PALETTE } from "../../lib/constants";
-import type { RankingItem, Room, RoomSummary } from "../../types";
-import { useRoomActions } from "../../hooks/useRoomActions";
+import type { RankingItem, Room } from "../../types";
 type RoomDashboardProps = {
   rankings: RankingItem[];
   room: Room;
   isCurrentUserHost?: boolean;
+  onRemoveParticipant: (participantId: string) => Promise<boolean>;
+  onShareRanking: () => Promise<void>;
   stickyTopOffset?: number;
-  roomSummary: RoomSummary;
 };
 
 export function RoomDashboard({
   isCurrentUserHost = false,
+  onRemoveParticipant,
+  onShareRanking,
   rankings,
   room,
   stickyTopOffset = 92,
-  roomSummary,
 }: RoomDashboardProps) {
   const dashboardContentId = useId();
   const sentinelRef = useRef<HTMLDivElement | null>(null);
@@ -37,11 +38,6 @@ export function RoomDashboard({
     ...participant,
     color: COLOR_PALETTE[participant.colorIndex] ?? COLOR_PALETTE[0],
   }));
-  const { removeParticipant, shareRanking } = useRoomActions({
-    isCurrentUserHost,
-    room,
-    roomSummary,
-  });
   useEffect(() => {
     const updateStickyState = () => {
       const nextSticky =
@@ -82,7 +78,7 @@ export function RoomDashboard({
     setRemovingParticipantId(participantId);
 
     try {
-      await removeParticipant(participantId);
+      await onRemoveParticipant(participantId);
     } finally {
       setRemovingParticipantId(null);
     }
@@ -126,7 +122,7 @@ export function RoomDashboard({
               className="dashboard-share-button"
               onClick={(event) => {
                 event.stopPropagation();
-                void shareRanking();
+                void onShareRanking();
               }}
               type="button"
             >

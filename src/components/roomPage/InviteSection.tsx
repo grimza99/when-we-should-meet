@@ -1,26 +1,26 @@
 import { ARIA_LABELS } from "../../lib/ariaLabels";
-import type { Room } from "../../types";
-import { useRoomActions } from "../../hooks/useRoomActions";
 import { Button } from "../ui/Button";
 
 type InviteSectionProps = {
-  room: Room;
+  onCopyInviteCode: () => Promise<void>;
+  onShareRoom: () => Promise<void>;
 };
-export default function InviteSection({ room }: InviteSectionProps) {
-  const { copyInviteCode, shareRoom } = useRoomActions({ room });
-
+export default function InviteSection({
+  onCopyInviteCode,
+  onShareRoom,
+}: InviteSectionProps) {
   return (
     <div className="header-actions">
       <Button
         ariaLabel={ARIA_LABELS.room.copyInviteCodeButton}
-        onClick={() => void copyInviteCode()}
+        onClick={() => void onCopyInviteCode()}
         variant="chip"
       >
         입장 코드 복사
       </Button>
       <Button
         ariaLabel={ARIA_LABELS.room.shareRoomButton}
-        onClick={() => void shareRoom()}
+        onClick={() => void onShareRoom()}
         variant="chip"
       >
         공유

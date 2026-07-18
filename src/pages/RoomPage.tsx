@@ -15,15 +15,19 @@ import { useRoomRender } from "../hooks/useRoomRender";
 import { addMonths, clampVisibleMonth } from "../lib/date";
 import { useRoomSummary } from "../hooks/useRoomSummary";
 import HeaderSection from "../components/roomPage/HeaderSection";
-import { useRoomActions } from "../hooks/useRoomActions";
+import { useToast } from "../components/shell/toast/toast-context";
+import { createRoomManagementActions } from "../lib/roomActions/createRoomManagementActions";
+import { createRoomSelectionActions } from "../lib/roomActions/createRoomSelectionActions";
+import { createRoomShareActions } from "../lib/roomActions/createRoomShareActions";
 
 export function RoomPage() {
   const headerRef = useRef<HTMLElement | null>(null);
-  const { route } = useRouteState();
+  const { navigate, route } = useRouteState();
   const [, setStorage] = useLocalStorageState();
   const [nicknameModalDismissedRoomId, setNicknameModalDismissedRoomId] =
     useState<string | null>(null);
   const [dashboardStickyTop, setDashboardStickyTop] = useState(80);
+  const { showToast } = useToast();
   const { effectiveVisibleMonth, room, participant, roomSummary } =
     useRoomSummary({ route });
 
@@ -32,9 +36,23 @@ export function RoomPage() {
     room,
     roomId: room?.id ?? (route.name === "room" ? route.roomId : undefined),
   });
-  const { resetSelections, toggleDate } = useRoomActions({
-    isCurrentUserHost: participant?.id === room?.hostClientKey,
-    participant,
+  const isCurrentUserHost = participant?.id === room?.hostClientKey;
+  const actionContext = { navigate, setStorage, showToast };
+  const { changeSelectionMode, resetSelections, toggleDate, toggleWeekday } =
+    createRoomSelectionActions({
+      context: actionContext,
+      participant,
+      room,
+    });
+  const { changeNickname, deleteRoom, leaveRoom, removeParticipant } =
+    createRoomManagementActions({
+      context: actionContext,
+      isCurrentUserHost,
+      participant,
+      room,
+    });
+  const { copyInviteCode, shareRanking, shareRoom } = createRoomShareActions({
+    context: { showToast },
     room,
     roomSummary,
   });
@@ -71,7 +89,6 @@ export function RoomPage() {
   const shouldShowNicknameModal =
     !participant && !isRoomFull && nicknameModalDismissedRoomId !== room.id;
   const roomRangeLabel = formatRoomRange(room.startDate, room.endDate);
-  const isCurrentUserHost = participant?.id === room.hostClientKey;
 
   const hasSelectionToReset = participant
     ? participant.weekdayRules.length > 0 ||
@@ -105,25 +122,37 @@ export function RoomPage() {
     >
       <HeaderSection
         headerRef={headerRef}
+        onCopyInviteCode={copyInviteCode}
+        onShareRoom={shareRoom}
         room={room}
         setDashboardStickyTop={setDashboardStickyTop}
       />
       <RoomDashboard
         isCurrentUserHost={isCurrentUserHost}
+        onRemoveParticipant={removeParticipant}
+        onShareRanking={shareRanking}
         rankings={roomSummary.rankings}
         room={room}
         stickyTopOffset={dashboardStickyTop}
-        roomSummary={roomSummary}
       />
 
       {participant && (
         <ControlGroupSection
           currentNickname={participant.nickname}
-          currentParticipant={participant}
-          room={room}
+          isCurrentUserHost={isCurrentUserHost}
+          onChangeNickname={changeNickname}
+          onDeleteRoom={deleteRoom}
+          onLeaveRoom={leaveRoom}
+          participant={participant}
         />
       )}
-      {participant && <ControlSection room={room} participant={participant} />}
+      {participant && (
+        <ControlSection
+          onChangeSelectionMode={changeSelectionMode}
+          onToggleWeekday={toggleWeekday}
+          participant={participant}
+        />
+      )}
       <section
         aria-label={ARIA_LABELS.room.calendarCard}
         className="calendar-card"

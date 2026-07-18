@@ -2,17 +2,22 @@ import { useState } from "react";
 import { ARIA_LABELS } from "../../lib/ariaLabels";
 import { Button } from "../ui/Button";
 import { TextInput } from "../ui/TextInput";
-import type { Participant, Room } from "../../types";
-import { useRoomActions } from "../../hooks/useRoomActions";
+import type { Participant } from "../../types";
 interface IControlGroupSectionProps {
   currentNickname: string;
-  currentParticipant: Participant;
-  room: Room;
+  isCurrentUserHost: boolean;
+  onChangeNickname: (nickname: string) => Promise<boolean>;
+  onDeleteRoom: () => Promise<boolean>;
+  onLeaveRoom: () => Promise<boolean>;
+  participant: Participant;
 }
 export default function ControlGroupSection({
   currentNickname,
-  currentParticipant,
-  room,
+  isCurrentUserHost,
+  onChangeNickname,
+  onDeleteRoom,
+  onLeaveRoom,
+  participant,
 }: IControlGroupSectionProps) {
   const [isSavingNickname, setIsSavingNickname] = useState(false);
   const [isDeletingRoom, setIsDeletingRoom] = useState(false);
@@ -20,15 +25,6 @@ export default function ControlGroupSection({
   const [nickname, setNickname] = useState(currentNickname);
 
   const trimmedNickname = nickname.trim();
-
-  const isCurrentUserHost =
-    Boolean(currentParticipant.id) &&
-    currentParticipant.id === room?.hostClientKey;
-  const { changeNickname, deleteRoom, leaveRoom } = useRoomActions({
-    isCurrentUserHost,
-    participant: currentParticipant,
-    room,
-  });
 
   const submitNicknameChange = async () => {
     if (!trimmedNickname || isSavingNickname) {
@@ -38,7 +34,7 @@ export default function ControlGroupSection({
     setIsSavingNickname(true);
 
     try {
-      await changeNickname(trimmedNickname);
+      await onChangeNickname(trimmedNickname);
     } finally {
       setIsSavingNickname(false);
     }
@@ -54,7 +50,7 @@ export default function ControlGroupSection({
     setIsDeletingRoom(true);
 
     try {
-      await deleteRoom();
+      await onDeleteRoom();
     } finally {
       setIsDeletingRoom(false);
     }
@@ -73,7 +69,7 @@ export default function ControlGroupSection({
     setIsLeavingRoom(true);
 
     try {
-      await leaveRoom();
+      await onLeaveRoom();
     } finally {
       setIsLeavingRoom(false);
     }
@@ -95,7 +91,7 @@ export default function ControlGroupSection({
             ariaLabel={ARIA_LABELS.room.nicknameSaveButton}
             disabled={
               !trimmedNickname ||
-              trimmedNickname === currentParticipant.nickname ||
+              trimmedNickname === participant.nickname ||
               isSavingNickname
             }
             onClick={() => void submitNicknameChange()}

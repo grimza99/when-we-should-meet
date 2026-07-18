@@ -6,11 +6,15 @@ import InviteSection from "./InviteSection";
 
 type THeaderSection = {
   headerRef: RefObject<HTMLElement | null>;
+  onCopyInviteCode: () => Promise<void>;
+  onShareRoom: () => Promise<void>;
   room: Room;
   setDashboardStickyTop: (num: number) => void;
 };
 export default function HeaderSection({
   headerRef,
+  onCopyInviteCode,
+  onShareRoom,
   room,
   setDashboardStickyTop,
 }: THeaderSection) {
@@ -51,7 +55,10 @@ export default function HeaderSection({
             {room.inviteCode}
           </h1>
         </div>
-        <InviteSection room={room} />
+        <InviteSection
+          onCopyInviteCode={onCopyInviteCode}
+          onShareRoom={onShareRoom}
+        />
       </div>
     </header>
   );

@@ -1,18 +1,18 @@
 import { ARIA_LABELS, getWeekdayRuleAriaLabel } from "../../lib/ariaLabels";
 import { MODE_LABELS, WEEKDAY_LABELS } from "../../lib/constants";
-import type { DateMode, Participant, Room } from "../../types";
+import type { DateMode, Participant } from "../../types";
 import { SegmentedButtonGroup } from "../ui/SegmentedButtonGroup";
-import { useRoomActions } from "../../hooks/useRoomActions";
 interface IControlSectionProps {
-  room: Room;
+  onChangeSelectionMode: (mode: DateMode) => Promise<void>;
+  onToggleWeekday: (weekday: number) => Promise<void>;
   participant: Participant;
 }
-export function ControlSection({ room, participant }: IControlSectionProps) {
+export function ControlSection({
+  onChangeSelectionMode,
+  onToggleWeekday,
+  participant,
+}: IControlSectionProps) {
   const selectedMode = participant?.selectionMode ?? "available";
-  const { changeSelectionMode, toggleWeekday } = useRoomActions({
-    participant,
-    room,
-  });
 
   const modeOptions = (Object.keys(MODE_LABELS) as DateMode[]).map((value) => ({
     label: MODE_LABELS[value],
@@ -29,7 +29,7 @@ export function ControlSection({ room, participant }: IControlSectionProps) {
       <div className="control-group">
         <p className="section-label">선택 필터</p>
         <SegmentedButtonGroup
-          onChange={changeSelectionMode}
+          onChange={onChangeSelectionMode}
           options={modeOptions.map((option) => ({
             ...option,
             ariaLabel:
@@ -49,7 +49,7 @@ export function ControlSection({ room, participant }: IControlSectionProps) {
               aria-pressed={option.selected}
               key={option.value}
               className={`day-chip${option.selected ? " is-active" : ""}`}
-              onClick={() => toggleWeekday(option.value)}
+              onClick={() => void onToggleWeekday(option.value)}
               type="button"
             >
               {option.label}
