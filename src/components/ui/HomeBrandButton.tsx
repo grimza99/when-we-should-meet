@@ -1,17 +1,19 @@
+import { ARIA_LABELS } from "../../lib/ariaLabels";
+import { useRouteState } from "../../lib/router";
+
 type HomeBrandButtonProps = {
   ariaLabel?: string;
-  onClick: () => void;
+  onClick?: () => void;
 };
 
-export function HomeBrandButton({
-  ariaLabel,
-  onClick,
-}: HomeBrandButtonProps) {
+export function HomeBrandButton({ ariaLabel, onClick }: HomeBrandButtonProps) {
+  const { navigate } = useRouteState();
+  const resolveAriaLabel = ariaLabel ? ariaLabel : ARIA_LABELS.room.homeButton;
   return (
     <button
-      aria-label={ariaLabel}
+      aria-label={resolveAriaLabel}
       className="home-brand-button"
-      onClick={onClick}
+      onClick={onClick ? onClick : () => navigate({ name: "landing" })}
       type="button"
     >
       <img

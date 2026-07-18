@@ -1,22 +1,23 @@
 import { useEffect, type RefObject } from "react";
 import { ARIA_LABELS } from "../../lib/ariaLabels";
-import { useRouteState } from "../../lib/router";
 import type { Room } from "../../types";
 import { HomeBrandButton } from "../ui/HomeBrandButton";
 import InviteSection from "./InviteSection";
 
 type THeaderSection = {
   headerRef: RefObject<HTMLElement | null>;
+  onCopyInviteCode: () => Promise<void>;
+  onShareRoom: () => Promise<void>;
   room: Room;
   setDashboardStickyTop: (num: number) => void;
 };
 export default function HeaderSection({
   headerRef,
+  onCopyInviteCode,
+  onShareRoom,
   room,
   setDashboardStickyTop,
 }: THeaderSection) {
-  const { navigate } = useRouteState();
-
   useEffect(() => {
     const headerElement = headerRef.current;
 
@@ -46,10 +47,7 @@ export default function HeaderSection({
     <header className="room-header" ref={headerRef}>
       <div className="room-header-top">
         <div className="brand-button-and-invite-code">
-          <HomeBrandButton
-            ariaLabel={ARIA_LABELS.room.homeButton}
-            onClick={() => navigate({ name: "landing" })}
-          />
+          <HomeBrandButton />
           <h1
             aria-label={ARIA_LABELS.room.inviteCodeHeading}
             className="room-title"
@@ -57,7 +55,10 @@ export default function HeaderSection({
             {room.inviteCode}
           </h1>
         </div>
-        <InviteSection inviteCode={room.inviteCode} roomId={room.id} />
+        <InviteSection
+          onCopyInviteCode={onCopyInviteCode}
+          onShareRoom={onShareRoom}
+        />
       </div>
     </header>
   );
