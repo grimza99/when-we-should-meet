@@ -8,10 +8,7 @@ export default function NotFoundRoomPage() {
 
   return (
     <main aria-label={ARIA_LABELS.room.page} className="page room-page">
-      <HomeBrandButton
-        ariaLabel={ARIA_LABELS.room.homeButton}
-        onClick={() => navigate({ name: "landing" })}
-      />
+      <HomeBrandButton />
       <section className="hero-card">
         <h1>존재하지 않는 방입니다</h1>
         <p className="hero-copy">

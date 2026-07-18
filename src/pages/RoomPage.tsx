@@ -19,7 +19,7 @@ import { useRoomActions } from "../hooks/useRoomActions";
 
 export function RoomPage() {
   const headerRef = useRef<HTMLElement | null>(null);
-  const { navigate, route } = useRouteState();
+  const { route } = useRouteState();
   const [, setStorage] = useLocalStorageState();
   const [nicknameModalDismissedRoomId, setNicknameModalDismissedRoomId] =
     useState<string | null>(null);
@@ -52,10 +52,7 @@ export function RoomPage() {
   if (isHydratingRoom) {
     return (
       <main aria-label={ARIA_LABELS.room.page} className="page room-page">
-        <HomeBrandButton
-          ariaLabel={ARIA_LABELS.room.homeButton}
-          onClick={() => navigate({ name: "landing" })}
-        />
+        <HomeBrandButton />
         <section className="hero-card">
           <h1>방 정보를 불러오는 중입니다</h1>
           <p className="hero-copy">

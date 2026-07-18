@@ -1,6 +1,5 @@
 import { useEffect, type RefObject } from "react";
 import { ARIA_LABELS } from "../../lib/ariaLabels";
-import { useRouteState } from "../../lib/router";
 import type { Room } from "../../types";
 import { HomeBrandButton } from "../ui/HomeBrandButton";
 import InviteSection from "./InviteSection";
@@ -15,8 +14,6 @@ export default function HeaderSection({
   room,
   setDashboardStickyTop,
 }: THeaderSection) {
-  const { navigate } = useRouteState();
-
   useEffect(() => {
     const headerElement = headerRef.current;
 
@@ -46,10 +43,7 @@ export default function HeaderSection({
     <header className="room-header" ref={headerRef}>
       <div className="room-header-top">
         <div className="brand-button-and-invite-code">
-          <HomeBrandButton
-            ariaLabel={ARIA_LABELS.room.homeButton}
-            onClick={() => navigate({ name: "landing" })}
-          />
+          <HomeBrandButton />
           <h1
             aria-label={ARIA_LABELS.room.inviteCodeHeading}
             className="room-title"
